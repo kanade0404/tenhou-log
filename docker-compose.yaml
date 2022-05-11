@@ -1,0 +1,14 @@
+version: '3'
+
+services:
+  api:
+    build: .
+    container_name: tenhou
+    volumes:
+      - ./:/main
+    platform: linux/amd64
+    tty: true
+    environment:
+      - GOPATH=/go
+      - LOG_LEVEL=info
+      - ENV=local
