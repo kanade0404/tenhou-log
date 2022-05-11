@@ -2,6 +2,7 @@ package xml
 
 import (
 	"fmt"
+	"github.com/kanade0404/tenhou-log/xml/init"
 	"strconv"
 )
 

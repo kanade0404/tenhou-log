@@ -2,6 +2,7 @@ package init
 
 import (
 	"fmt"
+	"github.com/kanade0404/tenhou-log/xml/hai"
 	"strconv"
 	"strings"
 )

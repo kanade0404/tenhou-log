@@ -2,7 +2,7 @@ package xml
 
 import (
 	"fmt"
-	"github.com/kanade0404/tenhou/common"
+	"github.com/kanade0404/tenhou-log/common"
 	"net/url"
 	"strconv"
 )
