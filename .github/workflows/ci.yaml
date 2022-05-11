@@ -5,6 +5,7 @@ on:
     branches:
       - master
       - release-*
+      - feature/*
 
 jobs:
   ci:
@@ -22,7 +23,7 @@ jobs:
         with:
           go-version: 1.18
       - name: Install packages
-        run: go get ./...
+        run: go mod tidy
       - name: Build
         run: go build .
       - name: Test
