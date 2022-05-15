@@ -2,6 +2,7 @@ package xml
 
 import (
 	"reflect"
+	"sort"
 	"testing"
 )
 
@@ -120,6 +121,12 @@ func TestGameInfo_Marshal(t *testing.T) {
 				t.Errorf("Marshal() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+			sort.Slice(tt.want.Attr, func(i, j int) bool {
+				return tt.want.Attr[i].Name > tt.want.Attr[j].Name
+			})
+			sort.Slice(got.Attr, func(i, j int) bool {
+				return got.Attr[i].Name > got.Attr[i].Name
+			})
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Marshal() got = %v, want %v", got, tt.want)
 			}
