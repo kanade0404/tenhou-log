@@ -202,7 +202,74 @@ func Test_newBamboos(t *testing.T) {
 		want    IBamboos
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "一索(72)赤あり",
+			args: args{
+				id:    72,
+				isRed: true,
+			},
+			want: Bamboos{
+				Suits: Suits{
+					Hai: Hai{
+						ID:   72,
+						Num:  1,
+						Type: BamboosType,
+					},
+					IsRed: true,
+				},
+			},
+		},
+		{
+			name: "一索(73)赤なし",
+			args: args{
+				id:    73,
+				isRed: false,
+			},
+			want: Bamboos{
+				Suits: Suits{
+					Hai: Hai{
+						ID:   73,
+						Num:  1,
+						Type: BamboosType,
+					},
+					IsRed: false,
+				},
+			},
+		},
+		{
+			name: "九索(106)赤あり",
+			args: args{
+				id:    106,
+				isRed: true,
+			},
+			want: Bamboos{
+				Suits: Suits{
+					Hai: Hai{
+						ID:   106,
+						Num:  9,
+						Type: BamboosType,
+					},
+					IsRed: true,
+				},
+			},
+		},
+		{
+			name: "九索(107)赤なし",
+			args: args{
+				id:    107,
+				isRed: false,
+			},
+			want: Bamboos{
+				Suits: Suits{
+					Hai: Hai{
+						ID:   107,
+						Num:  9,
+						Type: BamboosType,
+					},
+					IsRed: false,
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -341,7 +408,7 @@ func Test_newCircles(t *testing.T) {
 			},
 		},
 		{
-			name: "一萬(37)赤なし",
+			name: "一筒(37)赤なし",
 			args: args{
 				id:    37,
 				isRed: false,
@@ -358,7 +425,7 @@ func Test_newCircles(t *testing.T) {
 			},
 		},
 		{
-			name: "九萬(70)赤あり",
+			name: "九筒(70)赤あり",
 			args: args{
 				id:    70,
 				isRed: true,
@@ -375,7 +442,7 @@ func Test_newCircles(t *testing.T) {
 			},
 		},
 		{
-			name: "九萬(71)赤なし",
+			name: "九筒(71)赤なし",
 			args: args{
 				id:    71,
 				isRed: false,

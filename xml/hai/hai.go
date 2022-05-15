@@ -176,13 +176,21 @@ func (b Bamboos) Name() string {
 }
 
 func newBamboos(id uint, isRed bool) (IBamboos, error) {
-	if id < 73 || id > 108 {
+	if id < 72 || id > 107 {
 		return nil, fmt.Errorf("unexpected argument id: %d, isRed: %t", id, isRed)
 	} else {
+		rs := (id - 72 + 1) / 4
+		mod := (id - 72 + 1) % 4
+		var num uint
+		if mod == 0 {
+			num = rs
+		} else {
+			num = rs + 1
+		}
 		return Bamboos{
 			Suits: Suits{
 				Hai: Hai{
-					Num:  (id-73)/4 + 1,
+					Num:  num,
 					ID:   id,
 					Type: BamboosType,
 				},
