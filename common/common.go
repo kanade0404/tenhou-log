@@ -21,14 +21,6 @@ func SplitByComma(str string) []string {
 	return strings.Split(str, ",")
 }
 
-func JoinByCommaFromInts(ints []int) string {
-	var res []string
-	for _, i := range ints {
-		res = append(res, strconv.Itoa(i))
-	}
-	return JoinByComma(res)
-}
-
 func JoinByComma(strs []string) string {
 	return strings.Join(strs, ",")
 }
