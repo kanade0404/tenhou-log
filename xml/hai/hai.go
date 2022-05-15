@@ -6,7 +6,7 @@ import (
 )
 
 type IHai interface {
-	String() string
+	Name() string
 }
 
 var _ IHai = Hai{}
@@ -26,16 +26,15 @@ type Hai struct {
 	Type HaiType
 }
 
-func (h Hai) String() string {
-	return h.String()
+func (h Hai) Name() string {
+	return h.Name()
 }
 
-func NewHai(num uint, isRed bool) (IHai, error) {
-	id := (num + 1) / 36
-	if id < 1 || num > 136 {
-		return Hai{}, fmt.Errorf("unexpected argument num: %d, isRed: %t", num, isRed)
-	} else if id > 0 && id < 109 {
-		return newSuits(num, isRed)
+func NewHai(id uint, isRed bool) (IHai, error) {
+	if id < 0 || id > 135 {
+		return Hai{}, fmt.Errorf("unexpected argument id: %d, isRed: %t", id, isRed)
+	} else if id >= 0 && id <= 107 {
+		return newSuits(id, isRed)
 	} else {
 		return newHonours(id)
 	}
@@ -52,28 +51,19 @@ type Suits struct {
 	IsRed bool
 }
 
-func (s Suits) String() string {
-	return s.String()
+func (s Suits) Name() string {
+	return s.Name()
 }
 
 func newSuits(id uint, isRed bool) (ISuits, error) {
-	if id < 1 || id > 108 {
+	if id < 0 || id > 107 {
 		return nil, fmt.Errorf("unexpected argument id: %d, isRed: %t", id, isRed)
+	} else if id >= 0 && id <= 35 {
+		return newCharacters(id, isRed)
+	} else if id >= 36 && id <= 71 {
+		return newCircles(id, isRed)
 	} else {
-		switch id {
-		case 0:
-			// 萬子
-			return newCharacters(id, isRed)
-		case 1:
-			// 筒子
-			return newCircles(id, isRed)
-		case 2:
-			// 索子
-			return newBamboos(id, isRed)
-		default:
-			return nil, fmt.Errorf("unexpected value id:%d, isRed: %t", id, isRed)
-
-		}
+		return newBamboos(id, isRed)
 	}
 }
 
@@ -88,7 +78,7 @@ type Characters struct {
 	Suits
 }
 
-func (c Characters) String() string {
+func (c Characters) Name() string {
 	if c.IsRed {
 		return fmt.Sprintf("赤%s萬", str.ConvertToCjkNum(c.Num))
 	} else {
@@ -98,13 +88,21 @@ func (c Characters) String() string {
 
 // newCharacters 萬子 0~35
 func newCharacters(id uint, isRed bool) (ICharacters, error) {
-	if id < 1 || id > 36 {
+	if id < 0 || id > 35 {
 		return nil, fmt.Errorf("unexpected argument %d", id)
 	} else {
+		rs := (id + 1) / 4
+		mod := (id + 1) % 4
+		var num uint
+		if mod == 0 {
+			num = rs
+		} else {
+			num = rs + 1
+		}
 		return Characters{
 			Suits{
 				Hai: Hai{
-					Num:  id / 4,
+					Num:  num,
 					ID:   id,
 					Type: CharactersType,
 				},
@@ -125,7 +123,7 @@ type Circles struct {
 	Suits
 }
 
-func (c Circles) String() string {
+func (c Circles) Name() string {
 	if c.IsRed {
 		return fmt.Sprintf("赤%s筒", str.ConvertToCjkNum(c.Num))
 	} else {
@@ -161,7 +159,7 @@ type Bamboos struct {
 	Suits
 }
 
-func (b Bamboos) String() string {
+func (b Bamboos) Name() string {
 	if b.IsRed {
 		return fmt.Sprintf("赤%s索", str.ConvertToCjkNum(b.Num))
 	} else {
@@ -196,7 +194,7 @@ type Honours struct {
 	Hai
 }
 
-func (h Honours) String() string {
+func (h Honours) Name() string {
 	switch (h.ID - 109) / 4 {
 	case 0:
 		return "東"

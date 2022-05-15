@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestBamboos_String(t *testing.T) {
+func TestBamboos_Name(t *testing.T) {
 	type fields struct {
 		Suits Suits
 	}
@@ -35,14 +35,14 @@ func TestBamboos_String(t *testing.T) {
 			b := Bamboos{
 				Suits: tt.fields.Suits,
 			}
-			if got := b.String(); got != tt.want {
-				t.Errorf("String() = %v, want %v", got, tt.want)
+			if got := b.Name(); got != tt.want {
+				t.Errorf("Name() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestCharacters_String(t *testing.T) {
+func TestCharacters_Name(t *testing.T) {
 	type fields struct {
 		Suits Suits
 	}
@@ -58,14 +58,14 @@ func TestCharacters_String(t *testing.T) {
 			c := Characters{
 				Suits: tt.fields.Suits,
 			}
-			if got := c.String(); got != tt.want {
-				t.Errorf("String() = %v, want %v", got, tt.want)
+			if got := c.Name(); got != tt.want {
+				t.Errorf("Name() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestCircles_String(t *testing.T) {
+func TestCircles_Name(t *testing.T) {
 	type fields struct {
 		Suits Suits
 	}
@@ -81,14 +81,14 @@ func TestCircles_String(t *testing.T) {
 			c := Circles{
 				Suits: tt.fields.Suits,
 			}
-			if got := c.String(); got != tt.want {
-				t.Errorf("String() = %v, want %v", got, tt.want)
+			if got := c.Name(); got != tt.want {
+				t.Errorf("Name() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestHai_String(t *testing.T) {
+func TestHai_Name(t *testing.T) {
 	type fields struct {
 		ID   uint
 		Num  uint
@@ -108,14 +108,14 @@ func TestHai_String(t *testing.T) {
 				Num:  tt.fields.Num,
 				Type: tt.fields.Type,
 			}
-			if got := h.String(); got != tt.want {
-				t.Errorf("String() = %v, want %v", got, tt.want)
+			if got := h.Name(); got != tt.want {
+				t.Errorf("Name() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestHonours_String(t *testing.T) {
+func TestHonours_Name(t *testing.T) {
 	type fields struct {
 		Hai Hai
 	}
@@ -131,8 +131,8 @@ func TestHonours_String(t *testing.T) {
 			h := Honours{
 				Hai: tt.fields.Hai,
 			}
-			if got := h.String(); got != tt.want {
-				t.Errorf("String() = %v, want %v", got, tt.want)
+			if got := h.Name(); got != tt.want {
+				t.Errorf("Name() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -165,7 +165,7 @@ func TestNewHai(t *testing.T) {
 	}
 }
 
-func TestSuits_String(t *testing.T) {
+func TestSuits_Name(t *testing.T) {
 	type fields struct {
 		Hai   Hai
 		IsRed bool
@@ -183,8 +183,8 @@ func TestSuits_String(t *testing.T) {
 				Hai:   tt.fields.Hai,
 				IsRed: tt.fields.IsRed,
 			}
-			if got := s.String(); got != tt.want {
-				t.Errorf("String() = %v, want %v", got, tt.want)
+			if got := s.Name(); got != tt.want {
+				t.Errorf("Name() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -228,7 +228,74 @@ func Test_newCharacters(t *testing.T) {
 		want    ICharacters
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "一萬(0)赤あり",
+			args: args{
+				id:    0,
+				isRed: true,
+			},
+			want: Characters{
+				Suits: Suits{
+					Hai: Hai{
+						ID:   0,
+						Num:  1,
+						Type: CharactersType,
+					},
+					IsRed: true,
+				},
+			},
+		},
+		{
+			name: "一萬(3)赤なし",
+			args: args{
+				id:    3,
+				isRed: false,
+			},
+			want: Characters{
+				Suits: Suits{
+					Hai: Hai{
+						ID:   3,
+						Num:  1,
+						Type: CharactersType,
+					},
+					IsRed: false,
+				},
+			},
+		},
+		{
+			name: "九萬(32)赤あり",
+			args: args{
+				id:    32,
+				isRed: true,
+			},
+			want: Characters{
+				Suits: Suits{
+					Hai: Hai{
+						ID:   32,
+						Num:  9,
+						Type: CharactersType,
+					},
+					IsRed: true,
+				},
+			},
+		},
+		{
+			name: "九萬(35)赤なし",
+			args: args{
+				id:    35,
+				isRed: false,
+			},
+			want: Characters{
+				Suits: Suits{
+					Hai: Hai{
+						ID:   35,
+						Num:  9,
+						Type: CharactersType,
+					},
+					IsRed: false,
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

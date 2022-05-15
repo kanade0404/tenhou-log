@@ -6,6 +6,6 @@ func ConvertToCjkNum(num uint) string {
 	if num < 1 || num > 9 {
 		return ""
 	} else {
-		return cjkNum[num]
+		return cjkNum[num-1]
 	}
 }

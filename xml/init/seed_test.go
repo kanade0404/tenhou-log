@@ -154,7 +154,7 @@ func TestSeed_Marshal(t *testing.T) {
 				DiceValue1:  1,
 				DiceValue2:  3,
 			},
-			wantSeed: "0,0,0,1,3,",
+			wantSeed: "0,0,0,0,0,2",
 		},
 	}
 	for _, tt := range tests {

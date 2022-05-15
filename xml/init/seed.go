@@ -2,7 +2,6 @@ package init
 
 import (
 	"fmt"
-	"github.com/kanade0404/tenhou-log/xml/hai"
 	"strconv"
 	"strings"
 )
@@ -50,10 +49,10 @@ func UnmarshalRound(round Round) (string, error) {
 type Hand uint
 
 const (
-	First  Hand = 1
-	Second Hand = 2
-	Third  Hand = 3
-	Fourth Hand = 4
+	First Hand = iota
+	Second
+	Third
+	Fourth
 )
 
 type Honba uint
@@ -89,9 +88,9 @@ func NewDiceValue(diceValue uint) (DiceValue, error) {
 		}
 	}
 	if isDiceValue {
-		return 0, fmt.Errorf("unexpected value %d", diceValue)
-	} else {
 		return DiceValue(diceValue + 1), nil
+	} else {
+		return 0, fmt.Errorf("unexpected value %d", diceValue)
 	}
 }
 
