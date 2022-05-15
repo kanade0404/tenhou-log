@@ -132,13 +132,21 @@ func (c Circles) Name() string {
 }
 
 func newCircles(id uint, isRed bool) (ICircles, error) {
-	if id < 37 || id > 72 {
+	if id < 36 || id > 71 {
 		return nil, fmt.Errorf("unexpected argument id: %d, isRed: %t", id, isRed)
 	} else {
+		rs := (id - 36 + 1) / 4
+		mod := (id - 36 + 1) % 4
+		var num uint
+		if mod == 0 {
+			num = rs
+		} else {
+			num = rs + 1
+		}
 		return Circles{
 			Suits: Suits{
 				Hai: Hai{
-					Num:  id / 4,
+					Num:  num,
 					ID:   id,
 					Type: CirclesType,
 				},

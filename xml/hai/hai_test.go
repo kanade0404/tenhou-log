@@ -2,6 +2,7 @@ package hai
 
 import (
 	"fmt"
+	"github.com/google/go-cmp/cmp"
 	"reflect"
 	"testing"
 )
@@ -322,7 +323,74 @@ func Test_newCircles(t *testing.T) {
 		want    ICircles
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "一筒(36)赤あり",
+			args: args{
+				id:    36,
+				isRed: true,
+			},
+			want: Circles{
+				Suits: Suits{
+					Hai: Hai{
+						ID:   36,
+						Num:  1,
+						Type: CirclesType,
+					},
+					IsRed: true,
+				},
+			},
+		},
+		{
+			name: "一萬(37)赤なし",
+			args: args{
+				id:    37,
+				isRed: false,
+			},
+			want: Circles{
+				Suits: Suits{
+					Hai: Hai{
+						ID:   37,
+						Num:  1,
+						Type: CirclesType,
+					},
+					IsRed: false,
+				},
+			},
+		},
+		{
+			name: "九萬(70)赤あり",
+			args: args{
+				id:    70,
+				isRed: true,
+			},
+			want: Circles{
+				Suits: Suits{
+					Hai: Hai{
+						ID:   70,
+						Num:  9,
+						Type: CirclesType,
+					},
+					IsRed: true,
+				},
+			},
+		},
+		{
+			name: "九萬(71)赤なし",
+			args: args{
+				id:    71,
+				isRed: false,
+			},
+			want: Circles{
+				Suits: Suits{
+					Hai: Hai{
+						ID:   71,
+						Num:  9,
+						Type: CirclesType,
+					},
+					IsRed: false,
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -331,8 +399,8 @@ func Test_newCircles(t *testing.T) {
 				t.Errorf("newCircles() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("newCircles() got = %v, want %v", got, tt.want)
+			if diff := cmp.Diff(got, tt.want); diff != "" {
+				t.Errorf("newCircles() got = %v, want %v, diff: %s", got, tt.want, diff)
 			}
 		})
 	}
