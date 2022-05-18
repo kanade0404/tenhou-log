@@ -483,7 +483,135 @@ func Test_newHonours(t *testing.T) {
 		want    IHonours
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "東(108)",
+			args: args{
+				id: 108,
+			},
+			want: Honours{
+				Hai: Hai{
+					ID:   108,
+					Num:  1,
+					Type: HonorsType,
+				},
+			},
+		},
+		{
+			name: "東(111)",
+			args: args{
+				id: 111,
+			},
+			want: Honours{
+				Hai: Hai{
+					ID:   111,
+					Num:  1,
+					Type: HonorsType,
+				},
+			},
+		}, {
+			name: "南(112)",
+			args: args{
+				id: 112,
+			},
+			want: Honours{
+				Hai: Hai{
+					ID:   112,
+					Num:  2,
+					Type: HonorsType,
+				},
+			},
+		},
+		{
+			name: "南(115)",
+			args: args{
+				id: 115,
+			},
+			want: Honours{
+				Hai: Hai{
+					ID:   115,
+					Num:  2,
+					Type: HonorsType,
+				},
+			},
+		},
+		{
+			name: "西(116)",
+			args: args{
+				id: 116,
+			},
+			want: Honours{
+				Hai: Hai{
+					ID:   116,
+					Num:  3,
+					Type: HonorsType,
+				},
+			},
+		},
+		{
+			name: "西(119)",
+			args: args{
+				id: 119,
+			},
+			want: Honours{
+				Hai: Hai{
+					ID:   119,
+					Num:  3,
+					Type: HonorsType,
+				},
+			},
+		},
+		{
+			name: "北(120)",
+			args: args{
+				id: 120,
+			},
+			want: Honours{
+				Hai: Hai{
+					ID:   120,
+					Num:  4,
+					Type: HonorsType,
+				},
+			},
+		},
+		{
+			name: "北(123)",
+			args: args{
+				id: 123,
+			},
+			want: Honours{
+				Hai: Hai{
+					ID:   123,
+					Num:  4,
+					Type: HonorsType,
+				},
+			},
+		},
+		{
+			name: "白(124)",
+			args: args{
+				id: 124,
+			},
+			want: Honours{
+				Hai: Hai{
+					ID:   124,
+					Num:  5,
+					Type: HonorsType,
+				},
+			},
+		},
+		{
+			name: "白(127)",
+			args: args{
+				id: 127,
+			},
+			want: Honours{
+				Hai: Hai{
+					ID:   124,
+					Num:  5,
+					Type: HonorsType,
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

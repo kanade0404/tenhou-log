@@ -232,13 +232,19 @@ func (h Honours) Name() string {
 }
 
 func newHonours(id uint) (IHonours, error) {
-	if id < 109 || id > 136 {
+	if id < 108 || id > 136 {
 		return nil, fmt.Errorf("unexpected argument id: %d", id)
 	} else {
-		result := (id - 109) / 4
-		num := id / 4
-		switch result {
-		case 0:
+		rs := (id - 108 + 1) / 4
+		mod := (id - 108 + 1) % 4
+		var num uint
+		if mod == 0 {
+			num = rs
+		} else {
+			num = rs + 1
+		}
+		switch num {
+		case 1:
 			//東
 			return Honours{
 				Hai: Hai{
@@ -247,19 +253,21 @@ func newHonours(id uint) (IHonours, error) {
 					Type: HonorsType,
 				},
 			}, nil
-		case 1:
+		case 2:
 			// 南
 			return Honours{
 				Hai: Hai{Num: num, ID: id, Type: HonorsType},
 			}, nil
-		case 2:
+		case 3:
 			// 西
 			return Honours{
 				Hai: Hai{
-					Num: num, ID: id, Type: HonorsType,
+					Num:  num,
+					ID:   id,
+					Type: HonorsType,
 				},
 			}, nil
-		case 3:
+		case 4:
 			// 北
 			return Honours{
 				Hai: Hai{
@@ -269,15 +277,6 @@ func newHonours(id uint) (IHonours, error) {
 				},
 			}, nil
 			// 白
-		case 4:
-			return Honours{
-				Hai: Hai{
-					Num:  num,
-					ID:   id,
-					Type: HonorsType,
-				},
-			}, nil
-			// 發
 		case 5:
 			return Honours{
 				Hai: Hai{
@@ -286,7 +285,16 @@ func newHonours(id uint) (IHonours, error) {
 					Type: HonorsType,
 				},
 			}, nil
+			// 發
 		case 6:
+			return Honours{
+				Hai: Hai{
+					Num:  num,
+					ID:   id,
+					Type: HonorsType,
+				},
+			}, nil
+		case 7:
 			// 中
 			return Honours{
 				Hai: Hai{
@@ -296,7 +304,7 @@ func newHonours(id uint) (IHonours, error) {
 				},
 			}, nil
 		default:
-			return nil, fmt.Errorf("unexpected value result: %d, id: %d", result, id)
+			return nil, fmt.Errorf("unexpected value num: %d, id: %d", num, id)
 		}
 	}
 }
