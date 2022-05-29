@@ -9,8 +9,6 @@ type IHai interface {
 	Name() string
 }
 
-//var _ IHai = Hai{}
-
 type HaiType string
 
 const (
@@ -24,6 +22,7 @@ type Hai struct {
 	ID   uint
 	Num  uint
 	Type HaiType
+	_    struct{}
 }
 
 func NewHai(id uint, isRed bool) (IHai, error) {
@@ -44,6 +43,7 @@ type ISuits interface {
 type Suits struct {
 	Hai
 	IsRed bool
+	_     struct{}
 }
 
 func newSuits(id uint, isRed bool) (ISuits, error) {
@@ -67,6 +67,7 @@ var _ ICharacters = Characters{}
 // Characters 萬子
 type Characters struct {
 	Suits
+	_ struct{}
 }
 
 func (c Characters) redFiveID() uint {
@@ -96,7 +97,7 @@ func newCharacters(id uint, isRed bool) (ICharacters, error) {
 			num = rs + 1
 		}
 		return Characters{
-			Suits{
+			Suits: Suits{
 				Hai: Hai{
 					Num:  num,
 					ID:   id,
@@ -117,6 +118,7 @@ var _ ICircles = Circles{}
 // Circles 筒子
 type Circles struct {
 	Suits
+	_ struct{}
 }
 
 func (c Circles) redFiveID() uint {
@@ -166,6 +168,7 @@ var _ IBamboos = Bamboos{}
 // Bamboos 索子
 type Bamboos struct {
 	Suits
+	_ struct{}
 }
 
 func (b Bamboos) redFiveID() uint {
@@ -214,6 +217,7 @@ var _ IHonours = Honours{}
 
 type Honours struct {
 	Hai
+	_ struct{}
 }
 
 func (h Honours) Name() string {
