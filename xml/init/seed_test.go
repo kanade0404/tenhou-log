@@ -1,6 +1,9 @@
 package init
 
-import "testing"
+import (
+	"github.com/google/go-cmp/cmp"
+	"testing"
+)
 
 func TestHonba_String(t *testing.T) {
 	tests := []struct {
@@ -180,37 +183,52 @@ func TestSeed_Marshal(t *testing.T) {
 }
 
 func TestSeed_Unmarshal(t *testing.T) {
-	type fields struct {
-		Round       Round
-		Hand        Hand
-		Honba       Honba
-		RiichPoints RiichPoints
-		DiceValue1  DiceValue
-		DiceValue2  DiceValue
-	}
 	type args struct {
 		seed string
 	}
 	tests := []struct {
 		name    string
-		fields  fields
 		args    args
+		want    *Seed
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "東1局0本場ダイスは1と3",
+			args: args{
+				seed: "0,0,0,0,0,2",
+			},
+			want: &Seed{
+				Round:       East,
+				Hand:        First,
+				Honba:       0,
+				RiichPoints: 0,
+				DiceValue1:  1,
+				DiceValue2:  3,
+			},
+		},
+		{
+			name: "南4局3本場供託1600点ダイスは2と1",
+			args: args{
+				seed: "1,3,3,1600,1,0",
+			},
+			want: &Seed{
+				Round:       South,
+				Hand:        Fourth,
+				Honba:       3,
+				RiichPoints: 1600,
+				DiceValue1:  2,
+				DiceValue2:  1,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Seed{
-				Round:       tt.fields.Round,
-				Hand:        tt.fields.Hand,
-				Honba:       tt.fields.Honba,
-				RiichPoints: tt.fields.RiichPoints,
-				DiceValue1:  tt.fields.DiceValue1,
-				DiceValue2:  tt.fields.DiceValue2,
-			}
+			s := &Seed{}
 			if err := s.Unmarshal(tt.args.seed); (err != nil) != tt.wantErr {
 				t.Errorf("Unmarshal() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if diff := cmp.Diff(tt.want, s); diff != "" {
+				t.Errorf("(-want +got)\n%v", diff)
 			}
 		})
 	}
@@ -226,17 +244,51 @@ func TestUnmarshalRound(t *testing.T) {
 		want    string
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "東場",
+			args: args{
+				round: East,
+			},
+			want: "0",
+		},
+		{
+			name: "南場",
+			args: args{
+				round: South,
+			},
+			want: "1",
+		},
+		{
+			name: "西場",
+			args: args{
+				round: West,
+			},
+			want: "2",
+		},
+		{
+			name: "北場",
+			args: args{
+				round: North,
+			},
+			want: "3",
+		},
+		{
+			name: "UNKNOWN",
+			args: args{
+				round: UNKNOWN,
+			},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := UnmarshalRound(tt.args.round)
+			got, err := Unmarshal(tt.args.round)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("UnmarshalRound() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Unmarshal() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got != tt.want {
-				t.Errorf("UnmarshalRound() got = %v, want %v", got, tt.want)
+				t.Errorf("Unmarshal() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
