@@ -55,6 +55,21 @@ const (
 	Fourth
 )
 
+func (h Hand) String() string {
+	switch h {
+	case First:
+		return "1局"
+	case Second:
+		return "2局"
+	case Third:
+		return "3局"
+	case Fourth:
+		return "4局"
+	default:
+		return ""
+	}
+}
+
 type Honba uint
 
 func (h Honba) String() string {
