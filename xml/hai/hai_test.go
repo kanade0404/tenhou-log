@@ -606,7 +606,7 @@ func Test_newHonours(t *testing.T) {
 			},
 			want: Honours{
 				Hai: Hai{
-					ID:   124,
+					ID:   127,
 					Num:  5,
 					Type: HonorsType,
 				},
