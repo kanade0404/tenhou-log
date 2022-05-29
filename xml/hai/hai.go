@@ -9,7 +9,7 @@ type IHai interface {
 	Name() string
 }
 
-var _ IHai = Hai{}
+//var _ IHai = Hai{}
 
 type HaiType string
 
@@ -26,13 +26,9 @@ type Hai struct {
 	Type HaiType
 }
 
-func (h Hai) Name() string {
-	return h.Name()
-}
-
 func NewHai(id uint, isRed bool) (IHai, error) {
 	if id < 0 || id > 135 {
-		return Hai{}, fmt.Errorf("unexpected argument id: %d, isRed: %t", id, isRed)
+		return nil, fmt.Errorf("unexpected argument id: %d, isRed: %t", id, isRed)
 	} else if id >= 0 && id <= 107 {
 		return newSuits(id, isRed)
 	} else {
@@ -42,17 +38,12 @@ func NewHai(id uint, isRed bool) (IHai, error) {
 
 type ISuits interface {
 	IHai
+	redFiveID() uint
 }
-
-var _ ISuits = Suits{}
 
 type Suits struct {
 	Hai
 	IsRed bool
-}
-
-func (s Suits) Name() string {
-	return s.Name()
 }
 
 func newSuits(id uint, isRed bool) (ISuits, error) {
@@ -78,11 +69,16 @@ type Characters struct {
 	Suits
 }
 
+func (c Characters) redFiveID() uint {
+	return 16
+}
+
 func (c Characters) Name() string {
-	if c.IsRed {
-		return fmt.Sprintf("赤%s萬", str.ConvertToCjkNum(c.Num))
+	cjkNum := str.ConvertToCjkNum(c.Num)
+	if c.IsRed && c.ID == c.redFiveID() {
+		return fmt.Sprintf("赤%s萬", cjkNum)
 	} else {
-		return fmt.Sprintf("%s萬", str.ConvertToCjkNum(c.Num))
+		return fmt.Sprintf("%s萬", cjkNum)
 	}
 }
 
@@ -123,9 +119,14 @@ type Circles struct {
 	Suits
 }
 
+func (c Circles) redFiveID() uint {
+	return 52
+}
+
 func (c Circles) Name() string {
-	if c.IsRed {
-		return fmt.Sprintf("赤%s筒", str.ConvertToCjkNum(c.Num))
+	cjkNum := str.ConvertToCjkNum(c.Num)
+	if c.IsRed && c.ID == c.redFiveID() {
+		return fmt.Sprintf("赤%s筒", cjkNum)
 	} else {
 		return fmt.Sprintf("%s筒", str.ConvertToCjkNum(c.Num))
 	}
@@ -167,11 +168,16 @@ type Bamboos struct {
 	Suits
 }
 
+func (b Bamboos) redFiveID() uint {
+	return 88
+}
+
 func (b Bamboos) Name() string {
-	if b.IsRed {
-		return fmt.Sprintf("赤%s索", str.ConvertToCjkNum(b.Num))
+	cjkNum := str.ConvertToCjkNum(b.Num)
+	if b.IsRed && b.ID == b.redFiveID() {
+		return fmt.Sprintf("赤%s索", cjkNum)
 	} else {
-		return fmt.Sprintf("%s索", str.ConvertToCjkNum(b.Num))
+		return fmt.Sprintf("%s索", cjkNum)
 	}
 }
 

@@ -1,93 +1,9 @@
 package hai
 
 import (
-	"fmt"
-	"github.com/google/go-cmp/cmp"
 	"reflect"
 	"testing"
 )
-
-func TestBamboos_Name(t *testing.T) {
-	type fields struct {
-		Suits Suits
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   string
-	}{
-		{
-			name: "1索赤なし",
-			fields: fields{
-				Suits{
-					Hai{
-						ID:   73,
-						Num:  1,
-						Type: BamboosType,
-					},
-					false,
-				},
-			},
-			want: "一索",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(fmt.Sprintf("%s ID:%d Num:%d Type:%s", tt.name, tt.fields.Suits.ID, tt.fields.Suits.Num, tt.fields.Suits.Type), func(t *testing.T) {
-			b := Bamboos{
-				Suits: tt.fields.Suits,
-			}
-			if got := b.Name(); got != tt.want {
-				t.Errorf("Name() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestCharacters_Name(t *testing.T) {
-	type fields struct {
-		Suits Suits
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   string
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := Characters{
-				Suits: tt.fields.Suits,
-			}
-			if got := c.Name(); got != tt.want {
-				t.Errorf("Name() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestCircles_Name(t *testing.T) {
-	type fields struct {
-		Suits Suits
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   string
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := Circles{
-				Suits: tt.fields.Suits,
-			}
-			if got := c.Name(); got != tt.want {
-				t.Errorf("Name() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
 
 func TestHai_Name(t *testing.T) {
 	type fields struct {
@@ -98,40 +14,164 @@ func TestHai_Name(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields fields
+		isRed  bool
 		want   string
 	}{
-		// TODO: Add test cases.
+		{
+			name: "一萬赤なし",
+			fields: fields{
+				ID:   0,
+				Num:  1,
+				Type: CharactersType,
+			},
+			want: "一萬",
+		},
+		{
+			name: "一萬赤なし",
+			fields: fields{
+				ID:   3,
+				Num:  1,
+				Type: CharactersType,
+			},
+			want: "一萬",
+		},
+		{
+			name: "五萬赤なし",
+			fields: fields{
+				ID:   16,
+				Num:  5,
+				Type: CharactersType,
+			},
+			want: "五萬",
+		},
+		{
+			name: "五萬赤あり（赤五萬）",
+			fields: fields{
+				ID:   16,
+				Num:  5,
+				Type: CharactersType,
+			},
+			isRed: true,
+			want:  "赤五萬",
+		},
+		{
+			name: "五萬赤あり（黒五萬）",
+			fields: fields{
+				ID:   17,
+				Num:  5,
+				Type: CharactersType,
+			},
+			isRed: true,
+			want:  "五萬",
+		},
+		{
+			name: "九萬赤なし",
+			fields: fields{
+				ID:   35,
+				Num:  9,
+				Type: CharactersType,
+			},
+			want: "九萬",
+		},
+		{
+			name: "一筒赤なし",
+			fields: fields{
+				ID:   36,
+				Num:  1,
+				Type: CirclesType,
+			},
+			want: "一筒",
+		},
+		{
+			name: "五筒赤なし",
+			fields: fields{
+				ID:   52,
+				Num:  5,
+				Type: CirclesType,
+			},
+			want: "五筒",
+		},
+		{
+			name: "五筒赤あり（赤五筒）",
+			fields: fields{
+				ID:   52,
+				Num:  5,
+				Type: CirclesType,
+			},
+			isRed: true,
+			want:  "赤五筒",
+		},
+		{
+			name: "五筒赤あり（黒五筒）",
+			fields: fields{
+				ID:   53,
+				Num:  5,
+				Type: CirclesType,
+			},
+			isRed: true,
+			want:  "五筒",
+		},
+		{
+			name: "九筒赤なし",
+			fields: fields{
+				ID:   71,
+				Num:  9,
+				Type: CirclesType,
+			},
+			want: "九筒",
+		},
+		{
+			name: "一索赤なし",
+			fields: fields{
+				ID:   73,
+				Num:  1,
+				Type: BamboosType,
+			},
+			want: "一索",
+		},
+		{
+			name: "五索赤なし",
+			fields: fields{
+				ID:   88,
+				Num:  5,
+				Type: BamboosType,
+			},
+			want: "五索",
+		},
+		{
+			name: "五索赤あり（赤五索）",
+			fields: fields{
+				ID:   88,
+				Num:  5,
+				Type: BamboosType,
+			},
+			isRed: true,
+			want:  "赤五索",
+		},
+		{
+			name: "五索赤あり（黒五索）",
+			fields: fields{
+				ID:   89,
+				Num:  5,
+				Type: BamboosType,
+			},
+			isRed: true,
+			want:  "五索",
+		},
+		{
+			name: "九索赤なし",
+			fields: fields{
+				ID:   107,
+				Num:  9,
+				Type: BamboosType,
+			},
+			isRed: true,
+			want:  "九索",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			h := Hai{
-				ID:   tt.fields.ID,
-				Num:  tt.fields.Num,
-				Type: tt.fields.Type,
-			}
-			if got := h.Name(); got != tt.want {
-				t.Errorf("Name() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestHonours_Name(t *testing.T) {
-	type fields struct {
-		Hai Hai
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   string
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			h := Honours{
-				Hai: tt.fields.Hai,
-			}
+			h, _ := NewHai(tt.fields.ID, tt.isRed)
 			if got := h.Name(); got != tt.want {
 				t.Errorf("Name() = %v, want %v", got, tt.want)
 			}
@@ -141,159 +181,13 @@ func TestHonours_Name(t *testing.T) {
 
 func TestNewHai(t *testing.T) {
 	type args struct {
-		num   uint
+		id    uint
 		isRed bool
 	}
 	tests := []struct {
 		name    string
 		args    args
 		want    IHai
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewHai(tt.args.num, tt.args.isRed)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("NewHai() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewHai() got = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestSuits_Name(t *testing.T) {
-	type fields struct {
-		Hai   Hai
-		IsRed bool
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   string
-	}{
-		//
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := Suits{
-				Hai:   tt.fields.Hai,
-				IsRed: tt.fields.IsRed,
-			}
-			if got := s.Name(); got != tt.want {
-				t.Errorf("Name() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_newBamboos(t *testing.T) {
-	type args struct {
-		id    uint
-		isRed bool
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    IBamboos
-		wantErr bool
-	}{
-		{
-			name: "一索(72)赤あり",
-			args: args{
-				id:    72,
-				isRed: true,
-			},
-			want: Bamboos{
-				Suits: Suits{
-					Hai: Hai{
-						ID:   72,
-						Num:  1,
-						Type: BamboosType,
-					},
-					IsRed: true,
-				},
-			},
-		},
-		{
-			name: "一索(73)赤なし",
-			args: args{
-				id:    73,
-				isRed: false,
-			},
-			want: Bamboos{
-				Suits: Suits{
-					Hai: Hai{
-						ID:   73,
-						Num:  1,
-						Type: BamboosType,
-					},
-					IsRed: false,
-				},
-			},
-		},
-		{
-			name: "九索(106)赤あり",
-			args: args{
-				id:    106,
-				isRed: true,
-			},
-			want: Bamboos{
-				Suits: Suits{
-					Hai: Hai{
-						ID:   106,
-						Num:  9,
-						Type: BamboosType,
-					},
-					IsRed: true,
-				},
-			},
-		},
-		{
-			name: "九索(107)赤なし",
-			args: args{
-				id:    107,
-				isRed: false,
-			},
-			want: Bamboos{
-				Suits: Suits{
-					Hai: Hai{
-						ID:   107,
-						Num:  9,
-						Type: BamboosType,
-					},
-					IsRed: false,
-				},
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := newBamboos(tt.args.id, tt.args.isRed)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("newBamboos() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("newBamboos() got = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_newCharacters(t *testing.T) {
-	type args struct {
-		id    uint
-		isRed bool
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    ICharacters
 		wantErr bool
 	}{
 		{
@@ -364,32 +258,6 @@ func Test_newCharacters(t *testing.T) {
 				},
 			},
 		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := newCharacters(tt.args.id, tt.args.isRed)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("newCharacters() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("newCharacters() got = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_newCircles(t *testing.T) {
-	type args struct {
-		id    uint
-		isRed bool
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    ICircles
-		wantErr bool
-	}{
 		{
 			name: "一筒(36)赤あり",
 			args: args{
@@ -458,31 +326,74 @@ func Test_newCircles(t *testing.T) {
 				},
 			},
 		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := newCircles(tt.args.id, tt.args.isRed)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("newCircles() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if diff := cmp.Diff(got, tt.want); diff != "" {
-				t.Errorf("newCircles() got = %v, want %v, diff: %s", got, tt.want, diff)
-			}
-		})
-	}
-}
-
-func Test_newHonours(t *testing.T) {
-	type args struct {
-		id uint
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    IHonours
-		wantErr bool
-	}{
+		{
+			name: "一索(72)赤あり",
+			args: args{
+				id:    72,
+				isRed: true,
+			},
+			want: Bamboos{
+				Suits: Suits{
+					Hai: Hai{
+						ID:   72,
+						Num:  1,
+						Type: BamboosType,
+					},
+					IsRed: true,
+				},
+			},
+		},
+		{
+			name: "一索(73)赤なし",
+			args: args{
+				id:    73,
+				isRed: false,
+			},
+			want: Bamboos{
+				Suits: Suits{
+					Hai: Hai{
+						ID:   73,
+						Num:  1,
+						Type: BamboosType,
+					},
+					IsRed: false,
+				},
+			},
+		},
+		{
+			name: "九索(106)赤あり",
+			args: args{
+				id:    106,
+				isRed: true,
+			},
+			want: Bamboos{
+				Suits: Suits{
+					Hai: Hai{
+						ID:   106,
+						Num:  9,
+						Type: BamboosType,
+					},
+					IsRed: true,
+				},
+			},
+		},
+		{
+			name: "九索(107)赤なし",
+			args: args{
+				id:    107,
+				isRed: false,
+			},
+			want: Bamboos{
+				Suits: Suits{
+					Hai: Hai{
+						ID:   107,
+						Num:  9,
+						Type: BamboosType,
+					},
+					IsRed: false,
+				},
+			},
+		},
 		{
 			name: "東(108)",
 			args: args{
@@ -612,43 +523,76 @@ func Test_newHonours(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "發(128)",
+			args: args{
+				id: 128,
+			},
+			want: Honours{
+				Hai: Hai{
+					ID:   128,
+					Num:  6,
+					Type: HonorsType,
+				},
+			},
+		},
+		{
+			name: "發(131)",
+			args: args{
+				id: 131,
+			},
+			want: Honours{
+				Hai: Hai{
+					ID:   131,
+					Num:  6,
+					Type: HonorsType,
+				},
+			},
+		},
+		{
+			name: "中(132)",
+			args: args{
+				id: 132,
+			},
+			want: Honours{
+				Hai: Hai{
+					ID:   132,
+					Num:  7,
+					Type: HonorsType,
+				},
+			},
+		},
+		{
+			name: "中(135)",
+			args: args{
+				id: 135,
+			},
+			want: Honours{
+				Hai: Hai{
+					ID:   135,
+					Num:  7,
+					Type: HonorsType,
+				},
+			},
+		},
+		{
+			name: "字牌の上限135を上回るのでエラー",
+			args: args{
+				id: 136,
+			},
+			want:    nil,
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := newHonours(tt.args.id)
+			got, err := NewHai(tt.args.id, tt.args.isRed)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("newHonours() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("NewHai() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("newHonours() got = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_newSuits(t *testing.T) {
-	type args struct {
-		id    uint
-		isRed bool
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    ISuits
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := newSuits(tt.args.id, tt.args.isRed)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("newSuits() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("newSuits() got = %v, want %v", got, tt.want)
+				t.Errorf("NewHai() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
