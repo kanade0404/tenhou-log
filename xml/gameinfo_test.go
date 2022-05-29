@@ -1,7 +1,7 @@
 package xml
 
 import (
-	"reflect"
+	"github.com/google/go-cmp/cmp"
 	"sort"
 	"testing"
 )
@@ -125,10 +125,10 @@ func TestGameInfo_Marshal(t *testing.T) {
 				return tt.want.Attr[i].Name > tt.want.Attr[j].Name
 			})
 			sort.Slice(got.Attr, func(i, j int) bool {
-				return got.Attr[i].Name > got.Attr[i].Name
+				return got.Attr[i].Name > got.Attr[j].Name
 			})
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Marshal() got = %v, want %v", got, tt.want)
+			if diff := cmp.Diff(got, tt.want); diff != "" {
+				t.Errorf("Marshal() got = %v, want %v, diff: %s", got, tt.want, diff)
 			}
 		})
 	}
