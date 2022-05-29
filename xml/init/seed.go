@@ -30,7 +30,7 @@ func NewRound(round uint) Round {
 		return UNKNOWN
 	}
 }
-func UnmarshalRound(round Round) (string, error) {
+func Unmarshal(round Round) (string, error) {
 	switch round {
 	case East:
 		return "0", nil
@@ -54,6 +54,21 @@ const (
 	Third
 	Fourth
 )
+
+func (h Hand) String() string {
+	switch h {
+	case First:
+		return "1局"
+	case Second:
+		return "2局"
+	case Third:
+		return "3局"
+	case Fourth:
+		return "4局"
+	default:
+		return ""
+	}
+}
 
 type Honba uint
 
@@ -101,9 +116,7 @@ type Seed struct {
 	RiichPoints
 	DiceValue1 DiceValue
 	DiceValue2 DiceValue
-}
-type Init struct {
-	Seed []uint
+	_          struct{}
 }
 
 func (s *Seed) Unmarshal(seed string) error {
@@ -133,7 +146,7 @@ func (s *Seed) Unmarshal(seed string) error {
 	return nil
 }
 func (s Seed) Marshal() (seed string, err error) {
-	round, err := UnmarshalRound(s.Round)
+	round, err := Unmarshal(s.Round)
 	if err != nil {
 		return "", err
 	}
