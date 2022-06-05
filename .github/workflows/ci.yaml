@@ -20,7 +20,7 @@ jobs:
       - name: Install Task
         uses: arduino/setup-task@v1
       - name: Install packages
-        run: go mod tidy
+        run: task mod
       - name: Build
         run: go build .
       - name: Test
