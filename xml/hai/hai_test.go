@@ -1,7 +1,8 @@
 package hai
 
 import (
-	"reflect"
+	"fmt"
+	"github.com/google/go-cmp/cmp"
 	"testing"
 )
 
@@ -196,8 +197,8 @@ func TestNewHai(t *testing.T) {
 				id:    0,
 				isRed: true,
 			},
-			want: Characters{
-				Suits: Suits{
+			want: &Characters{
+				Suits: &Suits{
 					Hai: Hai{
 						id:      0,
 						num:     1,
@@ -213,8 +214,8 @@ func TestNewHai(t *testing.T) {
 				id:    3,
 				isRed: false,
 			},
-			want: Characters{
-				Suits: Suits{
+			want: &Characters{
+				Suits: &Suits{
 					Hai: Hai{
 						id:      3,
 						num:     1,
@@ -230,8 +231,8 @@ func TestNewHai(t *testing.T) {
 				id:    32,
 				isRed: true,
 			},
-			want: Characters{
-				Suits: Suits{
+			want: &Characters{
+				Suits: &Suits{
 					Hai: Hai{
 						id:      32,
 						num:     9,
@@ -247,8 +248,8 @@ func TestNewHai(t *testing.T) {
 				id:    35,
 				isRed: false,
 			},
-			want: Characters{
-				Suits: Suits{
+			want: &Characters{
+				Suits: &Suits{
 					Hai: Hai{
 						id:      35,
 						num:     9,
@@ -264,8 +265,8 @@ func TestNewHai(t *testing.T) {
 				id:    36,
 				isRed: true,
 			},
-			want: Circles{
-				Suits: Suits{
+			want: &Circles{
+				Suits: &Suits{
 					Hai: Hai{
 						id:      36,
 						num:     1,
@@ -281,8 +282,8 @@ func TestNewHai(t *testing.T) {
 				id:    37,
 				isRed: false,
 			},
-			want: Circles{
-				Suits: Suits{
+			want: &Circles{
+				Suits: &Suits{
 					Hai: Hai{
 						id:      37,
 						num:     1,
@@ -298,8 +299,8 @@ func TestNewHai(t *testing.T) {
 				id:    70,
 				isRed: true,
 			},
-			want: Circles{
-				Suits: Suits{
+			want: &Circles{
+				Suits: &Suits{
 					Hai: Hai{
 						id:      70,
 						num:     9,
@@ -315,8 +316,8 @@ func TestNewHai(t *testing.T) {
 				id:    71,
 				isRed: false,
 			},
-			want: Circles{
-				Suits: Suits{
+			want: &Circles{
+				Suits: &Suits{
 					Hai: Hai{
 						id:      71,
 						num:     9,
@@ -332,8 +333,8 @@ func TestNewHai(t *testing.T) {
 				id:    72,
 				isRed: true,
 			},
-			want: Bamboos{
-				Suits: Suits{
+			want: &Bamboos{
+				Suits: &Suits{
 					Hai: Hai{
 						id:      72,
 						num:     1,
@@ -349,8 +350,8 @@ func TestNewHai(t *testing.T) {
 				id:    73,
 				isRed: false,
 			},
-			want: Bamboos{
-				Suits: Suits{
+			want: &Bamboos{
+				Suits: &Suits{
 					Hai: Hai{
 						id:      73,
 						num:     1,
@@ -366,8 +367,8 @@ func TestNewHai(t *testing.T) {
 				id:    106,
 				isRed: true,
 			},
-			want: Bamboos{
-				Suits: Suits{
+			want: &Bamboos{
+				Suits: &Suits{
 					Hai: Hai{
 						id:      106,
 						num:     9,
@@ -383,8 +384,8 @@ func TestNewHai(t *testing.T) {
 				id:    107,
 				isRed: false,
 			},
-			want: Bamboos{
-				Suits: Suits{
+			want: &Bamboos{
+				Suits: &Suits{
 					Hai: Hai{
 						id:      107,
 						num:     9,
@@ -399,7 +400,7 @@ func TestNewHai(t *testing.T) {
 			args: args{
 				id: 108,
 			},
-			want: Honours{
+			want: &Honours{
 				Hai: Hai{
 					id:      108,
 					num:     1,
@@ -412,7 +413,7 @@ func TestNewHai(t *testing.T) {
 			args: args{
 				id: 111,
 			},
-			want: Honours{
+			want: &Honours{
 				Hai: Hai{
 					id:      111,
 					num:     1,
@@ -424,7 +425,7 @@ func TestNewHai(t *testing.T) {
 			args: args{
 				id: 112,
 			},
-			want: Honours{
+			want: &Honours{
 				Hai: Hai{
 					id:      112,
 					num:     2,
@@ -437,7 +438,7 @@ func TestNewHai(t *testing.T) {
 			args: args{
 				id: 115,
 			},
-			want: Honours{
+			want: &Honours{
 				Hai: Hai{
 					id:      115,
 					num:     2,
@@ -450,7 +451,7 @@ func TestNewHai(t *testing.T) {
 			args: args{
 				id: 116,
 			},
-			want: Honours{
+			want: &Honours{
 				Hai: Hai{
 					id:      116,
 					num:     3,
@@ -463,7 +464,7 @@ func TestNewHai(t *testing.T) {
 			args: args{
 				id: 119,
 			},
-			want: Honours{
+			want: &Honours{
 				Hai: Hai{
 					id:      119,
 					num:     3,
@@ -476,7 +477,7 @@ func TestNewHai(t *testing.T) {
 			args: args{
 				id: 120,
 			},
-			want: Honours{
+			want: &Honours{
 				Hai: Hai{
 					id:      120,
 					num:     4,
@@ -489,7 +490,7 @@ func TestNewHai(t *testing.T) {
 			args: args{
 				id: 123,
 			},
-			want: Honours{
+			want: &Honours{
 				Hai: Hai{
 					id:      123,
 					num:     4,
@@ -502,7 +503,7 @@ func TestNewHai(t *testing.T) {
 			args: args{
 				id: 124,
 			},
-			want: Honours{
+			want: &Honours{
 				Hai: Hai{
 					id:      124,
 					num:     5,
@@ -515,7 +516,7 @@ func TestNewHai(t *testing.T) {
 			args: args{
 				id: 127,
 			},
-			want: Honours{
+			want: &Honours{
 				Hai: Hai{
 					id:      127,
 					num:     5,
@@ -528,7 +529,7 @@ func TestNewHai(t *testing.T) {
 			args: args{
 				id: 128,
 			},
-			want: Honours{
+			want: &Honours{
 				Hai: Hai{
 					id:      128,
 					num:     6,
@@ -541,7 +542,7 @@ func TestNewHai(t *testing.T) {
 			args: args{
 				id: 131,
 			},
-			want: Honours{
+			want: &Honours{
 				Hai: Hai{
 					id:      131,
 					num:     6,
@@ -554,7 +555,7 @@ func TestNewHai(t *testing.T) {
 			args: args{
 				id: 132,
 			},
-			want: Honours{
+			want: &Honours{
 				Hai: Hai{
 					id:      132,
 					num:     7,
@@ -567,7 +568,7 @@ func TestNewHai(t *testing.T) {
 			args: args{
 				id: 135,
 			},
-			want: Honours{
+			want: &Honours{
 				Hai: Hai{
 					id:      135,
 					num:     7,
@@ -591,8 +592,8 @@ func TestNewHai(t *testing.T) {
 				t.Errorf("NewHai() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewHai() got = %v, want %v", got, tt.want)
+			if diff := cmp.Diff(fmt.Sprintf("%v", got), fmt.Sprintf("%v", tt.want)); diff != "" {
+				t.Errorf("(-got+want)\n%v", diff)
 			}
 		})
 	}
