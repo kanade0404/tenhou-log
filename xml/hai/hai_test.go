@@ -199,9 +199,9 @@ func TestNewHai(t *testing.T) {
 			want: Characters{
 				Suits: Suits{
 					Hai: Hai{
-						ID:   0,
-						Num:  1,
-						Type: CharactersType,
+						id:      0,
+						num:     1,
+						haiType: CharactersType,
 					},
 					IsRed: true,
 				},
@@ -216,9 +216,9 @@ func TestNewHai(t *testing.T) {
 			want: Characters{
 				Suits: Suits{
 					Hai: Hai{
-						ID:   3,
-						Num:  1,
-						Type: CharactersType,
+						id:      3,
+						num:     1,
+						haiType: CharactersType,
 					},
 					IsRed: false,
 				},
@@ -233,9 +233,9 @@ func TestNewHai(t *testing.T) {
 			want: Characters{
 				Suits: Suits{
 					Hai: Hai{
-						ID:   32,
-						Num:  9,
-						Type: CharactersType,
+						id:      32,
+						num:     9,
+						haiType: CharactersType,
 					},
 					IsRed: true,
 				},
@@ -250,9 +250,9 @@ func TestNewHai(t *testing.T) {
 			want: Characters{
 				Suits: Suits{
 					Hai: Hai{
-						ID:   35,
-						Num:  9,
-						Type: CharactersType,
+						id:      35,
+						num:     9,
+						haiType: CharactersType,
 					},
 					IsRed: false,
 				},
@@ -267,9 +267,9 @@ func TestNewHai(t *testing.T) {
 			want: Circles{
 				Suits: Suits{
 					Hai: Hai{
-						ID:   36,
-						Num:  1,
-						Type: CirclesType,
+						id:      36,
+						num:     1,
+						haiType: CirclesType,
 					},
 					IsRed: true,
 				},
@@ -284,9 +284,9 @@ func TestNewHai(t *testing.T) {
 			want: Circles{
 				Suits: Suits{
 					Hai: Hai{
-						ID:   37,
-						Num:  1,
-						Type: CirclesType,
+						id:      37,
+						num:     1,
+						haiType: CirclesType,
 					},
 					IsRed: false,
 				},
@@ -301,9 +301,9 @@ func TestNewHai(t *testing.T) {
 			want: Circles{
 				Suits: Suits{
 					Hai: Hai{
-						ID:   70,
-						Num:  9,
-						Type: CirclesType,
+						id:      70,
+						num:     9,
+						haiType: CirclesType,
 					},
 					IsRed: true,
 				},
@@ -318,9 +318,9 @@ func TestNewHai(t *testing.T) {
 			want: Circles{
 				Suits: Suits{
 					Hai: Hai{
-						ID:   71,
-						Num:  9,
-						Type: CirclesType,
+						id:      71,
+						num:     9,
+						haiType: CirclesType,
 					},
 					IsRed: false,
 				},
@@ -335,9 +335,9 @@ func TestNewHai(t *testing.T) {
 			want: Bamboos{
 				Suits: Suits{
 					Hai: Hai{
-						ID:   72,
-						Num:  1,
-						Type: BamboosType,
+						id:      72,
+						num:     1,
+						haiType: BamboosType,
 					},
 					IsRed: true,
 				},
@@ -352,9 +352,9 @@ func TestNewHai(t *testing.T) {
 			want: Bamboos{
 				Suits: Suits{
 					Hai: Hai{
-						ID:   73,
-						Num:  1,
-						Type: BamboosType,
+						id:      73,
+						num:     1,
+						haiType: BamboosType,
 					},
 					IsRed: false,
 				},
@@ -369,9 +369,9 @@ func TestNewHai(t *testing.T) {
 			want: Bamboos{
 				Suits: Suits{
 					Hai: Hai{
-						ID:   106,
-						Num:  9,
-						Type: BamboosType,
+						id:      106,
+						num:     9,
+						haiType: BamboosType,
 					},
 					IsRed: true,
 				},
@@ -386,9 +386,9 @@ func TestNewHai(t *testing.T) {
 			want: Bamboos{
 				Suits: Suits{
 					Hai: Hai{
-						ID:   107,
-						Num:  9,
-						Type: BamboosType,
+						id:      107,
+						num:     9,
+						haiType: BamboosType,
 					},
 					IsRed: false,
 				},
@@ -401,9 +401,9 @@ func TestNewHai(t *testing.T) {
 			},
 			want: Honours{
 				Hai: Hai{
-					ID:   108,
-					Num:  1,
-					Type: HonorsType,
+					id:      108,
+					num:     1,
+					haiType: HonorsType,
 				},
 			},
 		},
@@ -414,9 +414,9 @@ func TestNewHai(t *testing.T) {
 			},
 			want: Honours{
 				Hai: Hai{
-					ID:   111,
-					Num:  1,
-					Type: HonorsType,
+					id:      111,
+					num:     1,
+					haiType: HonorsType,
 				},
 			},
 		}, {
@@ -426,9 +426,9 @@ func TestNewHai(t *testing.T) {
 			},
 			want: Honours{
 				Hai: Hai{
-					ID:   112,
-					Num:  2,
-					Type: HonorsType,
+					id:      112,
+					num:     2,
+					haiType: HonorsType,
 				},
 			},
 		},
@@ -439,9 +439,9 @@ func TestNewHai(t *testing.T) {
 			},
 			want: Honours{
 				Hai: Hai{
-					ID:   115,
-					Num:  2,
-					Type: HonorsType,
+					id:      115,
+					num:     2,
+					haiType: HonorsType,
 				},
 			},
 		},
@@ -452,9 +452,9 @@ func TestNewHai(t *testing.T) {
 			},
 			want: Honours{
 				Hai: Hai{
-					ID:   116,
-					Num:  3,
-					Type: HonorsType,
+					id:      116,
+					num:     3,
+					haiType: HonorsType,
 				},
 			},
 		},
@@ -465,9 +465,9 @@ func TestNewHai(t *testing.T) {
 			},
 			want: Honours{
 				Hai: Hai{
-					ID:   119,
-					Num:  3,
-					Type: HonorsType,
+					id:      119,
+					num:     3,
+					haiType: HonorsType,
 				},
 			},
 		},
@@ -478,9 +478,9 @@ func TestNewHai(t *testing.T) {
 			},
 			want: Honours{
 				Hai: Hai{
-					ID:   120,
-					Num:  4,
-					Type: HonorsType,
+					id:      120,
+					num:     4,
+					haiType: HonorsType,
 				},
 			},
 		},
@@ -491,9 +491,9 @@ func TestNewHai(t *testing.T) {
 			},
 			want: Honours{
 				Hai: Hai{
-					ID:   123,
-					Num:  4,
-					Type: HonorsType,
+					id:      123,
+					num:     4,
+					haiType: HonorsType,
 				},
 			},
 		},
@@ -504,9 +504,9 @@ func TestNewHai(t *testing.T) {
 			},
 			want: Honours{
 				Hai: Hai{
-					ID:   124,
-					Num:  5,
-					Type: HonorsType,
+					id:      124,
+					num:     5,
+					haiType: HonorsType,
 				},
 			},
 		},
@@ -517,9 +517,9 @@ func TestNewHai(t *testing.T) {
 			},
 			want: Honours{
 				Hai: Hai{
-					ID:   127,
-					Num:  5,
-					Type: HonorsType,
+					id:      127,
+					num:     5,
+					haiType: HonorsType,
 				},
 			},
 		},
@@ -530,9 +530,9 @@ func TestNewHai(t *testing.T) {
 			},
 			want: Honours{
 				Hai: Hai{
-					ID:   128,
-					Num:  6,
-					Type: HonorsType,
+					id:      128,
+					num:     6,
+					haiType: HonorsType,
 				},
 			},
 		},
@@ -543,9 +543,9 @@ func TestNewHai(t *testing.T) {
 			},
 			want: Honours{
 				Hai: Hai{
-					ID:   131,
-					Num:  6,
-					Type: HonorsType,
+					id:      131,
+					num:     6,
+					haiType: HonorsType,
 				},
 			},
 		},
@@ -556,9 +556,9 @@ func TestNewHai(t *testing.T) {
 			},
 			want: Honours{
 				Hai: Hai{
-					ID:   132,
-					Num:  7,
-					Type: HonorsType,
+					id:      132,
+					num:     7,
+					haiType: HonorsType,
 				},
 			},
 		},
@@ -569,9 +569,9 @@ func TestNewHai(t *testing.T) {
 			},
 			want: Honours{
 				Hai: Hai{
-					ID:   135,
-					Num:  7,
-					Type: HonorsType,
+					id:      135,
+					num:     7,
+					haiType: HonorsType,
 				},
 			},
 		},

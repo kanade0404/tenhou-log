@@ -7,6 +7,9 @@ import (
 
 type IHai interface {
 	Name() string
+	ID() uint
+	Num() uint
+	Type() HaiType
 }
 
 type HaiType string
@@ -19,10 +22,10 @@ const (
 )
 
 type Hai struct {
-	ID   uint
-	Num  uint
-	Type HaiType
-	_    struct{}
+	id      uint
+	num     uint
+	haiType HaiType
+	_       struct{}
 }
 
 func NewHai(id uint, isRed bool) (IHai, error) {
@@ -44,6 +47,10 @@ type Suits struct {
 	Hai
 	IsRed bool
 	_     struct{}
+}
+
+func (s Suits) String() string {
+	return fmt.Sprintf("{id:%d,num:%d,haiType:%s,IsRed:%t}", s.id, s.num, s.haiType, s.IsRed)
 }
 
 func newSuits(id uint, isRed bool) (ISuits, error) {
@@ -70,13 +77,25 @@ type Characters struct {
 	_ struct{}
 }
 
+func (c Characters) ID() uint {
+	return c.id
+}
+
+func (c Characters) Num() uint {
+	return c.num
+}
+
+func (c Characters) Type() HaiType {
+	return CharactersType
+}
+
 func (c Characters) redFiveID() uint {
 	return 16
 }
 
 func (c Characters) Name() string {
-	cjkNum := str.ConvertToCjkNum(c.Num)
-	if c.IsRed && c.ID == c.redFiveID() {
+	cjkNum := str.ConvertToCjkNum(c.Num())
+	if c.IsRed && c.ID() == c.redFiveID() {
 		return fmt.Sprintf("赤%s萬", cjkNum)
 	} else {
 		return fmt.Sprintf("%s萬", cjkNum)
@@ -99,9 +118,9 @@ func newCharacters(id uint, isRed bool) (ICharacters, error) {
 		return Characters{
 			Suits: Suits{
 				Hai: Hai{
-					Num:  num,
-					ID:   id,
-					Type: CharactersType,
+					num:     num,
+					id:      id,
+					haiType: CharactersType,
 				},
 				IsRed: isRed,
 			},
@@ -121,16 +140,28 @@ type Circles struct {
 	_ struct{}
 }
 
+func (c Circles) ID() uint {
+	return c.id
+}
+
+func (c Circles) Num() uint {
+	return c.num
+}
+
+func (c Circles) Type() HaiType {
+	return CirclesType
+}
+
 func (c Circles) redFiveID() uint {
 	return 52
 }
 
 func (c Circles) Name() string {
-	cjkNum := str.ConvertToCjkNum(c.Num)
-	if c.IsRed && c.ID == c.redFiveID() {
+	cjkNum := str.ConvertToCjkNum(c.Num())
+	if c.IsRed && c.ID() == c.redFiveID() {
 		return fmt.Sprintf("赤%s筒", cjkNum)
 	} else {
-		return fmt.Sprintf("%s筒", str.ConvertToCjkNum(c.Num))
+		return fmt.Sprintf("%s筒", str.ConvertToCjkNum(c.Num()))
 	}
 }
 
@@ -149,9 +180,9 @@ func newCircles(id uint, isRed bool) (ICircles, error) {
 		return Circles{
 			Suits: Suits{
 				Hai: Hai{
-					Num:  num,
-					ID:   id,
-					Type: CirclesType,
+					num:     num,
+					id:      id,
+					haiType: CirclesType,
 				},
 				IsRed: isRed,
 			},
@@ -171,13 +202,25 @@ type Bamboos struct {
 	_ struct{}
 }
 
+func (b Bamboos) ID() uint {
+	return b.id
+}
+
+func (b Bamboos) Num() uint {
+	return b.num
+}
+
+func (b Bamboos) Type() HaiType {
+	return BamboosType
+}
+
 func (b Bamboos) redFiveID() uint {
 	return 88
 }
 
 func (b Bamboos) Name() string {
-	cjkNum := str.ConvertToCjkNum(b.Num)
-	if b.IsRed && b.ID == b.redFiveID() {
+	cjkNum := str.ConvertToCjkNum(b.Num())
+	if b.IsRed && b.ID() == b.redFiveID() {
 		return fmt.Sprintf("赤%s索", cjkNum)
 	} else {
 		return fmt.Sprintf("%s索", cjkNum)
@@ -199,9 +242,9 @@ func newBamboos(id uint, isRed bool) (IBamboos, error) {
 		return Bamboos{
 			Suits: Suits{
 				Hai: Hai{
-					Num:  num,
-					ID:   id,
-					Type: BamboosType,
+					num:     num,
+					id:      id,
+					haiType: BamboosType,
 				},
 				IsRed: isRed,
 			},
@@ -220,8 +263,24 @@ type Honours struct {
 	_ struct{}
 }
 
+func (h Honours) String() string {
+	return fmt.Sprintf("{id:%d,num:%d,haiType:%s}", h.id, h.num, h.haiType)
+}
+
+func (h Honours) ID() uint {
+	return h.id
+}
+
+func (h Honours) Num() uint {
+	return h.num
+}
+
+func (h Honours) Type() HaiType {
+	return HonorsType
+}
+
 func (h Honours) Name() string {
-	switch (h.ID - 109) / 4 {
+	switch (h.ID() - 109) / 4 {
 	case 0:
 		return "東"
 	case 1:
@@ -258,59 +317,59 @@ func newHonours(id uint) (IHonours, error) {
 			//東
 			return Honours{
 				Hai: Hai{
-					Num:  num,
-					ID:   id,
-					Type: HonorsType,
+					num:     num,
+					id:      id,
+					haiType: HonorsType,
 				},
 			}, nil
 		case 2:
 			// 南
 			return Honours{
-				Hai: Hai{Num: num, ID: id, Type: HonorsType},
+				Hai: Hai{num: num, id: id, haiType: HonorsType},
 			}, nil
 		case 3:
 			// 西
 			return Honours{
 				Hai: Hai{
-					Num:  num,
-					ID:   id,
-					Type: HonorsType,
+					num:     num,
+					id:      id,
+					haiType: HonorsType,
 				},
 			}, nil
 		case 4:
 			// 北
 			return Honours{
 				Hai: Hai{
-					Num:  num,
-					ID:   id,
-					Type: HonorsType,
+					num:     num,
+					id:      id,
+					haiType: HonorsType,
 				},
 			}, nil
 			// 白
 		case 5:
 			return Honours{
 				Hai: Hai{
-					Num:  num,
-					ID:   id,
-					Type: HonorsType,
+					num:     num,
+					id:      id,
+					haiType: HonorsType,
 				},
 			}, nil
 			// 發
 		case 6:
 			return Honours{
 				Hai: Hai{
-					Num:  num,
-					ID:   id,
-					Type: HonorsType,
+					num:     num,
+					id:      id,
+					haiType: HonorsType,
 				},
 			}, nil
 		case 7:
 			// 中
 			return Honours{
 				Hai: Hai{
-					Num:  num,
-					ID:   id,
-					Type: HonorsType,
+					num:     num,
+					id:      id,
+					haiType: HonorsType,
 				},
 			}, nil
 		default:
