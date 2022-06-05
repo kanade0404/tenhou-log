@@ -49,7 +49,7 @@ type Suits struct {
 	_     struct{}
 }
 
-func (s Suits) String() string {
+func (s *Suits) String() string {
 	return fmt.Sprintf("{id:%d,num:%d,haiType:%s,IsRed:%t}", s.id, s.num, s.haiType, s.IsRed)
 }
 
@@ -69,31 +69,31 @@ type ICharacters interface {
 	ISuits
 }
 
-var _ ICharacters = Characters{}
+var _ ICharacters = &Characters{}
 
 // Characters 萬子
 type Characters struct {
-	Suits
+	*Suits
 	_ struct{}
 }
 
-func (c Characters) ID() uint {
+func (c *Characters) ID() uint {
 	return c.id
 }
 
-func (c Characters) Num() uint {
+func (c *Characters) Num() uint {
 	return c.num
 }
 
-func (c Characters) Type() HaiType {
+func (c *Characters) Type() HaiType {
 	return CharactersType
 }
 
-func (c Characters) redFiveID() uint {
+func (c *Characters) redFiveID() uint {
 	return 16
 }
 
-func (c Characters) Name() string {
+func (c *Characters) Name() string {
 	cjkNum := str.ConvertToCjkNum(c.Num())
 	if c.IsRed && c.ID() == c.redFiveID() {
 		return fmt.Sprintf("赤%s萬", cjkNum)
@@ -103,7 +103,7 @@ func (c Characters) Name() string {
 }
 
 // newCharacters 萬子 0~35
-func newCharacters(id uint, isRed bool) (ICharacters, error) {
+func newCharacters(id uint, isRed bool) (ISuits, error) {
 	if id < 0 || id > 35 {
 		return nil, fmt.Errorf("unexpected argument %d", id)
 	} else {
@@ -115,8 +115,8 @@ func newCharacters(id uint, isRed bool) (ICharacters, error) {
 		} else {
 			num = rs + 1
 		}
-		return Characters{
-			Suits: Suits{
+		return &Characters{
+			Suits: &Suits{
 				Hai: Hai{
 					num:     num,
 					id:      id,
@@ -132,31 +132,31 @@ type ICircles interface {
 	ISuits
 }
 
-var _ ICircles = Circles{}
+var _ ICircles = &Circles{}
 
 // Circles 筒子
 type Circles struct {
-	Suits
+	*Suits
 	_ struct{}
 }
 
-func (c Circles) ID() uint {
+func (c *Circles) ID() uint {
 	return c.id
 }
 
-func (c Circles) Num() uint {
+func (c *Circles) Num() uint {
 	return c.num
 }
 
-func (c Circles) Type() HaiType {
+func (c *Circles) Type() HaiType {
 	return CirclesType
 }
 
-func (c Circles) redFiveID() uint {
+func (c *Circles) redFiveID() uint {
 	return 52
 }
 
-func (c Circles) Name() string {
+func (c *Circles) Name() string {
 	cjkNum := str.ConvertToCjkNum(c.Num())
 	if c.IsRed && c.ID() == c.redFiveID() {
 		return fmt.Sprintf("赤%s筒", cjkNum)
@@ -165,7 +165,7 @@ func (c Circles) Name() string {
 	}
 }
 
-func newCircles(id uint, isRed bool) (ICircles, error) {
+func newCircles(id uint, isRed bool) (ISuits, error) {
 	if id < 36 || id > 71 {
 		return nil, fmt.Errorf("unexpected argument id: %d, isRed: %t", id, isRed)
 	} else {
@@ -177,8 +177,8 @@ func newCircles(id uint, isRed bool) (ICircles, error) {
 		} else {
 			num = rs + 1
 		}
-		return Circles{
-			Suits: Suits{
+		return &Circles{
+			Suits: &Suits{
 				Hai: Hai{
 					num:     num,
 					id:      id,
@@ -194,31 +194,31 @@ type IBamboos interface {
 	ISuits
 }
 
-var _ IBamboos = Bamboos{}
+var _ IBamboos = &Bamboos{}
 
 // Bamboos 索子
 type Bamboos struct {
-	Suits
+	*Suits
 	_ struct{}
 }
 
-func (b Bamboos) ID() uint {
+func (b *Bamboos) ID() uint {
 	return b.id
 }
 
-func (b Bamboos) Num() uint {
+func (b *Bamboos) Num() uint {
 	return b.num
 }
 
-func (b Bamboos) Type() HaiType {
+func (b *Bamboos) Type() HaiType {
 	return BamboosType
 }
 
-func (b Bamboos) redFiveID() uint {
+func (b *Bamboos) redFiveID() uint {
 	return 88
 }
 
-func (b Bamboos) Name() string {
+func (b *Bamboos) Name() string {
 	cjkNum := str.ConvertToCjkNum(b.Num())
 	if b.IsRed && b.ID() == b.redFiveID() {
 		return fmt.Sprintf("赤%s索", cjkNum)
@@ -227,7 +227,7 @@ func (b Bamboos) Name() string {
 	}
 }
 
-func newBamboos(id uint, isRed bool) (IBamboos, error) {
+func newBamboos(id uint, isRed bool) (ISuits, error) {
 	if id < 72 || id > 107 {
 		return nil, fmt.Errorf("unexpected argument id: %d, isRed: %t", id, isRed)
 	} else {
@@ -239,8 +239,8 @@ func newBamboos(id uint, isRed bool) (IBamboos, error) {
 		} else {
 			num = rs + 1
 		}
-		return Bamboos{
-			Suits: Suits{
+		return &Bamboos{
+			Suits: &Suits{
 				Hai: Hai{
 					num:     num,
 					id:      id,
@@ -256,30 +256,30 @@ type IHonours interface {
 	IHai
 }
 
-var _ IHonours = Honours{}
+var _ IHonours = &Honours{}
 
 type Honours struct {
 	Hai
 	_ struct{}
 }
 
-func (h Honours) String() string {
+func (h *Honours) String() string {
 	return fmt.Sprintf("{id:%d,num:%d,haiType:%s}", h.id, h.num, h.haiType)
 }
 
-func (h Honours) ID() uint {
+func (h *Honours) ID() uint {
 	return h.id
 }
 
-func (h Honours) Num() uint {
+func (h *Honours) Num() uint {
 	return h.num
 }
 
-func (h Honours) Type() HaiType {
+func (h *Honours) Type() HaiType {
 	return HonorsType
 }
 
-func (h Honours) Name() string {
+func (h *Honours) Name() string {
 	switch (h.ID() - 109) / 4 {
 	case 0:
 		return "東"
@@ -300,7 +300,7 @@ func (h Honours) Name() string {
 	}
 }
 
-func newHonours(id uint) (IHonours, error) {
+func newHonours(id uint) (IHai, error) {
 	if id < 108 || id > 136 {
 		return nil, fmt.Errorf("unexpected argument id: %d", id)
 	} else {
@@ -315,7 +315,7 @@ func newHonours(id uint) (IHonours, error) {
 		switch num {
 		case 1:
 			//東
-			return Honours{
+			return &Honours{
 				Hai: Hai{
 					num:     num,
 					id:      id,
@@ -324,12 +324,12 @@ func newHonours(id uint) (IHonours, error) {
 			}, nil
 		case 2:
 			// 南
-			return Honours{
+			return &Honours{
 				Hai: Hai{num: num, id: id, haiType: HonorsType},
 			}, nil
 		case 3:
 			// 西
-			return Honours{
+			return &Honours{
 				Hai: Hai{
 					num:     num,
 					id:      id,
@@ -338,7 +338,7 @@ func newHonours(id uint) (IHonours, error) {
 			}, nil
 		case 4:
 			// 北
-			return Honours{
+			return &Honours{
 				Hai: Hai{
 					num:     num,
 					id:      id,
@@ -347,7 +347,7 @@ func newHonours(id uint) (IHonours, error) {
 			}, nil
 			// 白
 		case 5:
-			return Honours{
+			return &Honours{
 				Hai: Hai{
 					num:     num,
 					id:      id,
@@ -356,7 +356,7 @@ func newHonours(id uint) (IHonours, error) {
 			}, nil
 			// 發
 		case 6:
-			return Honours{
+			return &Honours{
 				Hai: Hai{
 					num:     num,
 					id:      id,
@@ -365,7 +365,7 @@ func newHonours(id uint) (IHonours, error) {
 			}, nil
 		case 7:
 			// 中
-			return Honours{
+			return &Honours{
 				Hai: Hai{
 					num:     num,
 					id:      id,
