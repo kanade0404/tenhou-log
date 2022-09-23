@@ -1,11 +1,9 @@
-name: CI
+name: Golang CI
 on:
-  pull_request:
   push:
-    branches:
-      - master
-      - release-*
-      - feature/*
+    paths:
+      - ./scraper
+      - ./serdes
 
 jobs:
   ci:

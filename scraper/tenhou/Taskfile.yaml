@@ -1,0 +1,17 @@
+version: '3'
+
+tasks:
+  run:
+    cmds:
+      - go build cmd/main/main.go
+      - ./main
+    sources:
+      - cmd/main/main.go
+    generates:
+      - /main
+  migrate:
+    cmds:
+      - migrate -source file://database/schema -database postgres://postgres:secret@db:5432/postgres?sslmode=disable up
+  rollback:
+    cmds:
+      - migrate -source file://database/schema -database postgres://postgres:secret@db:5432/postgres?sslmode=disable down

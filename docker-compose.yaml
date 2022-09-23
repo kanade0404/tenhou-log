@@ -1,14 +1,40 @@
 version: '3'
 
 services:
-  api:
-    build: .
-    container_name: tenhou
-    volumes:
-      - ./:/main
+  tenhou_scraper:
+    build:
+      context: ./scraper/tenhou
+      dockerfile: docker/local/Dockerfile
+    container_name: tenhou_log_scraper
     platform: linux/amd64
+    env_file:
+      - scraper/tenhou/.env
     tty: true
+    ports:
+      - "8181:8181"
+    volumes:
+      - ./scraper/tenhou:/main
+    depends_on:
+      - tenhou_log_db
+  tenhou_log_db:
+    image: postgres:14.3
+    container_name: tenhou-log-db
+    ports:
+      - "5432:5432"
+    restart: always
+    hostname: db
     environment:
-      - GOPATH=/go
-      - LOG_LEVEL=info
-      - ENV=local
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DATABASE: postgres
+  terraform:
+    container_name: tenhou-log-terraform
+    build: infra/terraform
+    working_dir: /terraform
+    tty: true
+    volumes:
+      - ./infra/terraform:/terraform:cached
+      - /var/run/docker.sock:/var/run/docker.sock
+    entrypoint: bash
+    environment:
+      HOME: "/terraform"
