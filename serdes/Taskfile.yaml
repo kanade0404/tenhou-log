@@ -1,0 +1,19 @@
+version: '3'
+
+tasks:
+  test:
+    cmds:
+      - go test -v -cover ./...
+  fmt:
+    cmds:
+      - go fmt ./...
+  vet:
+    cmds:
+      - go vet ./...
+
+  mod:
+    cmds:
+      - go mod tidy
+  download:
+    cmds:
+      - go mod download

@@ -1,0 +1,20 @@
+name: Next CI
+on:
+  push:
+
+jobs:
+  ci:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
+      - name: Install packages
+        run: yarn install  --frozen-lockfile
+      - name: Build
+        run: yarn build
+      - name: Run lint
+        run: yarn lint

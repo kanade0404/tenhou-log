@@ -1,0 +1,36 @@
+name: Golang CI
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+      - release-*
+      - feature/*
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+      - name: Install Task
+        uses: arduino/setup-task@v1
+      - name: Install packages
+        run: task download
+      - name: Build
+        run: go build .
+      - name: Test
+        run: task test
+      - name: go lint
+        run: task vet
+      - name: Run Gosec Security Scanner
+        uses: securego/gosec@v2.13.1
+        with:
+          args: ./...
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        continue-on-error: true

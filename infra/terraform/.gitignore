@@ -37,3 +37,4 @@ terraform.rc
 **/credentials/*.json
 .gsutil
 .config
+.bash_history
