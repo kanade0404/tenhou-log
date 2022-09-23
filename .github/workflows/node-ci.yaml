@@ -1,7 +1,8 @@
 name: Next CI
 on:
   push:
-
+    paths:
+      - ./web
 jobs:
   ci:
     runs-on: ubuntu-22.04
