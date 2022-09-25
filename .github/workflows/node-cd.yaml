@@ -1,12 +1,23 @@
 name: Next CD
 on:
-  push:
+  pull_request:
+    branches:
+      - master
+    types: [closed]
     paths:
       - ./web
-
+  workflow_dispatch:
+defaults:
+  run:
+    shell: bash
+    working-directory: ./web
 jobs:
   cd:
     runs-on: ubuntu-22.04
+    if: github.event.pull_request.merged == true
+    permissions:
+      contents: 'read'
+      id-token: 'write'
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -14,9 +25,23 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 16.x
+      - id: 'auth'
+        uses: 'google-github-actions/auth@v0'
+        with:
+          workload_identity_provider: "projects/${{ secrets.GCP_PROJECT_ID_DEV }}/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider"
+          service_account: "github-actions@${{ secrets.GCP_PROJECT_ID_DEV }}.iam.gserviceaccount.com"
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v0'
       - name: Install packages
-        run: yarn install --production  --frozen-lockfile
+        run: yarn install --production --frozen-lockfile
       - name: Build
         run: yarn build
       - name: Run lint
         run: yarn lint
+      - name: Create docker authentication
+        run: gcloud auth configure-docker asia-northeast1-docker.pkg.dev
+      - name: Build App
+        run: docker build -t asia-northeast1-docker.pkg.dev/mj-log-dev/web/next ./
+      - name: Deploy App
+        run: docker push asia-northeast1-docker.pkg.dev/mj-log-dev/web/next
+
