@@ -2,7 +2,7 @@ name: Next CI
 on:
   push:
     paths:
-      - ./web
+      - web/**
 defaults:
   run:
     shell: bash

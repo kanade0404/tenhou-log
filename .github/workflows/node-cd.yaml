@@ -5,7 +5,7 @@ on:
       - master
     types: [closed]
     paths:
-      - ./web
+      - web/**
   workflow_dispatch:
 defaults:
   run:
@@ -33,8 +33,8 @@ jobs:
       - name: 'Set up Cloud SDK'
         uses: 'google-github-actions/setup-gcloud@v0'
       - name: Install packages
-        run: yarn install --production --frozen-lockfile
-      - name: Build
+        run: yarn install --frozen-lockfile
+      - name: Run build
         run: yarn build
       - name: Run lint
         run: yarn lint
