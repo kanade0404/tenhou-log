@@ -64,6 +64,10 @@ locals {
     // Cloud Domains API
     "domains.googleapis.com",
     // Cloud DNS API
-    "dns.googleapis.com"
+    "dns.googleapis.com",
+    // Cloud Scheduler API
+    "cloudscheduler.googleapis.com",
+    // Eventarc API
+    "eventarc.googleapis.com"
   ]
 }

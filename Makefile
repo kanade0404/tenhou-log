@@ -36,3 +36,9 @@ project-set:
 format:
 	docker compose exec terraform terraform fmt -recursive
 	docker compose exec terraform terraform validate
+init-dev:
+	docker compose exec terraform terraform -chdir=/terraform/env/dev init
+plan-dev:
+	docker compose exec terraform terraform -chdir=/terraform/env/dev plan
+apply-dev:
+	docker compose exec terraform terraform -chdir=/terraform/env/dev apply

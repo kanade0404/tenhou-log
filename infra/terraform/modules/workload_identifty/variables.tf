@@ -13,3 +13,9 @@ variable "provider_id" {
 variable "provider_display_name" {
   type = string
 }
+variable "github_repository" {
+  type = string
+}
+variable "service_account_id" {
+  type = string
+}

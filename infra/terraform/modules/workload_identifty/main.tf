@@ -23,3 +23,8 @@ resource "google_iam_workload_identity_pool_provider" "provider" {
     issuer_uri = "https://token.actions.githubusercontent.com"
   }
 }
+resource "google_service_account_iam_member" "member" {
+  member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.pool.name}/attribute.repository/${var.github_repository}"
+  role               = "roles/iam.workloadIdentityUser"
+  service_account_id = var.service_account_id
+}

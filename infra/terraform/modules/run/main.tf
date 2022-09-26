@@ -20,7 +20,6 @@ resource "google_cloud_run_service" "run" {
     }
     metadata {
       annotations = {
-        #        "run.googleapis.com/ingress"       = var.ingress
         "autoscaling.knative.dev/maxScale" = "1000"
         #        "run.googleapis.com/cloudsql-instances" = var.sql_instance_name
         "run.googleapis.com/client-name" = "terraform"
@@ -33,6 +32,12 @@ resource "google_cloud_run_service" "run" {
     latest_revision = true
   }
   autogenerate_revision_name = true
+  metadata {
+    annotations = {
+      "run.googleapis.com/ingress"        = var.ingress
+      "run.googleapis.com/ingress-status" = var.ingress
+    }
+  }
   lifecycle {
     ignore_changes = [
       template[0].metadata[0].annotations["client.knative.dev/user-image"],

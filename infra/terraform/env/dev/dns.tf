@@ -47,3 +47,13 @@ module "a_record" {
   rrdatas       = [module.lb-http-serverless_neg.global_ipv4_address]
   ttl           = 21600
 }
+
+module "a__record" {
+  source        = "../../modules/dns/record_set"
+  PROJECT_ID    = var.PROJECT_ID
+  name          = module.dns.dns_name
+  dns_zone_name = "touka-ryuumonbuchi"
+  record_type   = "A"
+  rrdatas       = [module.lb-http-serverless_neg.global_ipv4_address]
+  ttl           = 21600
+}
