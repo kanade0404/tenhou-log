@@ -10,7 +10,7 @@ on:
 defaults:
   run:
     shell: bash
-    working-directory: ./web
+    working-directory: web
 jobs:
   cd:
     runs-on: ubuntu-22.04
