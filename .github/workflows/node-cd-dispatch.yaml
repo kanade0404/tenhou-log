@@ -5,6 +5,8 @@ defaults:
   run:
     shell: bash
     working-directory: web
+env:
+  IMAGE: asia-northeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID_DEV }}/web/next:${{ github.sha }}
 jobs:
   cd:
     runs-on: ubuntu-22.04
@@ -21,8 +23,8 @@ jobs:
       - id: 'auth'
         uses: 'google-github-actions/auth@v0'
         with:
-          workload_identity_provider: "projects/${{ secrets.GCP_PROJECT_NUMBER_DEV }}/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider"
-          service_account: "github-actions@${{ secrets.GCP_PROJECT_ID_DEV }}.iam.gserviceaccount.com"
+          workload_identity_provider: projects/${{ secrets.GCP_PROJECT_NUMBER_DEV }}/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider
+          service_account: github-actions@${{ secrets.GCP_PROJECT_ID_DEV }}.iam.gserviceaccount.com
       - name: 'Set up Cloud SDK'
         uses: 'google-github-actions/setup-gcloud@v0'
       - name: Install packages
@@ -34,7 +36,7 @@ jobs:
       - name: Create docker authentication
         run: gcloud auth configure-docker asia-northeast1-docker.pkg.dev
       - name: Build App
-        run: docker build -t asia-northeast1-docker.pkg.dev/mj-log-dev/web/next ./
+        run: docker build -t ${{ env.IMAGE }} .
       - name: Deploy App
-        run: docker push asia-northeast1-docker.pkg.dev/mj-log-dev/web/next
+        run: docker push ${{ env.IMAGE }}
 
