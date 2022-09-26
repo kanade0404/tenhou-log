@@ -5,8 +5,8 @@ module "web_app_container" {
   name              = "web"
   image_name        = "${module.artifact_registry_web.image}/next"
   sql_instance_name = ""
-  #  ingress           = "internal-and-cloud-load-balancing"
-  depends_on = [module.enabled_services.services]
+  ingress           = "internal-and-cloud-load-balancing"
+  depends_on        = [module.enabled_services.services]
 }
 module "web_app_container_public_iam_member" {
   source      = "../../modules/run/iam_members"

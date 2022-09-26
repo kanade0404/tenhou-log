@@ -12,5 +12,7 @@ module "github-actions-workload-identity" {
   pool_display_name     = "github-actions-pool"
   provider_id           = "github-actions-provider"
   provider_display_name = "github-actions-provider"
+  github_repository     = "kanade0404/tenhou-log"
+  service_account_id    = module.workload-identity-service-account.name
   depends_on            = [module.enabled_services.services]
 }
