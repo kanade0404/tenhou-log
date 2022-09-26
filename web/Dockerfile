@@ -1,12 +1,7 @@
 FROM node:18 AS builder
 
-ARG graphql_endpoint
-
 # ビルドには devDependencies もインストールする必要があるため
 ENV NODE_ENV=development
-
-# アプリに埋め込む環境変数
-ENV NEXT_PUBLIC_GRAPHQL_ENDPOINT=$graphql_endpoint
 
 WORKDIR /app
 COPY package.json ./
@@ -16,7 +11,7 @@ COPY . .
 RUN yarn build
 
 
-FROM node:17-stretch-slim AS runner
+FROM node:alpine AS runner
 ENV NODE_ENV=production
 
 WORKDIR /app
