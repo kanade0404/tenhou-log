@@ -16,7 +16,7 @@ COPY . .
 RUN yarn build
 
 
-FROM node:16-stretch-slim AS runner
+FROM node:17-stretch-slim AS runner
 ENV NODE_ENV=production
 
 WORKDIR /app
