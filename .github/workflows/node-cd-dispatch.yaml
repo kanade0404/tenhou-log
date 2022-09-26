@@ -1,11 +1,5 @@
 name: Next CD
 on:
-  pull_request:
-    branches:
-      - master
-    types: [closed]
-    paths:
-      - web/**
   workflow_dispatch:
 defaults:
   run:
@@ -14,7 +8,6 @@ defaults:
 jobs:
   cd:
     runs-on: ubuntu-22.04
-    if: github.event.pull_request.merged == true
     permissions:
       contents: 'read'
       id-token: 'write'

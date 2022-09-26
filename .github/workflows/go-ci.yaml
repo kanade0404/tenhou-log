@@ -2,27 +2,56 @@ name: Golang CI
 on:
   push:
     paths:
-      - ./scraper
+      - ./services
       - ./serdes
-
+env:
+  go-version: 1.19
 jobs:
-  ci:
+  scraper-ci:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./services
     steps:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Setup Go
         uses: actions/setup-go@v3
         with:
-          go-version: 1.18
-      - name: Install Task
-        uses: arduino/setup-task@v1
+          go-version: $env.go-version
       - name: Install packages
-        run: task download
+        run: go mod download
       - name: Build
         run: go build .
       - name: Test
-        run: task test
+        run: go test ./...
+      - name: go lint
+        run: task vet
+      - name: Run Gosec Security Scanner
+        uses: securego/gosec@v2.13.1
+        with:
+          args: ./...
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        continue-on-error: true
+  serdes-ci:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./serdes
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: $go-version
+      - name: Install packages
+        run: go mod download
+      - name: Build
+        run: go build .
+      - name: Test
+        run: go test ./...
       - name: go lint
         run: task vet
       - name: Run Gosec Security Scanner
