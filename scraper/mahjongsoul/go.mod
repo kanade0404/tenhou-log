@@ -3,7 +3,7 @@ module mahjongsoul
 go 1.18
 
 require (
-	github.com/chromedp/cdproto v0.0.0-20220515234810-83d799542a04
+	github.com/chromedp/cdproto 0e3390be1777
 	github.com/chromedp/chromedp v0.8.2
 	github.com/sirupsen/logrus v1.9.0
 )
