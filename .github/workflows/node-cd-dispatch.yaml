@@ -1,4 +1,4 @@
-name: Next CD
+name: Next CD(dispatch)
 on:
   workflow_dispatch:
 defaults:
@@ -25,6 +25,7 @@ jobs:
         with:
           workload_identity_provider: projects/${{ secrets.GCP_PROJECT_NUMBER_DEV }}/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider
           service_account: github-actions@${{ secrets.GCP_PROJECT_ID_DEV }}.iam.gserviceaccount.com
+          project_id: ${{ secrets.GCP_PROJECT_ID_DEV }}
       - name: 'Set up Cloud SDK'
         uses: 'google-github-actions/setup-gcloud@v0'
       - name: Install packages
@@ -39,4 +40,3 @@ jobs:
         run: docker build -t ${{ env.IMAGE }} .
       - name: Deploy App
         run: docker push ${{ env.IMAGE }}
-
