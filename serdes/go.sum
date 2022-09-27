@@ -8,3 +8,5 @@ github.com/kanade0404/tenhou-log v0.0.0-20220923114639-ac5ffba82470 h1:ENeYBZaM2
 github.com/kanade0404/tenhou-log v0.0.0-20220923114639-ac5ffba82470/go.mod h1:ZtI4hMg1ozIWl99w23iz1TB+BUOqdVjmygQyawbyt7Y=
 github.com/kanade0404/tenhou-log v0.0.0-20220926011300-748c8b8f235f h1:tNtHtZKn/deaJFTlS4Xl1o3CLiqtaZtAFUd/EVoX58w=
 github.com/kanade0404/tenhou-log v0.0.0-20220926011300-748c8b8f235f/go.mod h1:ZtI4hMg1ozIWl99w23iz1TB+BUOqdVjmygQyawbyt7Y=
+github.com/kanade0404/tenhou-log v0.0.0-20220927030124-271dc457accd h1:mfMz34q6aq5c0w79+o4hbr5u22SvqBsE9zFF9Z4Kzt8=
+github.com/kanade0404/tenhou-log v0.0.0-20220927030124-271dc457accd/go.mod h1:ZtI4hMg1ozIWl99w23iz1TB+BUOqdVjmygQyawbyt7Y=
