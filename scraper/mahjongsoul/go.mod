@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/chromedp/cdproto 0e3390be1777
-	github.com/chromedp/chromedp v0.8.2
+	github.com/chromedp/chromedp v0.8.5
 	github.com/sirupsen/logrus v1.9.0
 )
 
