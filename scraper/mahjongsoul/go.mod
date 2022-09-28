@@ -1,6 +1,6 @@
 module mahjongsoul
 
-go 1.18
+go 1.19
 
 require (
 	github.com/chromedp/cdproto 0e3390be1777
