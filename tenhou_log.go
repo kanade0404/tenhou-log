@@ -1,1 +1,0 @@
-package tenhou_log
