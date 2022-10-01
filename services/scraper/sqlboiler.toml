@@ -1,0 +1,13 @@
+output = "models"
+[psql]
+dbname = "postgres"
+host   = "localhost"
+port   = 65432
+user   = "postgres"
+pass   = "secret"
+sslmode = "disable"
+schema = "public"
+blacklist = ["schema_migrations"]
+templates = [
+    "templates"
+]
