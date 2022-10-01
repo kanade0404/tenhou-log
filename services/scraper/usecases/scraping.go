@@ -35,7 +35,7 @@ func ScrapingCompressedLog() ([]*entities.CompressedLogFile, error) {
 	}
 	return fetchLogs, nil
 }
-func StoreComporessedLogFile(ctx context.Context, db *sql.DB, fetchLogFiles []*entities.CompressedLogFile) (models.CompressedLogFileSlice, error) {
+func StoreCompressedLogFile(ctx context.Context, db *sql.DB, fetchLogFiles []*entities.CompressedLogFile) (models.CompressedLogFileSlice, error) {
 	// DBから圧縮されたファイルレコード取ってくる
 	currentLogFiles, err := models.CompressedLogFiles().All(ctx, db)
 	var newLogFiles models.CompressedLogFileSlice

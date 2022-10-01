@@ -13,8 +13,20 @@ services:
       POSTGRES_DATABASE: postgres
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
-      - ./database/data:/var/lib/postgresql/data
-      - ./database/logs:/var/log
+      - ./services/database/data:/var/lib/postgresql/data
+      - ./services/database/logs:/var/log
+  test_tenhou_log_db:
+    image: postgres:14.5
+    container_name: tenhou-log-db-test
+    ports:
+      - "55432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DATABASE: postgres_test
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - ./services/database/test_data:/var/lib/postgresql/data
   terraform:
     container_name: tenhou-log-terraform
     build: infra/terraform

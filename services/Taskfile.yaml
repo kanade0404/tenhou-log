@@ -1,0 +1,18 @@
+version: '3'
+
+tasks:
+  fmt:
+    cmds:
+      - go fmt scraper/... external/...
+  vet:
+    cmds:
+      - go vet scraper/... external/...
+  test:
+    cmds:
+      - go test scraper/... external/...
+  migrate:
+    cmds:
+      - migrate -source file://database/schema -database postgres://postgres:secret@localhost:65432/postgres?sslmode=disable up
+  rollback:
+    cmds:
+      - migrate -source file://database/schema -database postgres://postgres:secret@localhost:65432/postgres?sslmode=disable down

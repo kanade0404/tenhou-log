@@ -20,13 +20,17 @@ exec-terraform:
 	docker compose exec terraform bash
 log-db:
 	docker compose logs tenhou_log_db
+setup:
+	make build up setup-go setup-terraform
+setup-go:
+	cd services && go work init . backend-api external scraper
 setup-terraform:
 	docker compose exec terraform gcloud auth application-default login
 	docker compose exec terraform gcloud auth login
 	make project-set
-	docker compose exec terraform terraform init
+	make init-dev
 project-set:
-	docker compose exec terraform gcloud config set project kanade0404
+	docker compose exec terraform gcloud config set project mj-log-dev
 format-terraform:
 	docker compose exec terraform terraform fmt -recursive
 	docker compose exec terraform terraform validate

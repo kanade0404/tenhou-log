@@ -22,12 +22,13 @@ func (a *Api) Scraper(w http.ResponseWriter, _ *http.Request) {
 	}
 	http_handler.Response(w, http.StatusOK, res)
 }
+
 func ScrapingAndStore(ctx context.Context, db *sql.DB, bucketName string) ([]string, error) {
 	logFiles, err := usecases.ScrapingCompressedLog()
 	if err != nil {
 		return nil, err
 	}
-	compressedLogFile, err := usecases.StoreComporessedLogFile(ctx, db, logFiles)
+	compressedLogFile, err := usecases.StoreCompressedLogFile(ctx, db, logFiles)
 	if err != nil {
 		return nil, err
 	}
