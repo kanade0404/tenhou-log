@@ -4,5 +4,5 @@ go 1.19
 
 require (
 	github.com/google/go-cmp v0.5.9
-	github.com/kanade0404/tenhou-log v0.0.0-20220930035751-8e7387ca65f1
+	github.com/kanade0404/tenhou-log v0.0.0-20220930154556-bb2f59f0e7e3
 )
