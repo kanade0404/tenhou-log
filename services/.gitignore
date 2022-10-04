@@ -3,3 +3,4 @@ go.work*
 **/credentials/*.json
 database/data/**
 database/logs/**
+database/test_data/**
