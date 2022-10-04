@@ -12,7 +12,7 @@ tasks:
       - go test scraper/... external/...
   migrate:
     cmds:
-      - migrate -source file://database/schema -database postgres://postgres:secret@localhost:65432/postgres?sslmode=disable up
-  rollback:
+      - sqldef -U postgres -p 65432 -W=secret postgres < database/schema/schema.sql
+  migrate-dry:
     cmds:
-      - migrate -source file://database/schema -database postgres://postgres:secret@localhost:65432/postgres?sslmode=disable down
+      - sqldef -U postgres -p 65432 -W=secret postgres --dry-run < database/schema/schema.sql

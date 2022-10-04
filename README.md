@@ -6,8 +6,10 @@
 - docker
 - nodejs
 - yarn
-- golang-migrate
+- sqldef
 - go-task
+- air
+- sqlboiler
 
 ## Setup
 
@@ -18,10 +20,11 @@ go install github.com/cosmtrek/air@latest
 go install github.com/volatiletech/sqlboiler/v4@latest
 go install github.com/volatiletech/sqlboiler/v4/drivers/sqlboiler-psql@latest
 
-# https://github.com/golang-migrate/migrate/tree/master/cmd/migrate
+# https://github.com/k0kubun/sqldef
 # ex)arm64 macOS
-curl -L https://github.com/golang-migrate/migrate/releases/download/v4.15.2/migrate.darwin-arm64.tar.gz | tar xvz
-sudo mv migrate /usr/local/bin/migrate
+wget https://github.com/k0kubun/sqldef/releases/download/v0.13.12/psqldef_darwin_arm64.zip
+unzip psqldef_darwin_arm64.zip
+sudo mv psqldef  /usr/local/bin/sqldef
 
 task migrate
 make setup-terraform
