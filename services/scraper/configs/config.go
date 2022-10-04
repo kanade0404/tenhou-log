@@ -1,86 +1,102 @@
 package configs
 
 import (
+	"external/driver/secret_manager"
 	"fmt"
-	"github.com/joho/godotenv"
-	"log"
 	"os"
 )
 
-type LogFileEnv struct {
-	CompressedLogBucketName string
-}
-type RuntimeEnv string
-
-func (e RuntimeEnv) String() string {
-	switch e {
-	case LOCAL:
-		return "local"
-	case DEV:
-		return "dev"
-	case PROD:
-		return "prod"
-	default:
-		return ""
-	}
-}
-
-const (
-	LOCAL RuntimeEnv = "local"
-	DEV   RuntimeEnv = "dev"
-	PROD  RuntimeEnv = "prod"
-)
-
-type AppEnv struct {
-	Runtime      RuntimeEnv
-	Port         string
-	GoogleAppEnv string
-}
-type DBEnv struct {
-	Dialect  string
-	Name     string
-	UserName string
-	Password string
-	Host     string
-	Port     string
-	SSLMode  string
-	_        struct{}
-}
-
-func (e DBEnv) ConnectionString() string {
-	return fmt.Sprintf("user=%s password=%s host=%s port=%s dbname=%s sslmode=%s", e.UserName, e.Password, e.Host, e.Port, e.Name, e.SSLMode)
-}
-
 type Env struct {
-	App     AppEnv
-	LogFile LogFileEnv
-	DB      DBEnv
+	IsLocal                 bool
+	AppPort                 string
+	GoogleAppEnv            string
+	CompressedLogBucketName string
+	Dialect                 string
+	DBName                  string
+	UserName                string
+	Password                string
+	DBHost                  string
+	DBPort                  string
+	SSLMode                 string
+	InstanceConnectionName  string
+	InstancePrivateIP       string
+	_                       struct{}
 }
 
-func NewEnv() Env {
-	err := godotenv.Load(".env")
+func (e *Env) ConnectionString() string {
+	if e.IsLocal {
+		return fmt.Sprintf("user=%s password=%s host=%s port=%s dbname=%s sslmode=%s", e.UserName, e.Password, e.DBHost, e.DBPort, e.DBName, e.SSLMode)
+	}
+	return fmt.Sprintf("user=%s password=%s host=localhost port=5432 dbname=%s sslmode=%s", e.UserName, e.Password, e.DBName, e.SSLMode)
+}
+
+func NewLocalEnv() *Env {
+	return &Env{
+		IsLocal:                 IsLocal(),
+		AppPort:                 os.Getenv("PORT"),
+		GoogleAppEnv:            os.Getenv("GOOGLE_APPLICATION_CREDENTIALS"),
+		CompressedLogBucketName: os.Getenv("COMPRESSED_LOG_BUCKET_NAME"),
+		Dialect:                 os.Getenv("DB_DIALECT"),
+		DBName:                  os.Getenv("DB_NAME"),
+		UserName:                os.Getenv("DB_USER"),
+		Password:                os.Getenv("DB_PASSWORD"),
+		DBHost:                  os.Getenv("DB_HOST"),
+		DBPort:                  os.Getenv("DB_PORT"),
+	}
+}
+
+func NewDevEnv(manager *secret_manager.SecretManager) (*Env, error) {
+	appPort, err := manager.GetVersion("PORT")
 	if err != nil {
-		env := os.Getenv("ENV")
-		if env == "" || !(env == DEV.String() || env == PROD.String()) {
-			log.Fatal(err)
-		}
+		return nil, err
 	}
-	return Env{
-		App: AppEnv{
-			Port:         os.Getenv("PORT"),
-			GoogleAppEnv: os.Getenv("GOOGLE_APPLICATION_CREDENTIALS"),
-		},
-		LogFile: LogFileEnv{
-			CompressedLogBucketName: os.Getenv("COMPRESSED_LOG_BUCKET_NAME"),
-		},
-		DB: DBEnv{
-			Dialect:  os.Getenv("DB_DIALECT"),
-			Name:     os.Getenv("DB_NAME"),
-			UserName: os.Getenv("DB_USER"),
-			Password: os.Getenv("DB_PASSWORD"),
-			Host:     os.Getenv("DB_HOST"),
-			Port:     os.Getenv("DB_PORT"),
-			SSLMode:  "disable",
-		},
+	googleAppCredentials, err := manager.GetVersion("GOOGLE_APPLICATION_CREDENTIALS")
+	if err != nil {
+		return nil, err
 	}
+	compressedLogBucketName, err := manager.GetVersion("COMPRESSED_LOG_BUCKET_NAME")
+	if err != nil {
+		return nil, err
+	}
+	dialect, err := manager.GetVersion("DB_DIALECT")
+	if err != nil {
+		return nil, err
+	}
+	dbName, err := manager.GetVersion("DB_NAME")
+	if err != nil {
+		return nil, err
+	}
+	dbUser, err := manager.GetVersion("DB_USER")
+	if err != nil {
+		return nil, err
+	}
+	dbPassword, err := manager.GetVersion("DB_PASSWORD")
+	if err != nil {
+		return nil, err
+	}
+	instanceConnName, err := manager.GetVersion("INSTANCE_CONNECTION_NAME")
+	if err != nil {
+		return nil, err
+	}
+	instancePrivateIP, err := manager.GetVersion("INSTANCE_PRIVATE_IP")
+	if err != nil {
+		return nil, err
+	}
+	return &Env{
+		IsLocal:                 false,
+		AppPort:                 appPort,
+		GoogleAppEnv:            googleAppCredentials,
+		CompressedLogBucketName: compressedLogBucketName,
+		Dialect:                 dialect,
+		DBName:                  dbName,
+		UserName:                dbUser,
+		Password:                dbPassword,
+		InstanceConnectionName:  instanceConnName,
+		InstancePrivateIP:       instancePrivateIP,
+	}, nil
+}
+
+func IsLocal() bool {
+	_, ok := os.LookupEnv("K_SERVICE")
+	return !ok
 }

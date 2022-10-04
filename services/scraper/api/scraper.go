@@ -11,12 +11,12 @@ import (
 
 type Api struct {
 	context.Context
-	Db *sql.DB
-	configs.Env
+	Db  *sql.DB
+	Env *configs.Env
 }
 
 func (a *Api) Scraper(w http.ResponseWriter, _ *http.Request) {
-	res, err := ScrapingAndStore(a.Context, a.Db, a.Env.LogFile.CompressedLogBucketName)
+	res, err := ScrapingAndStore(a.Context, a.Db, a.Env.CompressedLogBucketName)
 	if err != nil {
 		http_handler.ErrorResponse(w, http.StatusInternalServerError, err.Error())
 	}

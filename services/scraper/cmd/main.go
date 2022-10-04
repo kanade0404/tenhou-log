@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"external/driver/secret_manager"
 	"fmt"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
@@ -15,20 +16,34 @@ import (
 
 func main() {
 	log.Println("Run start")
-	config := configs.NewEnv()
-	port := config.App.Port
+	ctx := context.Background()
+	isLocal := configs.IsLocal()
+	var env *configs.Env
+	if isLocal {
+		env = configs.NewLocalEnv()
+	} else {
+		sm, err := secret_manager.NewSecretManager(ctx)
+		if err != nil {
+			log.Fatal(err)
+		}
+		env, err = configs.NewDevEnv(sm)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	port := env.AppPort
 	if port != "" {
 		port = "8088"
 	}
-	db, err := sql.Open(config.DB.Dialect, config.DB.ConnectionString())
+	db, err := sql.Open(env.Dialect, env.ConnectionString())
 	if err != nil {
 		log.Fatal(err)
 	}
 	boil.SetDB(db)
 	router := mux.NewRouter()
 	a := &api.Api{}
-	a.Context = context.Background()
-	a.Env = config
+	a.Context = ctx
+	a.Env = env
 	a.Db = db
 	router.HandleFunc("/scraping", a.Scraper).Methods("POST")
 	server := &http.Server{
