@@ -4,9 +4,9 @@ on:
 defaults:
   run:
     shell: bash
-    working-directory: web
+    working-directory: web/**
 env:
-  IMAGE: asia-northeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID_DEV }}/web/next:${{ github.sha }}
+  IMAGE: asia-northeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID_DEV }}/web/next
 jobs:
   cd:
     runs-on: ubuntu-22.04

@@ -1,9 +1,8 @@
 name: Next CD
 on:
-  pull_request:
+  push:
     branches:
       - master
-    types: [closed]
     paths:
       - web/**
   workflow_dispatch:
@@ -12,7 +11,7 @@ defaults:
     shell: bash
     working-directory: web
 env:
-  IMAGE: asia-northeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID_DEV }}/web/next:${{ github.sha }}
+  IMAGE: asia-northeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID_DEV }}/web/next
 jobs:
   cd:
     runs-on: ubuntu-22.04
