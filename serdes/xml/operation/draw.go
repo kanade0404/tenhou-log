@@ -43,6 +43,7 @@ func IsDrawType(drawType string) bool {
 	return false
 }
 
+// Draw ツモ情報
 type Draw struct {
 	DrawType
 	Hai      hai.IHai
