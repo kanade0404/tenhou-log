@@ -26,10 +26,6 @@ jobs:
         run: task fmt
       - name: go lint
         run: task vet
-      - name: Run Gosec Security Scanner
-        uses: securego/gosec@v2.13.1
-        with:
-          args: ./...
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         continue-on-error: true
