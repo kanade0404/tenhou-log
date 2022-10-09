@@ -3,6 +3,7 @@ on:
   push:
     paths:
       - serdes/**
+      - .github/workflows/serdes-ci.yaml
 defaults:
   run:
     working-directory: serdes
