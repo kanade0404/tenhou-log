@@ -1,15 +1,6 @@
 version: '3'
 
 tasks:
-  fmt:
-    cmds:
-      - go fmt scraper/... external/...
-  vet:
-    cmds:
-      - go vet scraper/... external/...
-  test:
-    cmds:
-      - go test scraper/... external/...
   migrate:
     cmds:
       - sqldef -U postgres -p 65432 -W=secret postgres < database/schema/schema.sql
