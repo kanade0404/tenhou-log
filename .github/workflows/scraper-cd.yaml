@@ -24,21 +24,8 @@ jobs:
         uses: actions/setup-go@v3
         with:
           go-version: ${{ env.go-version }}
-      - name: Install packages
-        run: go mod download
       - name: Build
         run: go build .
-      - name: Test
-        run: go test ./...
-      - name: go lint
-        run: task vet
-      - name: Run Gosec Security Scanner
-        uses: securego/gosec@v2.13.1
-        with:
-          args: ./...
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
-        continue-on-error: true
       - id: auth
         uses: 'google-github-actions/auth@v0'
         with:
@@ -54,6 +41,7 @@ jobs:
       - name: Deploy App
         run: docker push ${{ env.IMAGE }}
   deploy:
+    needs: change
     defaults:
       run:
         working-directory: services

@@ -20,12 +20,6 @@ jobs:
       uses: actions/setup-go@v3
       with:
         go-version: ${{ env.go-version }}
-    - name: Install Task
-      uses: arduino/setup-task@v1
-    - name: Test
-      run: go test scraper/...
-    - name: go lint
-      run: go vet scraper/...
     - name: golangci-lint
       uses: golangci/golangci-lint-action@v3
       continue-on-error: true
@@ -36,5 +30,13 @@ jobs:
       run:
         working-directory: services/scraper
     steps:
+      - name: Install Task
+        uses: arduino/setup-task@v1
+      - name: Format
+        run: task fmt
+      - name: Test
+        run: task test
+      - name: go lint
+        run: task vet
       - name: Build
         run: go build cmd/main.go
