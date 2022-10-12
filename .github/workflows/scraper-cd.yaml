@@ -13,7 +13,7 @@ env:
   go-version: 1.18
   IMAGE: asia-northeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID_DEV }}/backend/scraper
 jobs:
-  change:
+  deploy:
     permissions:
       contents: 'read'
       id-token: 'write'
@@ -28,8 +28,6 @@ jobs:
         uses: actions/setup-go@v3
         with:
           go-version: ${{ env.go-version }}
-      - name: Build
-        run: go build .
       - id: auth
         uses: 'google-github-actions/auth@v0'
         with:
@@ -41,27 +39,6 @@ jobs:
       - name: Create docker authentication
         run: gcloud auth configure-docker asia-northeast1-docker.pkg.dev
       - name: Build App
-        run: docker build -t ${{ env.IMAGE }} -f .
-      - name: Deploy App
-        run: docker push ${{ env.IMAGE }}
-  deploy:
-    needs: change
-    defaults:
-      run:
-        working-directory: services
-    runs-on: ubuntu-22.04
-    steps:
-      - id: auth
-        uses: 'google-github-actions/auth@v0'
-        with:
-          workload_identity_provider: "projects/${{ secrets.GCP_PROJECT_NUMBER_DEV }}/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider"
-          service_account: "github-actions@${{ secrets.GCP_PROJECT_ID_DEV }}.iam.gserviceaccount.com"
-          project_id: ${{ secrets.GCP_PROJECT_ID_DEV }}
-      - name: 'Set up Cloud SDK'
-        uses: 'google-github-actions/setup-gcloud@v0'
-      - name: Create docker authentication
-        run: gcloud auth configure-docker asia-northeast1-docker.pkg.dev
-      - name: Build App
-        run: docker build -t ${{ env.IMAGE }} -f .
+        run: docker build -t ${{ env.IMAGE }} -f ./docker/scraper/Dockerfile .
       - name: Deploy App
         run: docker push ${{ env.IMAGE }}
