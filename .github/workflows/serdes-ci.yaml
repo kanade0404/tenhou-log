@@ -19,14 +19,12 @@ jobs:
         uses: actions/setup-go@v3
         with:
           go-version: ${{ env.go-version }}
-      - name: Install Task
-        uses: arduino/setup-task@v1
       - name: Test
-        run: task test
+        run: go test ./...
       - name: Format
-        run: task fmt
+        run: go fmt ./...
       - name: go lint
-        run: task vet
+        run: go vet ./...
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         continue-on-error: true

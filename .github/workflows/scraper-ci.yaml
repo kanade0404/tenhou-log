@@ -30,13 +30,11 @@ jobs:
       run:
         working-directory: services/scraper
     steps:
-      - name: Install Task
-        uses: arduino/setup-task@v1
       - name: Format
-        run: task fmt
+        run: go fmt ./...
       - name: Test
         run: task test
       - name: go lint
-        run: task vet
+        run: go vet ./...
       - name: Build
         run: go build cmd/main.go
