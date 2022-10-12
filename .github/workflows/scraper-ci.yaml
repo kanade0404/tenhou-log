@@ -30,6 +30,12 @@ jobs:
       run:
         working-directory: services/scraper
     steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.go-version }}
       - name: Format
         run: go fmt ./...
       - name: Test
