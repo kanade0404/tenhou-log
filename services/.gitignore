@@ -1,0 +1,6 @@
+go.work*
+**/tmp/**
+**/credentials/*.json
+database/data/**
+database/logs/**
+database/test_data/**

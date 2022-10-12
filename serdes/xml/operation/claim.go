@@ -5,11 +5,12 @@ import (
 	"strconv"
 )
 
+// Claim 副露情報
 type Claim struct {
 	UserIndex xml.PlayerIndex
 }
 
-func ClaimFrom(claim uint64) xml.PlayerIndex {
+func claimFrom(claim uint64) xml.PlayerIndex {
 	switch claim {
 	case 0:
 		return 0
@@ -25,5 +26,6 @@ func (c *Claim) HandHais(m string) error {
 	if err != nil {
 		return err
 	}
-	ClaimFrom(mNum & 0x0003)
+	c.UserIndex = claimFrom(mNum & 0x0003)
+	return nil
 }

@@ -2,7 +2,7 @@ package xml
 
 import (
 	"fmt"
-	"github.com/kanade0404/tenhou-log/common"
+	"github.com/kanade0404/tenhou-log/serdes/str"
 	"net/url"
 	"strconv"
 )
@@ -187,12 +187,12 @@ func NewPlayerIndexFromString(pi string) (PlayerIndex, error) {
 type Players []Player
 
 func (p *Players) Unmarshal(e XmlElement) error {
-	rates := common.SplitByComma(e.AttrByName("rate"))
-	dans, err := common.SplitByCommaAsInt(e.AttrByName("dan"))
+	rates := str.SplitByComma(e.AttrByName("rate"))
+	dans, err := str.SplitByCommaAsInt(e.AttrByName("dan"))
 	if err != nil {
 		return err
 	}
-	sexes := common.SplitByComma(e.AttrByName("sx"))
+	sexes := str.SplitByComma(e.AttrByName("sx"))
 
 	for _, pi := range AllPlayerIndexes {
 		name, err := DecodePlayerName(e.AttrByName(fmt.Sprintf("n%d", pi)))
@@ -238,8 +238,8 @@ func (p Players) Marshal() (XmlElement, error) {
 		"n1":   n[1],
 		"n2":   n[2],
 		"n3":   n[3],
-		"rate": common.JoinByComma(rate),
-		"dan":  common.JoinByComma(dan),
-		"sx":   common.JoinByComma(sx),
+		"rate": str.JoinByComma(rate),
+		"dan":  str.JoinByComma(dan),
+		"sx":   str.JoinByComma(sx),
 	})), nil
 }

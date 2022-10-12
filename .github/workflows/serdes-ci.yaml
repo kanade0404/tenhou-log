@@ -1,0 +1,32 @@
+name: Serdes CI
+on:
+  push:
+    paths:
+      - serdes/**
+      - .github/workflows/serdes-ci.yaml
+defaults:
+  run:
+    working-directory: serdes
+env:
+  go-version: 1.18
+jobs:
+  serdes-ci:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.go-version }}
+      - name: Test
+        run: go test ./...
+      - name: Format
+        run: go fmt ./...
+      - name: go lint
+        run: go vet ./...
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        continue-on-error: true
+      - name: Build
+        run: go build .

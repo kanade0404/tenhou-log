@@ -1,0 +1,9 @@
+version: '3'
+
+tasks:
+  migrate:
+    cmds:
+      - sqldef -U postgres -p 65432 -W=secret postgres < database/schema/schema.sql
+  migrate-dry:
+    cmds:
+      - sqldef -U postgres -p 65432 -W=secret postgres --dry-run < database/schema/schema.sql
