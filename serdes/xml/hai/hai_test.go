@@ -174,7 +174,7 @@ func TestHai_Name(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			h, _ := NewHai(tt.fields.ID, tt.isRed)
 			if got := h.Name(); got != tt.want {
-				t.Errorf("Name() = %v, want %v", got, tt.want)
+				t.Errorf("File() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -198,13 +198,11 @@ func TestNewHai(t *testing.T) {
 				isRed: true,
 			},
 			want: &Characters{
-				Suits: &Suits{
-					Hai: Hai{
-						id:      0,
-						num:     1,
-						haiType: CharactersType,
-					},
-					IsRed: true,
+				Hai: &Hai{
+					id:        0,
+					num:       1,
+					haiType:   CharactersType,
+					isRedRule: true,
 				},
 			},
 		},
@@ -215,13 +213,11 @@ func TestNewHai(t *testing.T) {
 				isRed: false,
 			},
 			want: &Characters{
-				Suits: &Suits{
-					Hai: Hai{
-						id:      3,
-						num:     1,
-						haiType: CharactersType,
-					},
-					IsRed: false,
+				Hai: &Hai{
+					id:        3,
+					num:       1,
+					haiType:   CharactersType,
+					isRedRule: false,
 				},
 			},
 		},
@@ -232,13 +228,11 @@ func TestNewHai(t *testing.T) {
 				isRed: true,
 			},
 			want: &Characters{
-				Suits: &Suits{
-					Hai: Hai{
-						id:      32,
-						num:     9,
-						haiType: CharactersType,
-					},
-					IsRed: true,
+				Hai: &Hai{
+					id:        32,
+					num:       9,
+					haiType:   CharactersType,
+					isRedRule: true,
 				},
 			},
 		},
@@ -249,13 +243,11 @@ func TestNewHai(t *testing.T) {
 				isRed: false,
 			},
 			want: &Characters{
-				Suits: &Suits{
-					Hai: Hai{
-						id:      35,
-						num:     9,
-						haiType: CharactersType,
-					},
-					IsRed: false,
+				Hai: &Hai{
+					id:        35,
+					num:       9,
+					haiType:   CharactersType,
+					isRedRule: false,
 				},
 			},
 		},
@@ -266,13 +258,11 @@ func TestNewHai(t *testing.T) {
 				isRed: true,
 			},
 			want: &Circles{
-				Suits: &Suits{
-					Hai: Hai{
-						id:      36,
-						num:     1,
-						haiType: CirclesType,
-					},
-					IsRed: true,
+				Hai: &Hai{
+					id:        36,
+					num:       1,
+					haiType:   CirclesType,
+					isRedRule: true,
 				},
 			},
 		},
@@ -283,13 +273,11 @@ func TestNewHai(t *testing.T) {
 				isRed: false,
 			},
 			want: &Circles{
-				Suits: &Suits{
-					Hai: Hai{
-						id:      37,
-						num:     1,
-						haiType: CirclesType,
-					},
-					IsRed: false,
+				Hai: &Hai{
+					id:        37,
+					num:       1,
+					haiType:   CirclesType,
+					isRedRule: false,
 				},
 			},
 		},
@@ -300,13 +288,11 @@ func TestNewHai(t *testing.T) {
 				isRed: true,
 			},
 			want: &Circles{
-				Suits: &Suits{
-					Hai: Hai{
-						id:      70,
-						num:     9,
-						haiType: CirclesType,
-					},
-					IsRed: true,
+				Hai: &Hai{
+					id:        70,
+					num:       9,
+					haiType:   CirclesType,
+					isRedRule: true,
 				},
 			},
 		},
@@ -317,13 +303,11 @@ func TestNewHai(t *testing.T) {
 				isRed: false,
 			},
 			want: &Circles{
-				Suits: &Suits{
-					Hai: Hai{
-						id:      71,
-						num:     9,
-						haiType: CirclesType,
-					},
-					IsRed: false,
+				Hai: &Hai{
+					id:        71,
+					num:       9,
+					haiType:   CirclesType,
+					isRedRule: false,
 				},
 			},
 		},
@@ -334,13 +318,11 @@ func TestNewHai(t *testing.T) {
 				isRed: true,
 			},
 			want: &Bamboos{
-				Suits: &Suits{
-					Hai: Hai{
-						id:      72,
-						num:     1,
-						haiType: BamboosType,
-					},
-					IsRed: true,
+				Hai: &Hai{
+					id:        72,
+					num:       1,
+					haiType:   BamboosType,
+					isRedRule: true,
 				},
 			},
 		},
@@ -351,13 +333,11 @@ func TestNewHai(t *testing.T) {
 				isRed: false,
 			},
 			want: &Bamboos{
-				Suits: &Suits{
-					Hai: Hai{
-						id:      73,
-						num:     1,
-						haiType: BamboosType,
-					},
-					IsRed: false,
+				Hai: &Hai{
+					id:        73,
+					num:       1,
+					haiType:   BamboosType,
+					isRedRule: false,
 				},
 			},
 		},
@@ -368,13 +348,11 @@ func TestNewHai(t *testing.T) {
 				isRed: true,
 			},
 			want: &Bamboos{
-				Suits: &Suits{
-					Hai: Hai{
-						id:      106,
-						num:     9,
-						haiType: BamboosType,
-					},
-					IsRed: true,
+				Hai: &Hai{
+					id:        106,
+					num:       9,
+					haiType:   BamboosType,
+					isRedRule: true,
 				},
 			},
 		},
@@ -385,201 +363,228 @@ func TestNewHai(t *testing.T) {
 				isRed: false,
 			},
 			want: &Bamboos{
-				Suits: &Suits{
-					Hai: Hai{
-						id:      107,
-						num:     9,
-						haiType: BamboosType,
-					},
-					IsRed: false,
+				Hai: &Hai{
+					id:        107,
+					num:       9,
+					haiType:   BamboosType,
+					isRedRule: false,
 				},
 			},
 		},
 		{
 			name: "東(108)",
 			args: args{
-				id: 108,
+				id:    108,
+				isRed: false,
 			},
 			want: &Honours{
 				Hai: Hai{
-					id:      108,
-					num:     1,
-					haiType: HonorsType,
+					id:        108,
+					num:       1,
+					haiType:   HonorsType,
+					isRedRule: false,
 				},
 			},
 		},
 		{
 			name: "東(111)",
 			args: args{
-				id: 111,
+				id:    111,
+				isRed: false,
 			},
 			want: &Honours{
 				Hai: Hai{
-					id:      111,
-					num:     1,
-					haiType: HonorsType,
+					id:        111,
+					num:       1,
+					haiType:   HonorsType,
+					isRedRule: false,
 				},
 			},
 		}, {
 			name: "南(112)",
 			args: args{
-				id: 112,
+				id:    112,
+				isRed: false,
 			},
 			want: &Honours{
 				Hai: Hai{
-					id:      112,
-					num:     2,
-					haiType: HonorsType,
+					id:        112,
+					num:       2,
+					haiType:   HonorsType,
+					isRedRule: false,
 				},
 			},
 		},
 		{
 			name: "南(115)",
 			args: args{
-				id: 115,
+				id:    115,
+				isRed: false,
 			},
 			want: &Honours{
 				Hai: Hai{
-					id:      115,
-					num:     2,
-					haiType: HonorsType,
+					id:        115,
+					num:       2,
+					haiType:   HonorsType,
+					isRedRule: false,
 				},
 			},
 		},
 		{
 			name: "西(116)",
 			args: args{
-				id: 116,
+				id:    116,
+				isRed: false,
 			},
 			want: &Honours{
 				Hai: Hai{
-					id:      116,
-					num:     3,
-					haiType: HonorsType,
+					id:        116,
+					num:       3,
+					haiType:   HonorsType,
+					isRedRule: false,
 				},
 			},
 		},
 		{
 			name: "西(119)",
 			args: args{
-				id: 119,
+				id:    119,
+				isRed: false,
 			},
 			want: &Honours{
 				Hai: Hai{
-					id:      119,
-					num:     3,
-					haiType: HonorsType,
+					id:        119,
+					num:       3,
+					haiType:   HonorsType,
+					isRedRule: false,
 				},
 			},
 		},
 		{
 			name: "北(120)",
 			args: args{
-				id: 120,
+				id:    120,
+				isRed: false,
 			},
 			want: &Honours{
 				Hai: Hai{
-					id:      120,
-					num:     4,
-					haiType: HonorsType,
+					id:        120,
+					num:       4,
+					haiType:   HonorsType,
+					isRedRule: false,
 				},
 			},
 		},
 		{
 			name: "北(123)",
 			args: args{
-				id: 123,
+				id:    123,
+				isRed: false,
 			},
 			want: &Honours{
 				Hai: Hai{
-					id:      123,
-					num:     4,
-					haiType: HonorsType,
+					id:        123,
+					num:       4,
+					haiType:   HonorsType,
+					isRedRule: false,
 				},
 			},
 		},
 		{
 			name: "白(124)",
 			args: args{
-				id: 124,
+				id:    124,
+				isRed: false,
 			},
 			want: &Honours{
 				Hai: Hai{
-					id:      124,
-					num:     5,
-					haiType: HonorsType,
+					id:        124,
+					num:       5,
+					haiType:   HonorsType,
+					isRedRule: false,
 				},
 			},
 		},
 		{
 			name: "白(127)",
 			args: args{
-				id: 127,
+				id:    127,
+				isRed: false,
 			},
 			want: &Honours{
 				Hai: Hai{
-					id:      127,
-					num:     5,
-					haiType: HonorsType,
+					id:        127,
+					num:       5,
+					haiType:   HonorsType,
+					isRedRule: false,
 				},
 			},
 		},
 		{
 			name: "發(128)",
 			args: args{
-				id: 128,
+				id:    128,
+				isRed: false,
 			},
 			want: &Honours{
 				Hai: Hai{
-					id:      128,
-					num:     6,
-					haiType: HonorsType,
+					id:        128,
+					num:       6,
+					haiType:   HonorsType,
+					isRedRule: false,
 				},
 			},
 		},
 		{
 			name: "發(131)",
 			args: args{
-				id: 131,
+				id:    131,
+				isRed: false,
 			},
 			want: &Honours{
 				Hai: Hai{
-					id:      131,
-					num:     6,
-					haiType: HonorsType,
+					id:        131,
+					num:       6,
+					haiType:   HonorsType,
+					isRedRule: false,
 				},
 			},
 		},
 		{
 			name: "中(132)",
 			args: args{
-				id: 132,
+				id:    132,
+				isRed: false,
 			},
 			want: &Honours{
 				Hai: Hai{
-					id:      132,
-					num:     7,
-					haiType: HonorsType,
+					id:        132,
+					num:       7,
+					haiType:   HonorsType,
+					isRedRule: false,
 				},
 			},
 		},
 		{
 			name: "中(135)",
 			args: args{
-				id: 135,
+				id:    135,
+				isRed: false,
 			},
 			want: &Honours{
 				Hai: Hai{
-					id:      135,
-					num:     7,
-					haiType: HonorsType,
+					id:        135,
+					num:       7,
+					haiType:   HonorsType,
+					isRedRule: false,
 				},
 			},
 		},
 		{
 			name: "字牌の上限135を上回るのでエラー",
 			args: args{
-				id: 136,
+				id:    136,
+				isRed: false,
 			},
 			want:    nil,
 			wantErr: true,
@@ -592,8 +597,115 @@ func TestNewHai(t *testing.T) {
 				t.Errorf("NewHai() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if diff := cmp.Diff(fmt.Sprintf("%v", got), fmt.Sprintf("%v", tt.want)); diff != "" {
+			if diff := cmp.Diff(fmt.Sprintf("%+v", got), fmt.Sprintf("%+v", tt.want)); diff != "" {
 				t.Errorf("(-got+want)\n%v", diff)
+			}
+		})
+	}
+}
+
+func Test_IsRed(t *testing.T) {
+	tests := []struct {
+		name      string
+		id        uint
+		isRedRule bool
+		want      bool
+		wantErr   bool
+	}{
+		{
+			name:      "赤なし一萬(0)",
+			id:        0,
+			isRedRule: false,
+			want:      false,
+		},
+		{
+			name:      "赤あり一萬(0)",
+			id:        0,
+			isRedRule: true,
+			want:      false,
+		},
+		{
+			name:      "赤なし五萬(15)",
+			id:        15,
+			isRedRule: false,
+			want:      false,
+		},
+		{
+			name:      "赤あり五萬(15)",
+			id:        15,
+			isRedRule: true,
+			want:      false,
+		},
+		{
+			name:      "赤なし五萬(16)",
+			id:        16,
+			isRedRule: false,
+			want:      false,
+		},
+		{
+			name:      "赤あり五萬(16)",
+			id:        16,
+			isRedRule: true,
+			want:      true,
+		},
+		{
+			name:      "赤なし五筒(51)",
+			id:        51,
+			isRedRule: false,
+			want:      false,
+		},
+		{
+			name:      "赤あり五筒(51)",
+			id:        51,
+			isRedRule: true,
+			want:      false,
+		},
+		{
+			name:      "赤なし五筒(52)",
+			id:        52,
+			isRedRule: false,
+			want:      false,
+		},
+		{
+			name:      "赤あり五筒(52)",
+			id:        52,
+			isRedRule: true,
+			want:      true,
+		},
+		{
+			name:      "赤なし五索(87)",
+			id:        87,
+			isRedRule: false,
+			want:      false,
+		},
+		{
+			name:      "赤あり五索(87)",
+			id:        87,
+			isRedRule: true,
+			want:      false,
+		},
+		{
+			name:      "赤なし五索(88)",
+			id:        88,
+			isRedRule: false,
+			want:      false,
+		},
+		{
+			name:      "赤あり五索(88)",
+			id:        88,
+			isRedRule: true,
+			want:      true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h, err := NewHai(tt.id, tt.isRedRule)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("IsRed() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got := h.IsRed(); got != tt.want {
+				t.Errorf("IsRed() = %v, want %v", got, tt.want)
 			}
 		})
 	}
