@@ -15,10 +15,10 @@ const (
 	FourthUser DrawType = "W"
 )
 const (
-	FirstUserIndex = iota
-	SecondUserIndex
-	ThirdUserIndex
-	FourthUserIndex
+	FirstUserIndex  = iota // 自身
+	SecondUserIndex        // 下家
+	ThirdUserIndex         // 対面
+	FourthUserIndex        // 上家
 )
 
 func (t DrawType) PlayerIndex() uint {
