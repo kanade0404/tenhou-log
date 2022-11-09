@@ -40,7 +40,7 @@ func TestClaim_NewClaim(t *testing.T) {
 			name:       "8pを暗槓",
 			userIndex:  FirstUserIndex,
 			callIndex:  0,
-			haiIndexes: []uint{65, 66, 67},
+			haiIndexes: []uint{64, 65, 66, 67},
 			gameInfo: &xml.GameInfo{
 				Red: true,
 			},
@@ -50,7 +50,7 @@ func TestClaim_NewClaim(t *testing.T) {
 			name:       "上家から2mを明槓",
 			userIndex:  FourthUserIndex,
 			callIndex:  0,
-			haiIndexes: []uint{4, 5, 6},
+			haiIndexes: []uint{4, 5, 6, 7},
 			gameInfo: &xml.GameInfo{
 				Red: true,
 			},

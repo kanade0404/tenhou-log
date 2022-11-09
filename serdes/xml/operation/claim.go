@@ -232,8 +232,8 @@ func kan(mentsuCode uint64, isRedRule bool) (hais []hai.IHai, callIndex int, cla
 	callPlayerIndex := callPlayerIndex(mentsuCode)
 	if callPlayerIndex == 0 {
 		claimType = ClaimKan
-	} else {
 		pattern = (pattern &^ 3) + 3
+	} else {
 		claimType = ClaimMinkan
 	}
 	haiIndex := int(pattern/4) * 4
@@ -260,6 +260,10 @@ func kan(mentsuCode uint64, isRedRule bool) (hais []hai.IHai, callIndex int, cla
 		pattern = uint64(haiIndexes[0])
 		haiIndexes[0] = int(_pattern)
 	}
+	haiIndexes = append(haiIndexes, int(pattern))
+	sort.Slice(haiIndexes, func(i, j int) bool {
+		return haiIndexes[i] < haiIndexes[j]
+	})
 	for _, index := range haiIndexes {
 		h, err := hai.NewHai(uint(index), isRedRule)
 		if err != nil {
