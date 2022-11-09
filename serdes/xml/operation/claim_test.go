@@ -13,6 +13,7 @@ func TestClaim_NewClaim(t *testing.T) {
 		haiIndexes []uint
 		callIndex  int
 		m          string
+		claimType  string
 		gameInfo   *xml.GameInfo
 		wantErr    bool
 	}{
@@ -24,7 +25,8 @@ func TestClaim_NewClaim(t *testing.T) {
 			gameInfo: &xml.GameInfo{
 				Red: true,
 			},
-			m: "5431",
+			claimType: ClaimChii,
+			m:         "5431",
 		},
 		{
 			name:       "下家から南ポン",
@@ -34,7 +36,8 @@ func TestClaim_NewClaim(t *testing.T) {
 			gameInfo: &xml.GameInfo{
 				Red: true,
 			},
-			m: "44105",
+			claimType: ClaimPon,
+			m:         "44105",
 		},
 		{
 			name:       "8pを暗槓",
@@ -44,7 +47,8 @@ func TestClaim_NewClaim(t *testing.T) {
 			gameInfo: &xml.GameInfo{
 				Red: true,
 			},
-			m: "16384",
+			claimType: ClaimKan,
+			m:         "16384",
 		},
 		{
 			name:       "上家から2mを明槓",
@@ -54,7 +58,8 @@ func TestClaim_NewClaim(t *testing.T) {
 			gameInfo: &xml.GameInfo{
 				Red: true,
 			},
-			m: "1027",
+			claimType: ClaimMinkan,
+			m:         "1027",
 		},
 		{
 			name:       "抜きドラ",
@@ -64,7 +69,8 @@ func TestClaim_NewClaim(t *testing.T) {
 			gameInfo: &xml.GameInfo{
 				Red: true,
 			},
-			m: "31264",
+			claimType: ClaimNorthDora,
+			m:         "31264",
 		},
 		{
 			name:       "下家からポンした東を加カン",
@@ -74,7 +80,8 @@ func TestClaim_NewClaim(t *testing.T) {
 			gameInfo: &xml.GameInfo{
 				Red: true,
 			},
-			m: "42065",
+			claimType: ClaimChakan,
+			m:         "42065",
 		},
 	}
 	for _, tt := range tests {

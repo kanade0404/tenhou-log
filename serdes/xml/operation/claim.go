@@ -9,11 +9,12 @@ import (
 )
 
 const (
-	ClaimChii   = "チー"
-	ClaimPon    = "ポン"
-	ClaimKan    = "暗槓"
-	ClaimMinkan = "大明槓"
-	ClaimChakan = "加槓"
+	ClaimChii      = "チー"
+	ClaimPon       = "ポン"
+	ClaimKan       = "暗槓"
+	ClaimMinkan    = "大明槓"
+	ClaimChakan    = "加槓"
+	ClaimNorthDora = "北ドラ抜き"
 )
 
 // Claim 副露情報
@@ -38,6 +39,11 @@ func (c *Claim) Hais() []hai.IHai {
 // CallIndex 鳴いた牌のインデックス番号
 func (c *Claim) CallIndex() int {
 	return c.callIndex
+}
+
+// Type 鳴きの種類
+func (c *Claim) Type() string {
+	return c.claimType
 }
 
 // NewClaim New Claim 副露情報を面子コードから解析する
@@ -325,7 +331,8 @@ func (c *Claim) unmarshalMentsuCode(m string) error {
 		c.claimType = claimType
 	} else if (mNum & (1 << 5)) != 0 {
 		// 北抜き
-		return nil
+		c.callIndex = 0
+		c.claimType = ClaimNorthDora
 	} else {
 		hais, callIndex, claimType, err := kan(mNum, c.Red)
 		if err != nil {
