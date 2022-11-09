@@ -68,8 +68,8 @@ func TestClaim_NewClaim(t *testing.T) {
 		},
 		{
 			name:       "下家からポンした東を加カン",
-			userIndex:  FirstUserIndex,
-			callIndex:  0,
+			userIndex:  SecondUserIndex,
+			callIndex:  2,
 			haiIndexes: []uint{108, 109, 110, 111},
 			gameInfo: &xml.GameInfo{
 				Red: true,
