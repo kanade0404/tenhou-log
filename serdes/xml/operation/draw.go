@@ -9,27 +9,21 @@ import (
 type DrawType string
 
 const (
-	FirstUser  DrawType = "T"
-	SecondUser DrawType = "U"
-	ThirdUser  DrawType = "V"
-	FourthUser DrawType = "W"
-)
-const (
-	FirstUserIndex  = iota // 自身
-	SecondUserIndex        // 下家
-	ThirdUserIndex         // 対面
-	FourthUserIndex        // 上家
+	FirstDrawUser  DrawType = "T"
+	SecondDrawUser DrawType = "U"
+	ThirdDrawUser  DrawType = "V"
+	FourthDrawUser DrawType = "W"
 )
 
 func (t DrawType) PlayerIndex() uint {
 	switch t {
-	case FirstUser:
+	case FirstDrawUser:
 		return FirstUserIndex
-	case SecondUser:
+	case SecondDrawUser:
 		return SecondUserIndex
-	case ThirdUser:
+	case ThirdDrawUser:
 		return ThirdUserIndex
-	case FourthUser:
+	case FourthDrawUser:
 		return FourthUserIndex
 	default:
 		return 0
@@ -37,7 +31,7 @@ func (t DrawType) PlayerIndex() uint {
 }
 func IsDrawType(drawType string) bool {
 	switch drawType {
-	case string(FirstUser), string(SecondUser), string(ThirdUser), string(FourthUser):
+	case string(FirstDrawUser), string(SecondDrawUser), string(ThirdDrawUser), string(FourthDrawUser):
 		return true
 	}
 	return false

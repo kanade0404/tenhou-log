@@ -15,22 +15,22 @@ func TestDrawType_PlayerIndex(t *testing.T) {
 	}{
 		{
 			name: "対局開始時東家=0",
-			t:    FirstUser,
+			t:    FirstDrawUser,
 			want: 0,
 		},
 		{
 			name: "対局開始時南家=1",
-			t:    SecondUser,
+			t:    SecondDrawUser,
 			want: 1,
 		},
 		{
 			name: "対局開始時西家=2",
-			t:    ThirdUser,
+			t:    ThirdDrawUser,
 			want: 2,
 		},
 		{
 			name: "対局開始時北家=3",
-			t:    FourthUser,
+			t:    FourthDrawUser,
 			want: 3,
 		},
 	}
@@ -121,7 +121,7 @@ func TestNewDraw(t *testing.T) {
 				},
 			},
 			want: &Draw{
-				DrawType: FirstUser,
+				DrawType: FirstDrawUser,
 				Hai:      red5Character,
 				GameInfo: &xml.GameInfo{
 					Red: true,
@@ -138,7 +138,7 @@ func TestNewDraw(t *testing.T) {
 				},
 			},
 			want: &Draw{
-				DrawType: FirstUser,
+				DrawType: FirstDrawUser,
 				Hai:      nonRed5Character,
 				GameInfo: &xml.GameInfo{
 					Red: false,
