@@ -23,7 +23,7 @@ type Claim struct {
 	hais        []hai.IHai      // 鳴いた手牌
 	callIndex   int             // 鳴いた牌のインデックス
 	claimType   string
-	*xml.GameInfo
+	isRedRule   bool
 }
 
 // CallFromPlayer 自分から見て誰から鳴いたか
@@ -47,9 +47,9 @@ func (c *Claim) Type() string {
 }
 
 // NewClaim New Claim 副露情報を面子コードから解析する
-func NewClaim(info *xml.GameInfo, mentsuCode string) (*Claim, error) {
+func NewClaim(mentsuCode string, isRedRule bool) (*Claim, error) {
 	c := &Claim{
-		GameInfo: info,
+		isRedRule: isRedRule,
 	}
 	err := c.unmarshalMentsuCode(mentsuCode)
 	if err != nil {
@@ -120,9 +120,6 @@ func pon(mentsuCode uint64, isRedRule bool) (hais []hai.IHai, callIndex int, cla
 	// 牌添字
 	haiIndex := (mentsuCode & 0x0060) >> 5
 	idx := int(pattern/3) * 4
-	if err != nil {
-		return hais, callIndex, claimType, err
-	}
 	var haiIndexes []int
 	switch haiIndex {
 	case 0:
@@ -134,15 +131,13 @@ func pon(mentsuCode uint64, isRedRule bool) (hais []hai.IHai, callIndex int, cla
 	case 3:
 		haiIndexes = []int{idx, idx + 1, idx + 2}
 	default:
-		return hais, callIndex, claimType, fmt.Errorf("no matched 0~3. actual: %d", haiIndex)
+		return hais, callIndex, claimType, fmt.Errorf("error at pon: no matched 0~3. actual: %d", haiIndex)
 	}
-	switch callIndex {
-	case 1:
+	if callIndex == 1 {
 		haiIndexes = []int{haiIndexes[1], haiIndexes[0], haiIndexes[2]}
-	case 2:
+	}
+	if callIndex == 2 {
 		haiIndexes = []int{haiIndexes[2], haiIndexes[0], haiIndexes[1]}
-	default:
-		return hais, callIndex, claimType, fmt.Errorf("no matched 1~2. actual: %d", callIndex)
 	}
 	callPlayerIndex := callPlayerIndex(mentsuCode)
 	if callPlayerIndex < 3 {
@@ -303,10 +298,9 @@ func (c *Claim) unmarshalMentsuCode(m string) error {
 	if err != nil {
 		return err
 	}
-	c.playerIndex = playerIndex
-	fmt.Println(playerIndex)
+	c.playerIndex = *playerIndex
 	if (mNum&0x0004)>>2 == 1 {
-		hais, callIndex, claimType, err := chii(mNum, c.Red)
+		hais, callIndex, claimType, err := chii(mNum, c.isRedRule)
 		if err != nil {
 			return err
 		}
@@ -314,7 +308,7 @@ func (c *Claim) unmarshalMentsuCode(m string) error {
 		c.callIndex = callIndex
 		c.claimType = claimType
 	} else if (mNum & (1 << 3)) != 0 {
-		hais, callIndex, claimType, err := pon(mNum, c.Red)
+		hais, callIndex, claimType, err := pon(mNum, c.isRedRule)
 		if err != nil {
 			return err
 		}
@@ -322,7 +316,7 @@ func (c *Claim) unmarshalMentsuCode(m string) error {
 		c.callIndex = callIndex
 		c.claimType = claimType
 	} else if (mNum & (1 << 4)) != 0 {
-		hais, callIndex, claimType, err := chakan(mNum, c.Red)
+		hais, callIndex, claimType, err := chakan(mNum, c.isRedRule)
 		if err != nil {
 			return err
 		}
@@ -334,7 +328,7 @@ func (c *Claim) unmarshalMentsuCode(m string) error {
 		c.callIndex = 0
 		c.claimType = ClaimNorthDora
 	} else {
-		hais, callIndex, claimType, err := kan(mNum, c.Red)
+		hais, callIndex, claimType, err := kan(mNum, c.isRedRule)
 		if err != nil {
 			return err
 		}

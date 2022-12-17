@@ -161,27 +161,32 @@ type Player struct {
 	Sex
 }
 
-type PlayerIndex uint32
+type PlayerIndex int
 
-func (p PlayerIndex) String() string {
-	return strconv.Itoa(int(p))
+func (p *PlayerIndex) String() string {
+	return strconv.Itoa(int(*p))
 }
 
 var AllPlayerIndexes = []PlayerIndex{0, 1, 2, 3}
 
-func NewPlayerIndex(idx int) (PlayerIndex, error) {
+func NewPlayerIndex(idx int) (*PlayerIndex, error) {
 	if idx < 0 || idx > 3 {
-		return 0, fmt.Errorf("player index must be between 0 and 3 but %d", idx)
+		return nil, fmt.Errorf("player index must be between 0 and 3 but %d", idx)
 	}
-	return PlayerIndex(idx), nil
+	i := PlayerIndex(idx)
+	return &i, nil
 }
 
-func NewPlayerIndexFromString(pi string) (PlayerIndex, error) {
+func NewPlayerIndexFromString(pi string) (*PlayerIndex, error) {
 	idx, err := strconv.Atoi(pi)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	return NewPlayerIndex(idx)
+	i, err := NewPlayerIndex(idx)
+	if err != nil {
+		return nil, err
+	}
+	return i, nil
 }
 
 type Players []Player

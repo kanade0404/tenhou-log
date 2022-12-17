@@ -14,7 +14,7 @@ func TestClaim_NewClaim(t *testing.T) {
 		callIndex  int
 		m          string
 		claimType  string
-		gameInfo   *xml.GameInfo
+		isRedRule  bool
 		wantErr    bool
 	}{
 		{
@@ -22,74 +22,67 @@ func TestClaim_NewClaim(t *testing.T) {
 			userIndex:  FourthUserIndex,
 			callIndex:  2,
 			haiIndexes: []uint{6, 9, 14},
-			gameInfo: &xml.GameInfo{
-				Red: true,
-			},
-			claimType: ClaimChii,
-			m:         "5431",
+			isRedRule:  true,
+			claimType:  ClaimChii,
+			m:          "5431",
 		},
 		{
 			name:       "下家から南ポン",
 			userIndex:  SecondUserIndex,
 			callIndex:  2,
 			haiIndexes: []uint{112, 113, 115},
-			gameInfo: &xml.GameInfo{
-				Red: true,
-			},
-			claimType: ClaimPon,
-			m:         "44105",
+			isRedRule:  true,
+			claimType:  ClaimPon,
+			m:          "44105",
 		},
 		{
 			name:       "8pを暗槓",
 			userIndex:  FirstUserIndex,
 			callIndex:  0,
 			haiIndexes: []uint{64, 65, 66, 67},
-			gameInfo: &xml.GameInfo{
-				Red: true,
-			},
-			claimType: ClaimKan,
-			m:         "16384",
+			isRedRule:  true,
+			claimType:  ClaimKan,
+			m:          "16384",
 		},
 		{
 			name:       "上家から2mを明槓",
 			userIndex:  FourthUserIndex,
 			callIndex:  0,
 			haiIndexes: []uint{4, 5, 6, 7},
-			gameInfo: &xml.GameInfo{
-				Red: true,
-			},
-			claimType: ClaimMinkan,
-			m:         "1027",
+			isRedRule:  true,
+			claimType:  ClaimMinkan,
+			m:          "1027",
 		},
 		{
 			name:       "抜きドラ",
 			userIndex:  FirstUserIndex,
 			callIndex:  0,
 			haiIndexes: nil,
-			gameInfo: &xml.GameInfo{
-				Red: true,
-			},
-			claimType: ClaimNorthDora,
-			m:         "31264",
+			isRedRule:  true,
+			claimType:  ClaimNorthDora,
+			m:          "31264",
 		},
 		{
 			name:       "下家からポンした東を加カン",
 			userIndex:  SecondUserIndex,
 			callIndex:  2,
 			haiIndexes: []uint{108, 109, 110, 111},
-			gameInfo: &xml.GameInfo{
-				Red: true,
-			},
-			claimType: ClaimChakan,
-			m:         "42065",
+			isRedRule:  true,
+			claimType:  ClaimChakan,
+			m:          "42065",
+		},
+		{
+			name:       "から東をポン",
+			userIndex:  SecondUserIndex,
+			callIndex:  0,
+			haiIndexes: []uint{109, 110, 108},
+			isRedRule:  true,
+			m:          "41577",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &Claim{
-				GameInfo: tt.gameInfo,
-			}
-			c, err := NewClaim(tt.gameInfo, tt.m)
+			c, err := NewClaim(tt.m, tt.isRedRule)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("unmarshalMentsuCode() error = %v, wantErr %v", err, tt.wantErr)
 			}
