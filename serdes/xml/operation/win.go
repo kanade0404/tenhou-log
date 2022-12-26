@@ -8,6 +8,10 @@ import (
 	"strings"
 )
 
+func wrapError(funcName string, err error) error {
+	return fmt.Errorf("error at operation.%s(): %w", funcName, err)
+}
+
 func yakuMap() map[int]string {
 	return map[int]string{
 		0:  "門前清自摸和",
@@ -73,23 +77,40 @@ type point struct {
 	p  int
 	completeHand
 }
-type dora struct {
+type Dora struct {
+	common []*commonDora
+	isRed  bool
+}
+type commonDora struct {
 	omote hai.IHai
 	ura   hai.IHai
 }
 
-func (d dora) String() string {
+func (d *Dora) String() string {
 	var (
-		oi, on uint
-		ot     hai.HaiType
+		omoteDoras, uraDoras, redDoras []string
+		existUraDora                   bool
+		dora                           string
 	)
-	oi = d.omote.ID()
-	on = d.omote.Num()
-	ot = d.omote.Type()
-	if d.ura != nil {
-		return fmt.Sprintf("ドラ:(ID:%d,Num:%d,Type:%s),裏ドラ:(ID:%d,Num:%d,Type:%s)", oi, on, ot, d.ura.ID(), d.ura.Num(), d.ura.Type())
+	for i := range d.common {
+		omoteDoras = append(omoteDoras, fmt.Sprintf("{%s}", d.common[i].omote.String()))
+		if d.common[i].ura != nil {
+			uraDoras = append(uraDoras, fmt.Sprintf("{%s}", d.common[i].ura.String()))
+			existUraDora = true
+		}
 	}
-	return fmt.Sprintf("ドラ:(ID:%d,Num:%d,Type:%s)", oi, on, ot)
+	dora += fmt.Sprintf("ドラ:(%s)", strings.Join(omoteDoras, ","))
+	if existUraDora {
+		dora += fmt.Sprintf(",裏ドラ:(%s)", strings.Join(uraDoras, ","))
+	}
+	if d.isRed {
+		reds := hai.Reds(d.isRed)
+		for i := range reds {
+			redDoras = append(redDoras, fmt.Sprintf("{%s}", reds[i].String()))
+		}
+		dora = fmt.Sprintf(",赤ドラ:(%s)", strings.Join(redDoras, ","))
+	}
+	return dora
 }
 
 type player struct {
@@ -107,7 +128,7 @@ type Win struct {
 	continuePoint      int
 	reachPoint         int
 	winHai             hai.IHai
-	doras              []dora
+	dora               *Dora
 	winPoint           *point
 	playerPointSpreads []*pointSpread
 }
@@ -181,11 +202,11 @@ func (w *Win) WinHai() hai.IHai {
 }
 
 /*
-Doras
+Dora
 ドラ牌
 */
-func (w *Win) Doras() []dora {
-	return w.doras
+func (w *Win) Dora() *Dora {
+	return w.dora
 }
 
 /*
@@ -195,8 +216,8 @@ IsHitDora
 func (w *Win) IsHitDora() bool {
 	hais := w.AllHais()
 	for i := range hais {
-		for j := range w.doras {
-			if hais[i].Num() == w.doras[j].omote.Num() || (w.doras[j].ura != nil && hais[i].Num() == w.doras[j].ura.Num()) {
+		for j := range w.dora.common {
+			if hais[i].Num() == w.dora.common[j].omote.Num() || (w.dora.common[j].ura != nil && hais[i].Num() == w.dora.common[j].ura.Num()) {
 				return true
 			}
 		}
@@ -224,41 +245,41 @@ func NewWin(ba, hands, m, machi, ten, yaku, yakuman, doraHai, doraHaiUra, who, f
 	// 積み棒と供託リーチ棒
 	continuePoint, reachPoint, err := createContinueAndReachPoint(ba)
 	if err != nil {
-		return nil, err
+		return nil, wrapError("NewWin", err)
 	}
 	// 手牌
 	handHais, err := createHandHais(hands, isRedRule)
 	if err != nil {
-		return nil, err
+		return nil, wrapError("NewWin", err)
 	}
 	// 副露牌
 	callHais, err := createCallHais(m, isRedRule)
 	if err != nil {
-		return nil, err
+		return nil, wrapError("NewWin", err)
 	}
 	// 和了待ち牌
 	winHai, err := createWinHai(machi, isRedRule)
 	if err != nil {
-		return nil, err
+		return nil, wrapError("NewWin", err)
 	}
 	// 和了点
 	winPoint, err := createWinPoint(ten, yaku)
 	if err != nil {
-		return nil, err
+		return nil, wrapError("NewWin", err)
 	}
 	// ドラ
-	doras, err := createDoras(doraHai, doraHaiUra, isRedRule)
+	dora, err := createDora(doraHai, doraHaiUra, isRedRule)
 	if err != nil {
-		return nil, err
+		return nil, wrapError("NewWin", err)
 	}
 	// 和了・放銃プレイヤー
 	player, err := createPlayer(who, fromWho)
 	if err != nil {
-		return nil, err
+		return nil, wrapError("NewWin", err)
 	}
 	playerPointSpread, err := createPlayerPointSpread(sc)
 	if err != nil {
-		return nil, err
+		return nil, wrapError("NewWin", err)
 	}
 	return &Win{
 		handHais:           handHais,
@@ -267,7 +288,7 @@ func NewWin(ba, hands, m, machi, ten, yaku, yakuman, doraHai, doraHaiUra, who, f
 		reachPoint:         reachPoint,
 		winHai:             winHai,
 		winPoint:           winPoint,
-		doras:              doras,
+		dora:               dora,
 		player:             player,
 		playerPointSpreads: playerPointSpread,
 	}, nil
@@ -280,15 +301,16 @@ createContinueAndReachPoint
 func createContinueAndReachPoint(ba string) (continuePoint, reachPoint int, err error) {
 	points := strings.Split(ba, ",")
 	if len(points) < 2 {
-		return 0, 0, fmt.Errorf("argument 'ba' must be two elements. actual: %s", ba)
+		err = fmt.Errorf("argument 'ba' must be two elements. actual: %s", ba)
+		return 0, 0, wrapError("createContinueAndReachPoint", err)
 	}
 	cp, err := strconv.Atoi(points[0])
 	if err != nil {
-		return 0, 0, fmt.Errorf("error at createContinueAndReachPoint: %w", err)
+		return 0, 0, wrapError("createContinueAndReachPoint", err)
 	}
 	rp, err := strconv.Atoi(points[1])
 	if err != nil {
-		return 0, 0, fmt.Errorf("error at createContinueAndReachPoint: %w", err)
+		return 0, 0, wrapError("createContinueAndReachPoint", err)
 	}
 	if cp != 0 {
 		continuePoint = cp * 1000
@@ -309,11 +331,11 @@ func createHandHais(hands string, isRedRule bool) ([]hai.IHai, error) {
 	for i := range hhs {
 		idx, err := strconv.Atoi(hhs[i])
 		if err != nil {
-			return nil, fmt.Errorf("error at createHandHais: %w", err)
+			return nil, wrapError("createHandHais", err)
 		}
-		h, err := hai.NewHai(uint(idx), isRedRule)
+		h, err := hai.NewHai(idx, isRedRule)
 		if err != nil {
-			return nil, fmt.Errorf("error at createHandHais: %w", err)
+			return nil, wrapError("createHandHais", err)
 		}
 		handHais = append(handHais, h)
 	}
@@ -333,7 +355,7 @@ func createCallHais(m string, isRedRule bool) ([][]hai.IHai, error) {
 	for i := range chs {
 		c, err := NewClaim(chs[i], isRedRule)
 		if err != nil {
-			return nil, fmt.Errorf("error at createCallHais: %w", err)
+			return nil, wrapError("createCallHais", err)
 		}
 		callHais = append(callHais, c.hais)
 	}
@@ -348,15 +370,15 @@ func createWinPoint(ten string, yaku string) (*point, error) {
 	tens := strings.Split(ten, ",")
 	hu, err := strconv.Atoi(tens[0])
 	if err != nil {
-		return nil, fmt.Errorf("error at createWinPoint: %w", err)
+		return nil, wrapError("createWinPoint", err)
 	}
 	p, err := strconv.Atoi(tens[1])
 	if err != nil {
-		return nil, fmt.Errorf("error at createWinPoint: %w", err)
+		return nil, wrapError("createWinPoint", err)
 	}
 	completeHand, err := createCompleteHand(yaku)
 	if err != nil {
-		return nil, fmt.Errorf("error at createWinPoint: %w", err)
+		return nil, wrapError("createWinPoint", err)
 	}
 	return &point{
 		hu:           hu,
@@ -372,54 +394,57 @@ createWinHai
 func createWinHai(machi string, isRedRule bool) (hai.IHai, error) {
 	machiHaiIndex, err := strconv.Atoi(machi)
 	if err != nil {
-		return nil, fmt.Errorf("error at createWinHai: %w", err)
+		return nil, wrapError("createWinHai", err)
 	}
-	machiHai, err := hai.NewHai(uint(machiHaiIndex), isRedRule)
+	machiHai, err := hai.NewHai(machiHaiIndex, isRedRule)
 	if err != nil {
-		return nil, fmt.Errorf("error at createWinHai: %w", err)
+		return nil, wrapError("createWinHai", err)
 	}
 	return machiHai, nil
 }
 
 /*
-createDoras
+createDora
 ドラ情報を取得する
 */
-func createDoras(d, ud string, isRedRule bool) ([]dora, error) {
+func createDora(d, ud string, isRedRule bool) (*Dora, error) {
 	var (
-		doras []dora
+		doras []*commonDora
 	)
 	ds := strings.Split(d, ",")
 	uds := strings.Split(ud, ",")
 	for i := range ds {
 		haiID, err := strconv.Atoi(ds[i])
 		if err != nil {
-			return nil, fmt.Errorf("error at createDoras: %w", err)
+			return nil, wrapError("createDora", err)
 		}
-		h, err := hai.NewHai(uint(haiID), isRedRule)
+		h, err := hai.NewHai(haiID, isRedRule)
 		if err != nil {
-			return nil, fmt.Errorf("error at createDoras: %w", err)
+			return nil, wrapError("createDora", err)
 		}
 		if ud == "" {
-			doras = append(doras, dora{
+			doras = append(doras, &commonDora{
 				omote: h,
 			})
 		} else {
 			haiID, err := strconv.Atoi(uds[i])
 			if err != nil {
-				return nil, fmt.Errorf("error at createDoras: %w", err)
+				return nil, wrapError("createDora", err)
 			}
-			udh, err := hai.NewHai(uint(haiID), isRedRule)
+			udh, err := hai.NewHai(haiID, isRedRule)
 			if err != nil {
-				return nil, fmt.Errorf("error at createDoras: %w", err)
+				return nil, wrapError("createDora", err)
 			}
-			doras = append(doras, dora{
+			doras = append(doras, &commonDora{
 				omote: h,
 				ura:   udh,
 			})
 		}
 	}
-	return doras, nil
+	return &Dora{
+		common: doras,
+		isRed:  isRedRule,
+	}, nil
 }
 
 /*
@@ -429,7 +454,7 @@ createPlayer
 func createPlayer(who, fromWho string) (*player, error) {
 	winner, err := xml.NewPlayerIndexFromString(who)
 	if err != nil {
-		return nil, fmt.Errorf("error at createPlayer: %w", err)
+		return nil, wrapError("createPlayer", err)
 	}
 	if fromWho == who {
 		return &player{
@@ -438,7 +463,7 @@ func createPlayer(who, fromWho string) (*player, error) {
 	}
 	loser, err := xml.NewPlayerIndexFromString(fromWho)
 	if err != nil {
-		return nil, fmt.Errorf("error at createPlayer: %w", err)
+		return nil, wrapError("createPlayer", err)
 	}
 	return &player{
 		winner: *winner,
@@ -459,11 +484,11 @@ func createPlayerPointSpread(sc string) ([]*pointSpread, error) {
 	for i := 0; i < l; i += 2 {
 		before, err := strconv.Atoi(scs[i])
 		if err != nil {
-			return nil, fmt.Errorf("error at createPlayerPointSpread: %w", err)
+			return nil, wrapError("createPlayerPointSpread", err)
 		}
 		after, err := strconv.Atoi(scs[i+1])
 		if err != nil {
-			return nil, fmt.Errorf("error at createPlayerPointSpread: %w", err)
+			return nil, wrapError("createPlayerPointSpread", err)
 		}
 		results = append(results, &pointSpread{
 			before: before,
@@ -481,7 +506,7 @@ func createCompleteHand(yaku string) (completeHand, error) {
 		_yID := yakus[i]
 		yID, err := strconv.Atoi(_yID)
 		if err != nil {
-			return nil, fmt.Errorf("error at createCompleteHand: %w", err)
+			return nil, wrapError("createCompleteHand", err)
 		}
 		_yNum := yakus[i+1]
 		yNum, err := strconv.Atoi(_yNum)
