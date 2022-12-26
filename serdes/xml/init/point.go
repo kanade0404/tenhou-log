@@ -15,7 +15,7 @@ type Points struct {
 	_      struct{}
 }
 
-func (p Points) Marshal() string {
+func (p *Points) Marshal() string {
 	var results []string
 	for _, point := range p.Points {
 		results = append(results, strconv.Itoa(int(point.Point/100)))

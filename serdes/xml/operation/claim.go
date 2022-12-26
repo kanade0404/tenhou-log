@@ -88,7 +88,7 @@ func chii(mentsuCode uint64, isRedRule bool) (hais []hai.IHai, callIndex int, cl
 	}
 	a := ((pattern/3/7)*9 + (pattern / 3 % 7)) * 4
 	for i, index := range haiIndexes {
-		h, err := hai.NewHai(uint(a+4*uint64(i)+index), isRedRule)
+		h, err := hai.NewHai(int(a+4*uint64(i)+index), isRedRule)
 		if err != nil {
 			return hais, callIndex, claimType, err
 		}
@@ -147,7 +147,7 @@ func pon(mentsuCode uint64, isRedRule bool) (hais []hai.IHai, callIndex int, cla
 		haiIndexes = []int{haiIndexes[2], haiIndexes[0], haiIndexes[1]}
 	}
 	for _, index := range haiIndexes {
-		h, err := hai.NewHai(uint(index), isRedRule)
+		h, err := hai.NewHai(index, isRedRule)
 		if err != nil {
 			return hais, callIndex, claimType, err
 		}
@@ -204,7 +204,7 @@ func chakan(mentsuCode uint64, isRedRule bool) (hais []hai.IHai, callIndex int, 
 		return haiIndexes[i] < haiIndexes[j]
 	})
 	for _, index := range haiIndexes {
-		h, err := hai.NewHai(uint(index), isRedRule)
+		h, err := hai.NewHai(index, isRedRule)
 		if err != nil {
 			return hais, 0, claimType, err
 		}
@@ -266,7 +266,7 @@ func kan(mentsuCode uint64, isRedRule bool) (hais []hai.IHai, callIndex int, cla
 		return haiIndexes[i] < haiIndexes[j]
 	})
 	for _, index := range haiIndexes {
-		h, err := hai.NewHai(uint(index), isRedRule)
+		h, err := hai.NewHai(index, isRedRule)
 		if err != nil {
 			return hais, callIndex, claimType, err
 		}

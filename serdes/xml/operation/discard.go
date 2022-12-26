@@ -48,7 +48,7 @@ NewDiscard
 
 打牌情報
 */
-func NewDiscard(discardType string, haiID uint, gameInfo *xml.GameInfo) (*Discard, error) {
+func NewDiscard(discardType string, haiID int, gameInfo *xml.GameInfo) (*Discard, error) {
 	discardHai, err := hai.NewHai(haiID, gameInfo.Red)
 	if err != nil {
 		return nil, err

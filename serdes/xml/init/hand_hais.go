@@ -31,15 +31,15 @@ func (h HandHais) Marshal() string {
 func (h *HandHais) Unmarshal(hais string) error {
 	haiIds := strings.Split(hais, ",")
 	for _, id := range haiIds {
-		i, err := strconv.ParseUint(id, 10, 32)
+		i, err := strconv.Atoi(id)
 		if err != nil {
 			return err
 		}
-		hai, err := hai.NewHai(uint(i), h.gameInfo.Red)
+		newHai, err := hai.NewHai(i, h.gameInfo.Red)
 		if err != nil {
 			return err
 		}
-		h.Hands = append(h.Hands, hai)
+		h.Hands = append(h.Hands, newHai)
 	}
 	return nil
 }

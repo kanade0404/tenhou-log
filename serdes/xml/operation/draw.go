@@ -45,7 +45,7 @@ type Draw struct {
 	_        struct{}
 }
 
-func NewDraw(drawType string, haiID uint, gameInfo *xml.GameInfo) (*Draw, error) {
+func NewDraw(drawType string, haiID int, gameInfo *xml.GameInfo) (*Draw, error) {
 	drawHai, err := hai.NewHai(haiID, gameInfo.Red)
 	isDrawType := IsDrawType(drawType)
 	if isDrawType && err == nil {
