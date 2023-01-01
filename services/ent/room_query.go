@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -11,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/game"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 	"github.com/kanade0404/tenhou-log/services/ent/room"
 )
@@ -24,6 +26,7 @@ type RoomQuery struct {
 	order      []OrderFunc
 	fields     []string
 	predicates []predicate.Room
+	withGames  *GameQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -58,6 +61,28 @@ func (rq *RoomQuery) Unique(unique bool) *RoomQuery {
 func (rq *RoomQuery) Order(o ...OrderFunc) *RoomQuery {
 	rq.order = append(rq.order, o...)
 	return rq
+}
+
+// QueryGames chains the current query on the "games" edge.
+func (rq *RoomQuery) QueryGames() *GameQuery {
+	query := &GameQuery{config: rq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := rq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := rq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(room.Table, room.FieldID, selector),
+			sqlgraph.To(game.Table, game.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, room.GamesTable, room.GamesPrimaryKey...),
+		)
+		fromU = sqlgraph.SetNeighbors(rq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first Room entity from the query.
@@ -241,11 +266,23 @@ func (rq *RoomQuery) Clone() *RoomQuery {
 		offset:     rq.offset,
 		order:      append([]OrderFunc{}, rq.order...),
 		predicates: append([]predicate.Room{}, rq.predicates...),
+		withGames:  rq.withGames.Clone(),
 		// clone intermediate query.
 		sql:    rq.sql.Clone(),
 		path:   rq.path,
 		unique: rq.unique,
 	}
+}
+
+// WithGames tells the query-builder to eager-load the nodes that are connected to
+// the "games" edge. The optional arguments are used to configure the query builder of the edge.
+func (rq *RoomQuery) WithGames(opts ...func(*GameQuery)) *RoomQuery {
+	query := &GameQuery{config: rq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	rq.withGames = query
+	return rq
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -321,8 +358,11 @@ func (rq *RoomQuery) prepareQuery(ctx context.Context) error {
 
 func (rq *RoomQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Room, error) {
 	var (
-		nodes = []*Room{}
-		_spec = rq.querySpec()
+		nodes       = []*Room{}
+		_spec       = rq.querySpec()
+		loadedTypes = [1]bool{
+			rq.withGames != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Room).scanValues(nil, columns)
@@ -330,6 +370,7 @@ func (rq *RoomQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Room, e
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &Room{config: rq.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -341,7 +382,73 @@ func (rq *RoomQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Room, e
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := rq.withGames; query != nil {
+		if err := rq.loadGames(ctx, query, nodes,
+			func(n *Room) { n.Edges.Games = []*Game{} },
+			func(n *Room, e *Game) { n.Edges.Games = append(n.Edges.Games, e) }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (rq *RoomQuery) loadGames(ctx context.Context, query *GameQuery, nodes []*Room, init func(*Room), assign func(*Room, *Game)) error {
+	edgeIDs := make([]driver.Value, len(nodes))
+	byID := make(map[uuid.UUID]*Room)
+	nids := make(map[uuid.UUID]map[*Room]struct{})
+	for i, node := range nodes {
+		edgeIDs[i] = node.ID
+		byID[node.ID] = node
+		if init != nil {
+			init(node)
+		}
+	}
+	query.Where(func(s *sql.Selector) {
+		joinT := sql.Table(room.GamesTable)
+		s.Join(joinT).On(s.C(game.FieldID), joinT.C(room.GamesPrimaryKey[1]))
+		s.Where(sql.InValues(joinT.C(room.GamesPrimaryKey[0]), edgeIDs...))
+		columns := s.SelectedColumns()
+		s.Select(joinT.C(room.GamesPrimaryKey[0]))
+		s.AppendSelect(columns...)
+		s.SetDistinct(false)
+	})
+	if err := query.prepareQuery(ctx); err != nil {
+		return err
+	}
+	neighbors, err := query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
+		assign := spec.Assign
+		values := spec.ScanValues
+		spec.ScanValues = func(columns []string) ([]any, error) {
+			values, err := values(columns[1:])
+			if err != nil {
+				return nil, err
+			}
+			return append([]any{new(uuid.UUID)}, values...), nil
+		}
+		spec.Assign = func(columns []string, values []any) error {
+			outValue := *values[0].(*uuid.UUID)
+			inValue := *values[1].(*uuid.UUID)
+			if nids[inValue] == nil {
+				nids[inValue] = map[*Room]struct{}{byID[outValue]: {}}
+				return assign(columns[1:], values[1:])
+			}
+			nids[inValue][byID[outValue]] = struct{}{}
+			return nil
+		}
+	})
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected "games" node returned %v`, n.ID)
+		}
+		for kn := range nodes {
+			assign(kn, n)
+		}
+	}
+	return nil
 }
 
 func (rq *RoomQuery) sqlCount(ctx context.Context) (int, error) {

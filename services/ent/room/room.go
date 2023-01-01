@@ -13,8 +13,15 @@ const (
 	FieldID = "oid"
 	// FieldName holds the string denoting the name field in the database.
 	FieldName = "name"
+	// EdgeGames holds the string denoting the games edge name in mutations.
+	EdgeGames = "games"
 	// Table holds the table name of the room in the database.
 	Table = "rooms"
+	// GamesTable is the table that holds the games relation/edge. The primary key declared below.
+	GamesTable = "room_games"
+	// GamesInverseTable is the table name for the Game entity.
+	// It exists in this package in order to avoid circular dependency with the "game" package.
+	GamesInverseTable = "games"
 )
 
 // Columns holds all SQL columns for room fields.
@@ -22,6 +29,12 @@ var Columns = []string{
 	FieldID,
 	FieldName,
 }
+
+var (
+	// GamesPrimaryKey and GamesColumn2 are the table columns denoting the
+	// primary key for the games relation (M2M).
+	GamesPrimaryKey = []string{"room_id", "game_id"}
+)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {

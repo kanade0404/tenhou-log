@@ -11,6 +11,8 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/game"
+	"github.com/kanade0404/tenhou-log/services/ent/mjlog"
+	"github.com/kanade0404/tenhou-log/services/ent/room"
 )
 
 // GameCreate is the builder for creating a Game entity.
@@ -38,6 +40,40 @@ func (gc *GameCreate) SetNillableID(u *uuid.UUID) *GameCreate {
 		gc.SetID(*u)
 	}
 	return gc
+}
+
+// SetMjlogsID sets the "mjlogs" edge to the MJLog entity by ID.
+func (gc *GameCreate) SetMjlogsID(id uuid.UUID) *GameCreate {
+	gc.mutation.SetMjlogsID(id)
+	return gc
+}
+
+// SetNillableMjlogsID sets the "mjlogs" edge to the MJLog entity by ID if the given value is not nil.
+func (gc *GameCreate) SetNillableMjlogsID(id *uuid.UUID) *GameCreate {
+	if id != nil {
+		gc = gc.SetMjlogsID(*id)
+	}
+	return gc
+}
+
+// SetMjlogs sets the "mjlogs" edge to the MJLog entity.
+func (gc *GameCreate) SetMjlogs(m *MJLog) *GameCreate {
+	return gc.SetMjlogsID(m.ID)
+}
+
+// AddRoomIDs adds the "rooms" edge to the Room entity by IDs.
+func (gc *GameCreate) AddRoomIDs(ids ...uuid.UUID) *GameCreate {
+	gc.mutation.AddRoomIDs(ids...)
+	return gc
+}
+
+// AddRooms adds the "rooms" edges to the Room entity.
+func (gc *GameCreate) AddRooms(r ...*Room) *GameCreate {
+	ids := make([]uuid.UUID, len(r))
+	for i := range r {
+		ids[i] = r[i].ID
+	}
+	return gc.AddRoomIDs(ids...)
 }
 
 // Mutation returns the GameMutation object of the builder.
@@ -167,6 +203,44 @@ func (gc *GameCreate) createSpec() (*Game, *sqlgraph.CreateSpec) {
 	if value, ok := gc.mutation.Name(); ok {
 		_spec.SetField(game.FieldName, field.TypeString, value)
 		_node.Name = value
+	}
+	if nodes := gc.mutation.MjlogsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   game.MjlogsTable,
+			Columns: []string{game.MjlogsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: mjlog.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := gc.mutation.RoomsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   game.RoomsTable,
+			Columns: game.RoomsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: room.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

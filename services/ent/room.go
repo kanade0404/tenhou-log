@@ -18,6 +18,27 @@ type Room struct {
 	ID uuid.UUID `json:"id,omitempty"`
 	// Name holds the value of the "name" field.
 	Name string `json:"name,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the RoomQuery when eager-loading is set.
+	Edges RoomEdges `json:"edges"`
+}
+
+// RoomEdges holds the relations/edges for other nodes in the graph.
+type RoomEdges struct {
+	// Games holds the value of the games edge.
+	Games []*Game `json:"games,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// GamesOrErr returns the Games value or an error if the edge
+// was not loaded in eager-loading.
+func (e RoomEdges) GamesOrErr() ([]*Game, error) {
+	if e.loadedTypes[0] {
+		return e.Games, nil
+	}
+	return nil, &NotLoadedError{edge: "games"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -59,6 +80,11 @@ func (r *Room) assignValues(columns []string, values []any) error {
 		}
 	}
 	return nil
+}
+
+// QueryGames queries the "games" edge of the Room entity.
+func (r *Room) QueryGames() *GameQuery {
+	return (&RoomClient{config: r.config}).QueryGames(r)
 }
 
 // Update returns a builder for updating this Room.

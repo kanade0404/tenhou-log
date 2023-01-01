@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/game"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlog"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlogfile"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
@@ -48,6 +49,17 @@ func (mlu *MJLogUpdate) SetMjlogFiles(m *MJLogFile) *MJLogUpdate {
 	return mlu.SetMjlogFilesID(m.ID)
 }
 
+// SetGamesID sets the "games" edge to the Game entity by ID.
+func (mlu *MJLogUpdate) SetGamesID(id uuid.UUID) *MJLogUpdate {
+	mlu.mutation.SetGamesID(id)
+	return mlu
+}
+
+// SetGames sets the "games" edge to the Game entity.
+func (mlu *MJLogUpdate) SetGames(g *Game) *MJLogUpdate {
+	return mlu.SetGamesID(g.ID)
+}
+
 // Mutation returns the MJLogMutation object of the builder.
 func (mlu *MJLogUpdate) Mutation() *MJLogMutation {
 	return mlu.mutation
@@ -59,6 +71,12 @@ func (mlu *MJLogUpdate) ClearMjlogFiles() *MJLogUpdate {
 	return mlu
 }
 
+// ClearGames clears the "games" edge to the Game entity.
+func (mlu *MJLogUpdate) ClearGames() *MJLogUpdate {
+	mlu.mutation.ClearGames()
+	return mlu
+}
+
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (mlu *MJLogUpdate) Save(ctx context.Context) (int, error) {
 	var (
@@ -66,12 +84,18 @@ func (mlu *MJLogUpdate) Save(ctx context.Context) (int, error) {
 		affected int
 	)
 	if len(mlu.hooks) == 0 {
+		if err = mlu.check(); err != nil {
+			return 0, err
+		}
 		affected, err = mlu.sqlSave(ctx)
 	} else {
 		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 			mutation, ok := m.(*MJLogMutation)
 			if !ok {
 				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			if err = mlu.check(); err != nil {
+				return 0, err
 			}
 			mlu.mutation = mutation
 			affected, err = mlu.sqlSave(ctx)
@@ -111,6 +135,14 @@ func (mlu *MJLogUpdate) ExecX(ctx context.Context) {
 	if err := mlu.Exec(ctx); err != nil {
 		panic(err)
 	}
+}
+
+// check runs all checks and user-defined validators on the builder.
+func (mlu *MJLogUpdate) check() error {
+	if _, ok := mlu.mutation.GamesID(); mlu.mutation.GamesCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "MJLog.games"`)
+	}
+	return nil
 }
 
 func (mlu *MJLogUpdate) sqlSave(ctx context.Context) (n int, err error) {
@@ -166,6 +198,41 @@ func (mlu *MJLogUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if mlu.mutation.GamesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   mjlog.GamesTable,
+			Columns: []string{mjlog.GamesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: game.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := mlu.mutation.GamesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   mjlog.GamesTable,
+			Columns: []string{mjlog.GamesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: game.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, mlu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{mjlog.Label}
@@ -204,6 +271,17 @@ func (mluo *MJLogUpdateOne) SetMjlogFiles(m *MJLogFile) *MJLogUpdateOne {
 	return mluo.SetMjlogFilesID(m.ID)
 }
 
+// SetGamesID sets the "games" edge to the Game entity by ID.
+func (mluo *MJLogUpdateOne) SetGamesID(id uuid.UUID) *MJLogUpdateOne {
+	mluo.mutation.SetGamesID(id)
+	return mluo
+}
+
+// SetGames sets the "games" edge to the Game entity.
+func (mluo *MJLogUpdateOne) SetGames(g *Game) *MJLogUpdateOne {
+	return mluo.SetGamesID(g.ID)
+}
+
 // Mutation returns the MJLogMutation object of the builder.
 func (mluo *MJLogUpdateOne) Mutation() *MJLogMutation {
 	return mluo.mutation
@@ -212,6 +290,12 @@ func (mluo *MJLogUpdateOne) Mutation() *MJLogMutation {
 // ClearMjlogFiles clears the "mjlog_files" edge to the MJLogFile entity.
 func (mluo *MJLogUpdateOne) ClearMjlogFiles() *MJLogUpdateOne {
 	mluo.mutation.ClearMjlogFiles()
+	return mluo
+}
+
+// ClearGames clears the "games" edge to the Game entity.
+func (mluo *MJLogUpdateOne) ClearGames() *MJLogUpdateOne {
+	mluo.mutation.ClearGames()
 	return mluo
 }
 
@@ -229,12 +313,18 @@ func (mluo *MJLogUpdateOne) Save(ctx context.Context) (*MJLog, error) {
 		node *MJLog
 	)
 	if len(mluo.hooks) == 0 {
+		if err = mluo.check(); err != nil {
+			return nil, err
+		}
 		node, err = mluo.sqlSave(ctx)
 	} else {
 		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 			mutation, ok := m.(*MJLogMutation)
 			if !ok {
 				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			if err = mluo.check(); err != nil {
+				return nil, err
 			}
 			mluo.mutation = mutation
 			node, err = mluo.sqlSave(ctx)
@@ -280,6 +370,14 @@ func (mluo *MJLogUpdateOne) ExecX(ctx context.Context) {
 	if err := mluo.Exec(ctx); err != nil {
 		panic(err)
 	}
+}
+
+// check runs all checks and user-defined validators on the builder.
+func (mluo *MJLogUpdateOne) check() error {
+	if _, ok := mluo.mutation.GamesID(); mluo.mutation.GamesCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "MJLog.games"`)
+	}
+	return nil
 }
 
 func (mluo *MJLogUpdateOne) sqlSave(ctx context.Context) (_node *MJLog, err error) {
@@ -344,6 +442,41 @@ func (mluo *MJLogUpdateOne) sqlSave(ctx context.Context) (_node *MJLog, err erro
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: mjlogfile.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if mluo.mutation.GamesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   mjlog.GamesTable,
+			Columns: []string{mjlog.GamesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: game.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := mluo.mutation.GamesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   mjlog.GamesTable,
+			Columns: []string{mjlog.GamesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: game.FieldID,
 				},
 			},
 		}

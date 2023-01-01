@@ -429,6 +429,34 @@ func HasMjlogFilesWith(preds ...predicate.MJLogFile) predicate.MJLog {
 	})
 }
 
+// HasGames applies the HasEdge predicate on the "games" edge.
+func HasGames() predicate.MJLog {
+	return predicate.MJLog(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(GamesTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, GamesTable, GamesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasGamesWith applies the HasEdge predicate on the "games" edge with a given conditions (other predicates).
+func HasGamesWith(preds ...predicate.Game) predicate.MJLog {
+	return predicate.MJLog(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(GamesInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, GamesTable, GamesColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.MJLog) predicate.MJLog {
 	return predicate.MJLog(func(s *sql.Selector) {

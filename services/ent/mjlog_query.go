@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/game"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlog"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlogfile"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
@@ -26,6 +27,7 @@ type MJLogQuery struct {
 	fields         []string
 	predicates     []predicate.MJLog
 	withMjlogFiles *MJLogFileQuery
+	withGames      *GameQuery
 	withFKs        bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -78,6 +80,28 @@ func (mlq *MJLogQuery) QueryMjlogFiles() *MJLogFileQuery {
 			sqlgraph.From(mjlog.Table, mjlog.FieldID, selector),
 			sqlgraph.To(mjlogfile.Table, mjlogfile.FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, true, mjlog.MjlogFilesTable, mjlog.MjlogFilesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(mlq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryGames chains the current query on the "games" edge.
+func (mlq *MJLogQuery) QueryGames() *GameQuery {
+	query := &GameQuery{config: mlq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := mlq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := mlq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(mjlog.Table, mjlog.FieldID, selector),
+			sqlgraph.To(game.Table, game.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, mjlog.GamesTable, mjlog.GamesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(mlq.driver.Dialect(), step)
 		return fromU, nil
@@ -267,6 +291,7 @@ func (mlq *MJLogQuery) Clone() *MJLogQuery {
 		order:          append([]OrderFunc{}, mlq.order...),
 		predicates:     append([]predicate.MJLog{}, mlq.predicates...),
 		withMjlogFiles: mlq.withMjlogFiles.Clone(),
+		withGames:      mlq.withGames.Clone(),
 		// clone intermediate query.
 		sql:    mlq.sql.Clone(),
 		path:   mlq.path,
@@ -282,6 +307,17 @@ func (mlq *MJLogQuery) WithMjlogFiles(opts ...func(*MJLogFileQuery)) *MJLogQuery
 		opt(query)
 	}
 	mlq.withMjlogFiles = query
+	return mlq
+}
+
+// WithGames tells the query-builder to eager-load the nodes that are connected to
+// the "games" edge. The optional arguments are used to configure the query builder of the edge.
+func (mlq *MJLogQuery) WithGames(opts ...func(*GameQuery)) *MJLogQuery {
+	query := &GameQuery{config: mlq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	mlq.withGames = query
 	return mlq
 }
 
@@ -361,11 +397,12 @@ func (mlq *MJLogQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*MJLog
 		nodes       = []*MJLog{}
 		withFKs     = mlq.withFKs
 		_spec       = mlq.querySpec()
-		loadedTypes = [1]bool{
+		loadedTypes = [2]bool{
 			mlq.withMjlogFiles != nil,
+			mlq.withGames != nil,
 		}
 	)
-	if mlq.withMjlogFiles != nil {
+	if mlq.withMjlogFiles != nil || mlq.withGames != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -395,6 +432,12 @@ func (mlq *MJLogQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*MJLog
 			return nil, err
 		}
 	}
+	if query := mlq.withGames; query != nil {
+		if err := mlq.loadGames(ctx, query, nodes, nil,
+			func(n *MJLog, e *Game) { n.Edges.Games = e }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
 }
 
@@ -420,6 +463,35 @@ func (mlq *MJLogQuery) loadMjlogFiles(ctx context.Context, query *MJLogFileQuery
 		nodes, ok := nodeids[n.ID]
 		if !ok {
 			return fmt.Errorf(`unexpected foreign-key "mj_log_file_mjlogs" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (mlq *MJLogQuery) loadGames(ctx context.Context, query *GameQuery, nodes []*MJLog, init func(*MJLog), assign func(*MJLog, *Game)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*MJLog)
+	for i := range nodes {
+		if nodes[i].game_mjlogs == nil {
+			continue
+		}
+		fk := *nodes[i].game_mjlogs
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	query.Where(game.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "game_mjlogs" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

@@ -9,6 +9,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/game"
+	"github.com/kanade0404/tenhou-log/services/ent/mjlog"
 )
 
 // Game is the model entity for the Game schema.
@@ -18,6 +19,42 @@ type Game struct {
 	ID uuid.UUID `json:"id,omitempty"`
 	// Name holds the value of the "name" field.
 	Name string `json:"name,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the GameQuery when eager-loading is set.
+	Edges GameEdges `json:"edges"`
+}
+
+// GameEdges holds the relations/edges for other nodes in the graph.
+type GameEdges struct {
+	// Mjlogs holds the value of the mjlogs edge.
+	Mjlogs *MJLog `json:"mjlogs,omitempty"`
+	// Rooms holds the value of the rooms edge.
+	Rooms []*Room `json:"rooms,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [2]bool
+}
+
+// MjlogsOrErr returns the Mjlogs value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e GameEdges) MjlogsOrErr() (*MJLog, error) {
+	if e.loadedTypes[0] {
+		if e.Mjlogs == nil {
+			// Edge was loaded but was not found.
+			return nil, &NotFoundError{label: mjlog.Label}
+		}
+		return e.Mjlogs, nil
+	}
+	return nil, &NotLoadedError{edge: "mjlogs"}
+}
+
+// RoomsOrErr returns the Rooms value or an error if the edge
+// was not loaded in eager-loading.
+func (e GameEdges) RoomsOrErr() ([]*Room, error) {
+	if e.loadedTypes[1] {
+		return e.Rooms, nil
+	}
+	return nil, &NotLoadedError{edge: "rooms"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -59,6 +96,16 @@ func (ga *Game) assignValues(columns []string, values []any) error {
 		}
 	}
 	return nil
+}
+
+// QueryMjlogs queries the "mjlogs" edge of the Game entity.
+func (ga *Game) QueryMjlogs() *MJLogQuery {
+	return (&GameClient{config: ga.config}).QueryMjlogs(ga)
+}
+
+// QueryRooms queries the "rooms" edge of the Game entity.
+func (ga *Game) QueryRooms() *RoomQuery {
+	return (&GameClient{config: ga.config}).QueryRooms(ga)
 }
 
 // Update returns a builder for updating this Game.

@@ -847,6 +847,11 @@ type GameMutation struct {
 	id            *uuid.UUID
 	name          *string
 	clearedFields map[string]struct{}
+	mjlogs        *uuid.UUID
+	clearedmjlogs bool
+	rooms         map[uuid.UUID]struct{}
+	removedrooms  map[uuid.UUID]struct{}
+	clearedrooms  bool
 	done          bool
 	oldValue      func(context.Context) (*Game, error)
 	predicates    []predicate.Game
@@ -992,6 +997,99 @@ func (m *GameMutation) ResetName() {
 	m.name = nil
 }
 
+// SetMjlogsID sets the "mjlogs" edge to the MJLog entity by id.
+func (m *GameMutation) SetMjlogsID(id uuid.UUID) {
+	m.mjlogs = &id
+}
+
+// ClearMjlogs clears the "mjlogs" edge to the MJLog entity.
+func (m *GameMutation) ClearMjlogs() {
+	m.clearedmjlogs = true
+}
+
+// MjlogsCleared reports if the "mjlogs" edge to the MJLog entity was cleared.
+func (m *GameMutation) MjlogsCleared() bool {
+	return m.clearedmjlogs
+}
+
+// MjlogsID returns the "mjlogs" edge ID in the mutation.
+func (m *GameMutation) MjlogsID() (id uuid.UUID, exists bool) {
+	if m.mjlogs != nil {
+		return *m.mjlogs, true
+	}
+	return
+}
+
+// MjlogsIDs returns the "mjlogs" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// MjlogsID instead. It exists only for internal usage by the builders.
+func (m *GameMutation) MjlogsIDs() (ids []uuid.UUID) {
+	if id := m.mjlogs; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetMjlogs resets all changes to the "mjlogs" edge.
+func (m *GameMutation) ResetMjlogs() {
+	m.mjlogs = nil
+	m.clearedmjlogs = false
+}
+
+// AddRoomIDs adds the "rooms" edge to the Room entity by ids.
+func (m *GameMutation) AddRoomIDs(ids ...uuid.UUID) {
+	if m.rooms == nil {
+		m.rooms = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.rooms[ids[i]] = struct{}{}
+	}
+}
+
+// ClearRooms clears the "rooms" edge to the Room entity.
+func (m *GameMutation) ClearRooms() {
+	m.clearedrooms = true
+}
+
+// RoomsCleared reports if the "rooms" edge to the Room entity was cleared.
+func (m *GameMutation) RoomsCleared() bool {
+	return m.clearedrooms
+}
+
+// RemoveRoomIDs removes the "rooms" edge to the Room entity by IDs.
+func (m *GameMutation) RemoveRoomIDs(ids ...uuid.UUID) {
+	if m.removedrooms == nil {
+		m.removedrooms = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.rooms, ids[i])
+		m.removedrooms[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedRooms returns the removed IDs of the "rooms" edge to the Room entity.
+func (m *GameMutation) RemovedRoomsIDs() (ids []uuid.UUID) {
+	for id := range m.removedrooms {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// RoomsIDs returns the "rooms" edge IDs in the mutation.
+func (m *GameMutation) RoomsIDs() (ids []uuid.UUID) {
+	for id := range m.rooms {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetRooms resets all changes to the "rooms" edge.
+func (m *GameMutation) ResetRooms() {
+	m.rooms = nil
+	m.clearedrooms = false
+	m.removedrooms = nil
+}
+
 // Where appends a list predicates to the GameMutation builder.
 func (m *GameMutation) Where(ps ...predicate.Game) {
 	m.predicates = append(m.predicates, ps...)
@@ -1110,49 +1208,103 @@ func (m *GameMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *GameMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 2)
+	if m.mjlogs != nil {
+		edges = append(edges, game.EdgeMjlogs)
+	}
+	if m.rooms != nil {
+		edges = append(edges, game.EdgeRooms)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *GameMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case game.EdgeMjlogs:
+		if id := m.mjlogs; id != nil {
+			return []ent.Value{*id}
+		}
+	case game.EdgeRooms:
+		ids := make([]ent.Value, 0, len(m.rooms))
+		for id := range m.rooms {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *GameMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 2)
+	if m.removedrooms != nil {
+		edges = append(edges, game.EdgeRooms)
+	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *GameMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case game.EdgeRooms:
+		ids := make([]ent.Value, 0, len(m.removedrooms))
+		for id := range m.removedrooms {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *GameMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 2)
+	if m.clearedmjlogs {
+		edges = append(edges, game.EdgeMjlogs)
+	}
+	if m.clearedrooms {
+		edges = append(edges, game.EdgeRooms)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *GameMutation) EdgeCleared(name string) bool {
+	switch name {
+	case game.EdgeMjlogs:
+		return m.clearedmjlogs
+	case game.EdgeRooms:
+		return m.clearedrooms
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *GameMutation) ClearEdge(name string) error {
+	switch name {
+	case game.EdgeMjlogs:
+		m.ClearMjlogs()
+		return nil
+	}
 	return fmt.Errorf("unknown Game unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *GameMutation) ResetEdge(name string) error {
+	switch name {
+	case game.EdgeMjlogs:
+		m.ResetMjlogs()
+		return nil
+	case game.EdgeRooms:
+		m.ResetRooms()
+		return nil
+	}
 	return fmt.Errorf("unknown Game edge %s", name)
 }
 
@@ -2531,6 +2683,8 @@ type MJLogMutation struct {
 	clearedFields      map[string]struct{}
 	mjlog_files        *uuid.UUID
 	clearedmjlog_files bool
+	games              *uuid.UUID
+	clearedgames       bool
 	done               bool
 	oldValue           func(context.Context) (*MJLog, error)
 	predicates         []predicate.MJLog
@@ -2843,6 +2997,45 @@ func (m *MJLogMutation) ResetMjlogFiles() {
 	m.clearedmjlog_files = false
 }
 
+// SetGamesID sets the "games" edge to the Game entity by id.
+func (m *MJLogMutation) SetGamesID(id uuid.UUID) {
+	m.games = &id
+}
+
+// ClearGames clears the "games" edge to the Game entity.
+func (m *MJLogMutation) ClearGames() {
+	m.clearedgames = true
+}
+
+// GamesCleared reports if the "games" edge to the Game entity was cleared.
+func (m *MJLogMutation) GamesCleared() bool {
+	return m.clearedgames
+}
+
+// GamesID returns the "games" edge ID in the mutation.
+func (m *MJLogMutation) GamesID() (id uuid.UUID, exists bool) {
+	if m.games != nil {
+		return *m.games, true
+	}
+	return
+}
+
+// GamesIDs returns the "games" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// GamesID instead. It exists only for internal usage by the builders.
+func (m *MJLogMutation) GamesIDs() (ids []uuid.UUID) {
+	if id := m.games; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetGames resets all changes to the "games" edge.
+func (m *MJLogMutation) ResetGames() {
+	m.games = nil
+	m.clearedgames = false
+}
+
 // Where appends a list predicates to the MJLogMutation builder.
 func (m *MJLogMutation) Where(ps ...predicate.MJLog) {
 	m.predicates = append(m.predicates, ps...)
@@ -3027,9 +3220,12 @@ func (m *MJLogMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *MJLogMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.mjlog_files != nil {
 		edges = append(edges, mjlog.EdgeMjlogFiles)
+	}
+	if m.games != nil {
+		edges = append(edges, mjlog.EdgeGames)
 	}
 	return edges
 }
@@ -3042,13 +3238,17 @@ func (m *MJLogMutation) AddedIDs(name string) []ent.Value {
 		if id := m.mjlog_files; id != nil {
 			return []ent.Value{*id}
 		}
+	case mjlog.EdgeGames:
+		if id := m.games; id != nil {
+			return []ent.Value{*id}
+		}
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *MJLogMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	return edges
 }
 
@@ -3060,9 +3260,12 @@ func (m *MJLogMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *MJLogMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.clearedmjlog_files {
 		edges = append(edges, mjlog.EdgeMjlogFiles)
+	}
+	if m.clearedgames {
+		edges = append(edges, mjlog.EdgeGames)
 	}
 	return edges
 }
@@ -3073,6 +3276,8 @@ func (m *MJLogMutation) EdgeCleared(name string) bool {
 	switch name {
 	case mjlog.EdgeMjlogFiles:
 		return m.clearedmjlog_files
+	case mjlog.EdgeGames:
+		return m.clearedgames
 	}
 	return false
 }
@@ -3084,6 +3289,9 @@ func (m *MJLogMutation) ClearEdge(name string) error {
 	case mjlog.EdgeMjlogFiles:
 		m.ClearMjlogFiles()
 		return nil
+	case mjlog.EdgeGames:
+		m.ClearGames()
+		return nil
 	}
 	return fmt.Errorf("unknown MJLog unique edge %s", name)
 }
@@ -3094,6 +3302,9 @@ func (m *MJLogMutation) ResetEdge(name string) error {
 	switch name {
 	case mjlog.EdgeMjlogFiles:
 		m.ResetMjlogFiles()
+		return nil
+	case mjlog.EdgeGames:
+		m.ResetGames()
 		return nil
 	}
 	return fmt.Errorf("unknown MJLog edge %s", name)
@@ -3799,6 +4010,9 @@ type RoomMutation struct {
 	id            *uuid.UUID
 	name          *string
 	clearedFields map[string]struct{}
+	games         map[uuid.UUID]struct{}
+	removedgames  map[uuid.UUID]struct{}
+	clearedgames  bool
 	done          bool
 	oldValue      func(context.Context) (*Room, error)
 	predicates    []predicate.Room
@@ -3944,6 +4158,60 @@ func (m *RoomMutation) ResetName() {
 	m.name = nil
 }
 
+// AddGameIDs adds the "games" edge to the Game entity by ids.
+func (m *RoomMutation) AddGameIDs(ids ...uuid.UUID) {
+	if m.games == nil {
+		m.games = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.games[ids[i]] = struct{}{}
+	}
+}
+
+// ClearGames clears the "games" edge to the Game entity.
+func (m *RoomMutation) ClearGames() {
+	m.clearedgames = true
+}
+
+// GamesCleared reports if the "games" edge to the Game entity was cleared.
+func (m *RoomMutation) GamesCleared() bool {
+	return m.clearedgames
+}
+
+// RemoveGameIDs removes the "games" edge to the Game entity by IDs.
+func (m *RoomMutation) RemoveGameIDs(ids ...uuid.UUID) {
+	if m.removedgames == nil {
+		m.removedgames = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.games, ids[i])
+		m.removedgames[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedGames returns the removed IDs of the "games" edge to the Game entity.
+func (m *RoomMutation) RemovedGamesIDs() (ids []uuid.UUID) {
+	for id := range m.removedgames {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// GamesIDs returns the "games" edge IDs in the mutation.
+func (m *RoomMutation) GamesIDs() (ids []uuid.UUID) {
+	for id := range m.games {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetGames resets all changes to the "games" edge.
+func (m *RoomMutation) ResetGames() {
+	m.games = nil
+	m.clearedgames = false
+	m.removedgames = nil
+}
+
 // Where appends a list predicates to the RoomMutation builder.
 func (m *RoomMutation) Where(ps ...predicate.Room) {
 	m.predicates = append(m.predicates, ps...)
@@ -4062,49 +4330,85 @@ func (m *RoomMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *RoomMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.games != nil {
+		edges = append(edges, room.EdgeGames)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *RoomMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case room.EdgeGames:
+		ids := make([]ent.Value, 0, len(m.games))
+		for id := range m.games {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *RoomMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.removedgames != nil {
+		edges = append(edges, room.EdgeGames)
+	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *RoomMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case room.EdgeGames:
+		ids := make([]ent.Value, 0, len(m.removedgames))
+		for id := range m.removedgames {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *RoomMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.clearedgames {
+		edges = append(edges, room.EdgeGames)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *RoomMutation) EdgeCleared(name string) bool {
+	switch name {
+	case room.EdgeGames:
+		return m.clearedgames
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *RoomMutation) ClearEdge(name string) error {
+	switch name {
+	}
 	return fmt.Errorf("unknown Room unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *RoomMutation) ResetEdge(name string) error {
+	switch name {
+	case room.EdgeGames:
+		m.ResetGames()
+		return nil
+	}
 	return fmt.Errorf("unknown Room edge %s", name)
 }
 

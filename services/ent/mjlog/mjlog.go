@@ -23,6 +23,8 @@ const (
 	FieldInsertedAt = "inserted_at"
 	// EdgeMjlogFiles holds the string denoting the mjlog_files edge name in mutations.
 	EdgeMjlogFiles = "mjlog_files"
+	// EdgeGames holds the string denoting the games edge name in mutations.
+	EdgeGames = "games"
 	// Table holds the table name of the mjlog in the database.
 	Table = "mj_logs"
 	// MjlogFilesTable is the table that holds the mjlog_files relation/edge.
@@ -32,6 +34,13 @@ const (
 	MjlogFilesInverseTable = "mj_log_files"
 	// MjlogFilesColumn is the table column denoting the mjlog_files relation/edge.
 	MjlogFilesColumn = "mj_log_file_mjlogs"
+	// GamesTable is the table that holds the games relation/edge.
+	GamesTable = "mj_logs"
+	// GamesInverseTable is the table name for the Game entity.
+	// It exists in this package in order to avoid circular dependency with the "game" package.
+	GamesInverseTable = "games"
+	// GamesColumn is the table column denoting the games relation/edge.
+	GamesColumn = "game_mjlogs"
 )
 
 // Columns holds all SQL columns for mjlog fields.
@@ -46,6 +55,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "mj_logs"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
+	"game_mjlogs",
 	"mj_log_file_mjlogs",
 }
 

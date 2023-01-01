@@ -28,6 +28,6 @@ func (MJLog) Fields() []ent.Field {
 func (MJLog) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("mjlog_files", MJLogFile.Type).Ref("mjlogs").Unique(),
-		//edge.From("games", Game.Type).Ref("mjlogs").Unique().Required(),
+		edge.From("games", Game.Type).Ref("mjlogs").Unique().Required(),
 	}
 }

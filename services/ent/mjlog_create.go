@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/game"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlog"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlogfile"
 )
@@ -85,6 +86,17 @@ func (mlc *MJLogCreate) SetNillableMjlogFilesID(id *uuid.UUID) *MJLogCreate {
 // SetMjlogFiles sets the "mjlog_files" edge to the MJLogFile entity.
 func (mlc *MJLogCreate) SetMjlogFiles(m *MJLogFile) *MJLogCreate {
 	return mlc.SetMjlogFilesID(m.ID)
+}
+
+// SetGamesID sets the "games" edge to the Game entity by ID.
+func (mlc *MJLogCreate) SetGamesID(id uuid.UUID) *MJLogCreate {
+	mlc.mutation.SetGamesID(id)
+	return mlc
+}
+
+// SetGames sets the "games" edge to the Game entity.
+func (mlc *MJLogCreate) SetGames(g *Game) *MJLogCreate {
+	return mlc.SetGamesID(g.ID)
 }
 
 // Mutation returns the MJLogMutation object of the builder.
@@ -188,6 +200,9 @@ func (mlc *MJLogCreate) check() error {
 	if _, ok := mlc.mutation.InsertedAt(); !ok {
 		return &ValidationError{Name: "inserted_at", err: errors.New(`ent: missing required field "MJLog.inserted_at"`)}
 	}
+	if _, ok := mlc.mutation.GamesID(); !ok {
+		return &ValidationError{Name: "games", err: errors.New(`ent: missing required edge "MJLog.games"`)}
+	}
 	return nil
 }
 
@@ -258,6 +273,26 @@ func (mlc *MJLogCreate) createSpec() (*MJLog, *sqlgraph.CreateSpec) {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.mj_log_file_mjlogs = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := mlc.mutation.GamesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   mjlog.GamesTable,
+			Columns: []string{mjlog.GamesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: game.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.game_mjlogs = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

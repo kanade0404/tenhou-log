@@ -100,6 +100,7 @@ var (
 		{Name: "seed", Type: field.TypeString},
 		{Name: "started_at", Type: field.TypeTime},
 		{Name: "inserted_at", Type: field.TypeTime},
+		{Name: "game_mjlogs", Type: field.TypeUUID, Unique: true},
 		{Name: "mj_log_file_mjlogs", Type: field.TypeUUID, Unique: true, Nullable: true},
 	}
 	// MjLogsTable holds the schema information for the "mj_logs" table.
@@ -109,8 +110,14 @@ var (
 		PrimaryKey: []*schema.Column{MjLogsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "mj_logs_mj_log_files_mjlogs",
+				Symbol:     "mj_logs_games_mjlogs",
 				Columns:    []*schema.Column{MjLogsColumns[5]},
+				RefColumns: []*schema.Column{GamesColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "mj_logs_mj_log_files_mjlogs",
+				Columns:    []*schema.Column{MjLogsColumns[6]},
 				RefColumns: []*schema.Column{MjLogFilesColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -178,6 +185,31 @@ var (
 		Columns:    WindsColumns,
 		PrimaryKey: []*schema.Column{WindsColumns[0]},
 	}
+	// RoomGamesColumns holds the columns for the "room_games" table.
+	RoomGamesColumns = []*schema.Column{
+		{Name: "room_id", Type: field.TypeUUID},
+		{Name: "game_id", Type: field.TypeUUID},
+	}
+	// RoomGamesTable holds the schema information for the "room_games" table.
+	RoomGamesTable = &schema.Table{
+		Name:       "room_games",
+		Columns:    RoomGamesColumns,
+		PrimaryKey: []*schema.Column{RoomGamesColumns[0], RoomGamesColumns[1]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "room_games_room_id",
+				Columns:    []*schema.Column{RoomGamesColumns[0]},
+				RefColumns: []*schema.Column{RoomsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "room_games_game_id",
+				Columns:    []*schema.Column{RoomGamesColumns[1]},
+				RefColumns: []*schema.Column{GamesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		CompressedMjLogsTable,
@@ -194,10 +226,14 @@ var (
 		RoomsTable,
 		RoundsTable,
 		WindsTable,
+		RoomGamesTable,
 	}
 )
 
 func init() {
-	MjLogsTable.ForeignKeys[0].RefTable = MjLogFilesTable
+	MjLogsTable.ForeignKeys[0].RefTable = GamesTable
+	MjLogsTable.ForeignKeys[1].RefTable = MjLogFilesTable
 	MjLogFilesTable.ForeignKeys[0].RefTable = CompressedMjLogsTable
+	RoomGamesTable.ForeignKeys[0].RefTable = RoomsTable
+	RoomGamesTable.ForeignKeys[1].RefTable = GamesTable
 }

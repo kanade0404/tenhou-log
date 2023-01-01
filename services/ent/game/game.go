@@ -13,8 +13,24 @@ const (
 	FieldID = "oid"
 	// FieldName holds the string denoting the name field in the database.
 	FieldName = "name"
+	// EdgeMjlogs holds the string denoting the mjlogs edge name in mutations.
+	EdgeMjlogs = "mjlogs"
+	// EdgeRooms holds the string denoting the rooms edge name in mutations.
+	EdgeRooms = "rooms"
 	// Table holds the table name of the game in the database.
 	Table = "games"
+	// MjlogsTable is the table that holds the mjlogs relation/edge.
+	MjlogsTable = "mj_logs"
+	// MjlogsInverseTable is the table name for the MJLog entity.
+	// It exists in this package in order to avoid circular dependency with the "mjlog" package.
+	MjlogsInverseTable = "mj_logs"
+	// MjlogsColumn is the table column denoting the mjlogs relation/edge.
+	MjlogsColumn = "game_mjlogs"
+	// RoomsTable is the table that holds the rooms relation/edge. The primary key declared below.
+	RoomsTable = "room_games"
+	// RoomsInverseTable is the table name for the Room entity.
+	// It exists in this package in order to avoid circular dependency with the "room" package.
+	RoomsInverseTable = "rooms"
 )
 
 // Columns holds all SQL columns for game fields.
@@ -22,6 +38,12 @@ var Columns = []string{
 	FieldID,
 	FieldName,
 }
+
+var (
+	// RoomsPrimaryKey and RoomsColumn2 are the table columns denoting the
+	// primary key for the rooms relation (M2M).
+	RoomsPrimaryKey = []string{"room_id", "game_id"}
+)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {

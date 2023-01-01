@@ -10,6 +10,8 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/game"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 	"github.com/kanade0404/tenhou-log/services/ent/room"
 )
@@ -27,9 +29,45 @@ func (ru *RoomUpdate) Where(ps ...predicate.Room) *RoomUpdate {
 	return ru
 }
 
+// AddGameIDs adds the "games" edge to the Game entity by IDs.
+func (ru *RoomUpdate) AddGameIDs(ids ...uuid.UUID) *RoomUpdate {
+	ru.mutation.AddGameIDs(ids...)
+	return ru
+}
+
+// AddGames adds the "games" edges to the Game entity.
+func (ru *RoomUpdate) AddGames(g ...*Game) *RoomUpdate {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return ru.AddGameIDs(ids...)
+}
+
 // Mutation returns the RoomMutation object of the builder.
 func (ru *RoomUpdate) Mutation() *RoomMutation {
 	return ru.mutation
+}
+
+// ClearGames clears all "games" edges to the Game entity.
+func (ru *RoomUpdate) ClearGames() *RoomUpdate {
+	ru.mutation.ClearGames()
+	return ru
+}
+
+// RemoveGameIDs removes the "games" edge to Game entities by IDs.
+func (ru *RoomUpdate) RemoveGameIDs(ids ...uuid.UUID) *RoomUpdate {
+	ru.mutation.RemoveGameIDs(ids...)
+	return ru
+}
+
+// RemoveGames removes "games" edges to Game entities.
+func (ru *RoomUpdate) RemoveGames(g ...*Game) *RoomUpdate {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return ru.RemoveGameIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -104,6 +142,60 @@ func (ru *RoomUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			}
 		}
 	}
+	if ru.mutation.GamesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   room.GamesTable,
+			Columns: room.GamesPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: game.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ru.mutation.RemovedGamesIDs(); len(nodes) > 0 && !ru.mutation.GamesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   room.GamesTable,
+			Columns: room.GamesPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: game.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ru.mutation.GamesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   room.GamesTable,
+			Columns: room.GamesPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: game.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, ru.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{room.Label}
@@ -123,9 +215,45 @@ type RoomUpdateOne struct {
 	mutation *RoomMutation
 }
 
+// AddGameIDs adds the "games" edge to the Game entity by IDs.
+func (ruo *RoomUpdateOne) AddGameIDs(ids ...uuid.UUID) *RoomUpdateOne {
+	ruo.mutation.AddGameIDs(ids...)
+	return ruo
+}
+
+// AddGames adds the "games" edges to the Game entity.
+func (ruo *RoomUpdateOne) AddGames(g ...*Game) *RoomUpdateOne {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return ruo.AddGameIDs(ids...)
+}
+
 // Mutation returns the RoomMutation object of the builder.
 func (ruo *RoomUpdateOne) Mutation() *RoomMutation {
 	return ruo.mutation
+}
+
+// ClearGames clears all "games" edges to the Game entity.
+func (ruo *RoomUpdateOne) ClearGames() *RoomUpdateOne {
+	ruo.mutation.ClearGames()
+	return ruo
+}
+
+// RemoveGameIDs removes the "games" edge to Game entities by IDs.
+func (ruo *RoomUpdateOne) RemoveGameIDs(ids ...uuid.UUID) *RoomUpdateOne {
+	ruo.mutation.RemoveGameIDs(ids...)
+	return ruo
+}
+
+// RemoveGames removes "games" edges to Game entities.
+func (ruo *RoomUpdateOne) RemoveGames(g ...*Game) *RoomUpdateOne {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return ruo.RemoveGameIDs(ids...)
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -229,6 +357,60 @@ func (ruo *RoomUpdateOne) sqlSave(ctx context.Context) (_node *Room, err error) 
 				ps[i](selector)
 			}
 		}
+	}
+	if ruo.mutation.GamesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   room.GamesTable,
+			Columns: room.GamesPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: game.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ruo.mutation.RemovedGamesIDs(); len(nodes) > 0 && !ruo.mutation.GamesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   room.GamesTable,
+			Columns: room.GamesPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: game.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ruo.mutation.GamesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   room.GamesTable,
+			Columns: room.GamesPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: game.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &Room{config: ruo.config}
 	_spec.Assign = _node.assignValues

@@ -497,6 +497,38 @@ func (c *GameClient) GetX(ctx context.Context, id uuid.UUID) *Game {
 	return obj
 }
 
+// QueryMjlogs queries the mjlogs edge of a Game.
+func (c *GameClient) QueryMjlogs(ga *Game) *MJLogQuery {
+	query := &MJLogQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := ga.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(game.Table, game.FieldID, id),
+			sqlgraph.To(mjlog.Table, mjlog.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, game.MjlogsTable, game.MjlogsColumn),
+		)
+		fromV = sqlgraph.Neighbors(ga.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryRooms queries the rooms edge of a Game.
+func (c *GameClient) QueryRooms(ga *Game) *RoomQuery {
+	query := &RoomQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := ga.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(game.Table, game.FieldID, id),
+			sqlgraph.To(room.Table, room.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, game.RoomsTable, game.RoomsPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(ga.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *GameClient) Hooks() []Hook {
 	return c.hooks.Game
@@ -1053,6 +1085,22 @@ func (c *MJLogClient) QueryMjlogFiles(ml *MJLog) *MJLogFileQuery {
 	return query
 }
 
+// QueryGames queries the games edge of a MJLog.
+func (c *MJLogClient) QueryGames(ml *MJLog) *GameQuery {
+	query := &GameQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := ml.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(mjlog.Table, mjlog.FieldID, id),
+			sqlgraph.To(game.Table, game.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, mjlog.GamesTable, mjlog.GamesColumn),
+		)
+		fromV = sqlgraph.Neighbors(ml.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *MJLogClient) Hooks() []Hook {
 	return c.hooks.MJLog
@@ -1353,6 +1401,22 @@ func (c *RoomClient) GetX(ctx context.Context, id uuid.UUID) *Room {
 		panic(err)
 	}
 	return obj
+}
+
+// QueryGames queries the games edge of a Room.
+func (c *RoomClient) QueryGames(r *Room) *GameQuery {
+	query := &GameQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := r.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(room.Table, room.FieldID, id),
+			sqlgraph.To(game.Table, game.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, room.GamesTable, room.GamesPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(r.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.

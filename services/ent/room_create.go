@@ -10,6 +10,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/game"
 	"github.com/kanade0404/tenhou-log/services/ent/room"
 )
 
@@ -38,6 +39,21 @@ func (rc *RoomCreate) SetNillableID(u *uuid.UUID) *RoomCreate {
 		rc.SetID(*u)
 	}
 	return rc
+}
+
+// AddGameIDs adds the "games" edge to the Game entity by IDs.
+func (rc *RoomCreate) AddGameIDs(ids ...uuid.UUID) *RoomCreate {
+	rc.mutation.AddGameIDs(ids...)
+	return rc
+}
+
+// AddGames adds the "games" edges to the Game entity.
+func (rc *RoomCreate) AddGames(g ...*Game) *RoomCreate {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return rc.AddGameIDs(ids...)
 }
 
 // Mutation returns the RoomMutation object of the builder.
@@ -167,6 +183,25 @@ func (rc *RoomCreate) createSpec() (*Room, *sqlgraph.CreateSpec) {
 	if value, ok := rc.mutation.Name(); ok {
 		_spec.SetField(room.FieldName, field.TypeString, value)
 		_node.Name = value
+	}
+	if nodes := rc.mutation.GamesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   room.GamesTable,
+			Columns: room.GamesPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: game.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

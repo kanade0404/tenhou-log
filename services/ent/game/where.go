@@ -4,6 +4,7 @@ package game
 
 import (
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 )
@@ -182,6 +183,62 @@ func NameEqualFold(v string) predicate.Game {
 func NameContainsFold(v string) predicate.Game {
 	return predicate.Game(func(s *sql.Selector) {
 		s.Where(sql.ContainsFold(s.C(FieldName), v))
+	})
+}
+
+// HasMjlogs applies the HasEdge predicate on the "mjlogs" edge.
+func HasMjlogs() predicate.Game {
+	return predicate.Game(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(MjlogsTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, MjlogsTable, MjlogsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasMjlogsWith applies the HasEdge predicate on the "mjlogs" edge with a given conditions (other predicates).
+func HasMjlogsWith(preds ...predicate.MJLog) predicate.Game {
+	return predicate.Game(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(MjlogsInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, MjlogsTable, MjlogsColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasRooms applies the HasEdge predicate on the "rooms" edge.
+func HasRooms() predicate.Game {
+	return predicate.Game(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(RoomsTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, RoomsTable, RoomsPrimaryKey...),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasRoomsWith applies the HasEdge predicate on the "rooms" edge with a given conditions (other predicates).
+func HasRoomsWith(preds ...predicate.Room) predicate.Game {
+	return predicate.Game(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(RoomsInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, RoomsTable, RoomsPrimaryKey...),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
 	})
 }
 
