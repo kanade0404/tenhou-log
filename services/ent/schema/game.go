@@ -17,6 +17,7 @@ func (Game) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(uuid.New).StorageKey("oid"),
 		field.String("name").Unique().Immutable(),
+		field.Time("started_at").Immutable(),
 	}
 }
 
@@ -24,8 +25,8 @@ func (Game) Fields() []ent.Field {
 func (Game) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("mjlogs", MJLog.Type).Unique(),
-		//edge.To("game_players", GamePlayer.Type),
-		edge.From("rooms", Room.Type).Ref("games"),
+		edge.To("game_players", GamePlayer.Type),
+		edge.From("rooms", Room.Type).Ref("games").Unique(),
 		//edge.To("rounds", Round.Type),
 	}
 }
