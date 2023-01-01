@@ -14,6 +14,7 @@ import (
 	"github.com/kanade0404/tenhou-log/services/ent/hand"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlog"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlogfile"
+	"github.com/kanade0404/tenhou-log/services/ent/player"
 	"github.com/kanade0404/tenhou-log/services/ent/room"
 	"github.com/kanade0404/tenhou-log/services/ent/round"
 	"github.com/kanade0404/tenhou-log/services/ent/schema"
@@ -76,6 +77,20 @@ func init() {
 	mjlogfileDescID := mjlogfileFields[0].Descriptor()
 	// mjlogfile.DefaultID holds the default value on creation for the id field.
 	mjlogfile.DefaultID = mjlogfileDescID.Default.(func() uuid.UUID)
+	playerFields := schema.Player{}.Fields()
+	_ = playerFields
+	// playerDescSex is the schema descriptor for sex field.
+	playerDescSex := playerFields[2].Descriptor()
+	// player.SexValidator is a validator for the "sex" field. It is called by the builders before save.
+	player.SexValidator = playerDescSex.Validators[0].(func(string) error)
+	// playerDescCreatedAt is the schema descriptor for created_at field.
+	playerDescCreatedAt := playerFields[3].Descriptor()
+	// player.DefaultCreatedAt holds the default value on creation for the created_at field.
+	player.DefaultCreatedAt = playerDescCreatedAt.Default.(func() time.Time)
+	// playerDescID is the schema descriptor for id field.
+	playerDescID := playerFields[0].Descriptor()
+	// player.DefaultID holds the default value on creation for the id field.
+	player.DefaultID = playerDescID.Default.(func() uuid.UUID)
 	roomFields := schema.Room{}.Fields()
 	_ = roomFields
 	// roomDescID is the schema descriptor for id field.

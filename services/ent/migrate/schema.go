@@ -145,7 +145,10 @@ var (
 	}
 	// PlayersColumns holds the columns for the "players" table.
 	PlayersColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "oid", Type: field.TypeUUID},
+		{Name: "name", Type: field.TypeString, Unique: true},
+		{Name: "sex", Type: field.TypeString},
+		{Name: "created_at", Type: field.TypeTime},
 	}
 	// PlayersTable holds the schema information for the "players" table.
 	PlayersTable = &schema.Table{
@@ -184,6 +187,31 @@ var (
 		Name:       "winds",
 		Columns:    WindsColumns,
 		PrimaryKey: []*schema.Column{WindsColumns[0]},
+	}
+	// PlayerGamePlayersColumns holds the columns for the "player_game_players" table.
+	PlayerGamePlayersColumns = []*schema.Column{
+		{Name: "player_id", Type: field.TypeUUID},
+		{Name: "game_player_id", Type: field.TypeUUID},
+	}
+	// PlayerGamePlayersTable holds the schema information for the "player_game_players" table.
+	PlayerGamePlayersTable = &schema.Table{
+		Name:       "player_game_players",
+		Columns:    PlayerGamePlayersColumns,
+		PrimaryKey: []*schema.Column{PlayerGamePlayersColumns[0], PlayerGamePlayersColumns[1]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "player_game_players_player_id",
+				Columns:    []*schema.Column{PlayerGamePlayersColumns[0]},
+				RefColumns: []*schema.Column{PlayersColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "player_game_players_game_player_id",
+				Columns:    []*schema.Column{PlayerGamePlayersColumns[1]},
+				RefColumns: []*schema.Column{GamePlayersColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
 	}
 	// RoomGamesColumns holds the columns for the "room_games" table.
 	RoomGamesColumns = []*schema.Column{
@@ -226,6 +254,7 @@ var (
 		RoomsTable,
 		RoundsTable,
 		WindsTable,
+		PlayerGamePlayersTable,
 		RoomGamesTable,
 	}
 )
@@ -234,6 +263,8 @@ func init() {
 	MjLogsTable.ForeignKeys[0].RefTable = GamesTable
 	MjLogsTable.ForeignKeys[1].RefTable = MjLogFilesTable
 	MjLogFilesTable.ForeignKeys[0].RefTable = CompressedMjLogsTable
+	PlayerGamePlayersTable.ForeignKeys[0].RefTable = PlayersTable
+	PlayerGamePlayersTable.ForeignKeys[1].RefTable = GamePlayersTable
 	RoomGamesTable.ForeignKeys[0].RefTable = RoomsTable
 	RoomGamesTable.ForeignKeys[1].RefTable = GamesTable
 }

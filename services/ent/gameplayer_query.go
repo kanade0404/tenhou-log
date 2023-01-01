@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -12,18 +13,20 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayer"
+	"github.com/kanade0404/tenhou-log/services/ent/player"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 )
 
 // GamePlayerQuery is the builder for querying GamePlayer entities.
 type GamePlayerQuery struct {
 	config
-	limit      *int
-	offset     *int
-	unique     *bool
-	order      []OrderFunc
-	fields     []string
-	predicates []predicate.GamePlayer
+	limit       *int
+	offset      *int
+	unique      *bool
+	order       []OrderFunc
+	fields      []string
+	predicates  []predicate.GamePlayer
+	withPlayers *PlayerQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -58,6 +61,28 @@ func (gpq *GamePlayerQuery) Unique(unique bool) *GamePlayerQuery {
 func (gpq *GamePlayerQuery) Order(o ...OrderFunc) *GamePlayerQuery {
 	gpq.order = append(gpq.order, o...)
 	return gpq
+}
+
+// QueryPlayers chains the current query on the "players" edge.
+func (gpq *GamePlayerQuery) QueryPlayers() *PlayerQuery {
+	query := &PlayerQuery{config: gpq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := gpq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := gpq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(gameplayer.Table, gameplayer.FieldID, selector),
+			sqlgraph.To(player.Table, player.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, gameplayer.PlayersTable, gameplayer.PlayersPrimaryKey...),
+		)
+		fromU = sqlgraph.SetNeighbors(gpq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first GamePlayer entity from the query.
@@ -236,16 +261,28 @@ func (gpq *GamePlayerQuery) Clone() *GamePlayerQuery {
 		return nil
 	}
 	return &GamePlayerQuery{
-		config:     gpq.config,
-		limit:      gpq.limit,
-		offset:     gpq.offset,
-		order:      append([]OrderFunc{}, gpq.order...),
-		predicates: append([]predicate.GamePlayer{}, gpq.predicates...),
+		config:      gpq.config,
+		limit:       gpq.limit,
+		offset:      gpq.offset,
+		order:       append([]OrderFunc{}, gpq.order...),
+		predicates:  append([]predicate.GamePlayer{}, gpq.predicates...),
+		withPlayers: gpq.withPlayers.Clone(),
 		// clone intermediate query.
 		sql:    gpq.sql.Clone(),
 		path:   gpq.path,
 		unique: gpq.unique,
 	}
+}
+
+// WithPlayers tells the query-builder to eager-load the nodes that are connected to
+// the "players" edge. The optional arguments are used to configure the query builder of the edge.
+func (gpq *GamePlayerQuery) WithPlayers(opts ...func(*PlayerQuery)) *GamePlayerQuery {
+	query := &PlayerQuery{config: gpq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	gpq.withPlayers = query
+	return gpq
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -321,8 +358,11 @@ func (gpq *GamePlayerQuery) prepareQuery(ctx context.Context) error {
 
 func (gpq *GamePlayerQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*GamePlayer, error) {
 	var (
-		nodes = []*GamePlayer{}
-		_spec = gpq.querySpec()
+		nodes       = []*GamePlayer{}
+		_spec       = gpq.querySpec()
+		loadedTypes = [1]bool{
+			gpq.withPlayers != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*GamePlayer).scanValues(nil, columns)
@@ -330,6 +370,7 @@ func (gpq *GamePlayerQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &GamePlayer{config: gpq.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -341,7 +382,73 @@ func (gpq *GamePlayerQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := gpq.withPlayers; query != nil {
+		if err := gpq.loadPlayers(ctx, query, nodes,
+			func(n *GamePlayer) { n.Edges.Players = []*Player{} },
+			func(n *GamePlayer, e *Player) { n.Edges.Players = append(n.Edges.Players, e) }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (gpq *GamePlayerQuery) loadPlayers(ctx context.Context, query *PlayerQuery, nodes []*GamePlayer, init func(*GamePlayer), assign func(*GamePlayer, *Player)) error {
+	edgeIDs := make([]driver.Value, len(nodes))
+	byID := make(map[uuid.UUID]*GamePlayer)
+	nids := make(map[uuid.UUID]map[*GamePlayer]struct{})
+	for i, node := range nodes {
+		edgeIDs[i] = node.ID
+		byID[node.ID] = node
+		if init != nil {
+			init(node)
+		}
+	}
+	query.Where(func(s *sql.Selector) {
+		joinT := sql.Table(gameplayer.PlayersTable)
+		s.Join(joinT).On(s.C(player.FieldID), joinT.C(gameplayer.PlayersPrimaryKey[0]))
+		s.Where(sql.InValues(joinT.C(gameplayer.PlayersPrimaryKey[1]), edgeIDs...))
+		columns := s.SelectedColumns()
+		s.Select(joinT.C(gameplayer.PlayersPrimaryKey[1]))
+		s.AppendSelect(columns...)
+		s.SetDistinct(false)
+	})
+	if err := query.prepareQuery(ctx); err != nil {
+		return err
+	}
+	neighbors, err := query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
+		assign := spec.Assign
+		values := spec.ScanValues
+		spec.ScanValues = func(columns []string) ([]any, error) {
+			values, err := values(columns[1:])
+			if err != nil {
+				return nil, err
+			}
+			return append([]any{new(uuid.UUID)}, values...), nil
+		}
+		spec.Assign = func(columns []string, values []any) error {
+			outValue := *values[0].(*uuid.UUID)
+			inValue := *values[1].(*uuid.UUID)
+			if nids[inValue] == nil {
+				nids[inValue] = map[*GamePlayer]struct{}{byID[outValue]: {}}
+				return assign(columns[1:], values[1:])
+			}
+			nids[inValue][byID[outValue]] = struct{}{}
+			return nil
+		}
+	})
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected "players" node returned %v`, n.ID)
+		}
+		for kn := range nodes {
+			assign(kn, n)
+		}
+	}
+	return nil
 }
 
 func (gpq *GamePlayerQuery) sqlCount(ctx context.Context) (int, error) {

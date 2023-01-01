@@ -13,8 +13,15 @@ const (
 	FieldID = "oid"
 	// FieldRate holds the string denoting the rate field in the database.
 	FieldRate = "rate"
+	// EdgePlayers holds the string denoting the players edge name in mutations.
+	EdgePlayers = "players"
 	// Table holds the table name of the gameplayer in the database.
 	Table = "game_players"
+	// PlayersTable is the table that holds the players relation/edge. The primary key declared below.
+	PlayersTable = "player_game_players"
+	// PlayersInverseTable is the table name for the Player entity.
+	// It exists in this package in order to avoid circular dependency with the "player" package.
+	PlayersInverseTable = "players"
 )
 
 // Columns holds all SQL columns for gameplayer fields.
@@ -22,6 +29,12 @@ var Columns = []string{
 	FieldID,
 	FieldRate,
 }
+
+var (
+	// PlayersPrimaryKey and PlayersColumn2 are the table columns denoting the
+	// primary key for the players relation (M2M).
+	PlayersPrimaryKey = []string{"player_id", "game_player_id"}
+)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {

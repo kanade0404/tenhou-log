@@ -4,12 +4,15 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/gameplayer"
 	"github.com/kanade0404/tenhou-log/services/ent/player"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 )
@@ -17,12 +20,13 @@ import (
 // PlayerQuery is the builder for querying Player entities.
 type PlayerQuery struct {
 	config
-	limit      *int
-	offset     *int
-	unique     *bool
-	order      []OrderFunc
-	fields     []string
-	predicates []predicate.Player
+	limit           *int
+	offset          *int
+	unique          *bool
+	order           []OrderFunc
+	fields          []string
+	predicates      []predicate.Player
+	withGamePlayers *GamePlayerQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -59,6 +63,28 @@ func (pq *PlayerQuery) Order(o ...OrderFunc) *PlayerQuery {
 	return pq
 }
 
+// QueryGamePlayers chains the current query on the "game_players" edge.
+func (pq *PlayerQuery) QueryGamePlayers() *GamePlayerQuery {
+	query := &GamePlayerQuery{config: pq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := pq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := pq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(player.Table, player.FieldID, selector),
+			sqlgraph.To(gameplayer.Table, gameplayer.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, player.GamePlayersTable, player.GamePlayersPrimaryKey...),
+		)
+		fromU = sqlgraph.SetNeighbors(pq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
 // First returns the first Player entity from the query.
 // Returns a *NotFoundError when no Player was found.
 func (pq *PlayerQuery) First(ctx context.Context) (*Player, error) {
@@ -83,8 +109,8 @@ func (pq *PlayerQuery) FirstX(ctx context.Context) *Player {
 
 // FirstID returns the first Player ID from the query.
 // Returns a *NotFoundError when no Player ID was found.
-func (pq *PlayerQuery) FirstID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (pq *PlayerQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = pq.Limit(1).IDs(ctx); err != nil {
 		return
 	}
@@ -96,7 +122,7 @@ func (pq *PlayerQuery) FirstID(ctx context.Context) (id int, err error) {
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (pq *PlayerQuery) FirstIDX(ctx context.Context) int {
+func (pq *PlayerQuery) FirstIDX(ctx context.Context) uuid.UUID {
 	id, err := pq.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -134,8 +160,8 @@ func (pq *PlayerQuery) OnlyX(ctx context.Context) *Player {
 // OnlyID is like Only, but returns the only Player ID in the query.
 // Returns a *NotSingularError when more than one Player ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (pq *PlayerQuery) OnlyID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (pq *PlayerQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = pq.Limit(2).IDs(ctx); err != nil {
 		return
 	}
@@ -151,7 +177,7 @@ func (pq *PlayerQuery) OnlyID(ctx context.Context) (id int, err error) {
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (pq *PlayerQuery) OnlyIDX(ctx context.Context) int {
+func (pq *PlayerQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 	id, err := pq.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -177,8 +203,8 @@ func (pq *PlayerQuery) AllX(ctx context.Context) []*Player {
 }
 
 // IDs executes the query and returns a list of Player IDs.
-func (pq *PlayerQuery) IDs(ctx context.Context) ([]int, error) {
-	var ids []int
+func (pq *PlayerQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	var ids []uuid.UUID
 	if err := pq.Select(player.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
@@ -186,7 +212,7 @@ func (pq *PlayerQuery) IDs(ctx context.Context) ([]int, error) {
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (pq *PlayerQuery) IDsX(ctx context.Context) []int {
+func (pq *PlayerQuery) IDsX(ctx context.Context) []uuid.UUID {
 	ids, err := pq.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -235,11 +261,12 @@ func (pq *PlayerQuery) Clone() *PlayerQuery {
 		return nil
 	}
 	return &PlayerQuery{
-		config:     pq.config,
-		limit:      pq.limit,
-		offset:     pq.offset,
-		order:      append([]OrderFunc{}, pq.order...),
-		predicates: append([]predicate.Player{}, pq.predicates...),
+		config:          pq.config,
+		limit:           pq.limit,
+		offset:          pq.offset,
+		order:           append([]OrderFunc{}, pq.order...),
+		predicates:      append([]predicate.Player{}, pq.predicates...),
+		withGamePlayers: pq.withGamePlayers.Clone(),
 		// clone intermediate query.
 		sql:    pq.sql.Clone(),
 		path:   pq.path,
@@ -247,8 +274,32 @@ func (pq *PlayerQuery) Clone() *PlayerQuery {
 	}
 }
 
+// WithGamePlayers tells the query-builder to eager-load the nodes that are connected to
+// the "game_players" edge. The optional arguments are used to configure the query builder of the edge.
+func (pq *PlayerQuery) WithGamePlayers(opts ...func(*GamePlayerQuery)) *PlayerQuery {
+	query := &GamePlayerQuery{config: pq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	pq.withGamePlayers = query
+	return pq
+}
+
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
+//
+// Example:
+//
+//	var v []struct {
+//		Name string `json:"name,omitempty"`
+//		Count int `json:"count,omitempty"`
+//	}
+//
+//	client.Player.Query().
+//		GroupBy(player.FieldName).
+//		Aggregate(ent.Count()).
+//		Scan(ctx, &v)
+//
 func (pq *PlayerQuery) GroupBy(field string, fields ...string) *PlayerGroupBy {
 	grbuild := &PlayerGroupBy{config: pq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -265,6 +316,17 @@ func (pq *PlayerQuery) GroupBy(field string, fields ...string) *PlayerGroupBy {
 
 // Select allows the selection one or more fields/columns for the given query,
 // instead of selecting all fields in the entity.
+//
+// Example:
+//
+//	var v []struct {
+//		Name string `json:"name,omitempty"`
+//	}
+//
+//	client.Player.Query().
+//		Select(player.FieldName).
+//		Scan(ctx, &v)
+//
 func (pq *PlayerQuery) Select(fields ...string) *PlayerSelect {
 	pq.fields = append(pq.fields, fields...)
 	selbuild := &PlayerSelect{PlayerQuery: pq}
@@ -296,8 +358,11 @@ func (pq *PlayerQuery) prepareQuery(ctx context.Context) error {
 
 func (pq *PlayerQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Player, error) {
 	var (
-		nodes = []*Player{}
-		_spec = pq.querySpec()
+		nodes       = []*Player{}
+		_spec       = pq.querySpec()
+		loadedTypes = [1]bool{
+			pq.withGamePlayers != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Player).scanValues(nil, columns)
@@ -305,6 +370,7 @@ func (pq *PlayerQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Playe
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &Player{config: pq.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -316,7 +382,73 @@ func (pq *PlayerQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Playe
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := pq.withGamePlayers; query != nil {
+		if err := pq.loadGamePlayers(ctx, query, nodes,
+			func(n *Player) { n.Edges.GamePlayers = []*GamePlayer{} },
+			func(n *Player, e *GamePlayer) { n.Edges.GamePlayers = append(n.Edges.GamePlayers, e) }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (pq *PlayerQuery) loadGamePlayers(ctx context.Context, query *GamePlayerQuery, nodes []*Player, init func(*Player), assign func(*Player, *GamePlayer)) error {
+	edgeIDs := make([]driver.Value, len(nodes))
+	byID := make(map[uuid.UUID]*Player)
+	nids := make(map[uuid.UUID]map[*Player]struct{})
+	for i, node := range nodes {
+		edgeIDs[i] = node.ID
+		byID[node.ID] = node
+		if init != nil {
+			init(node)
+		}
+	}
+	query.Where(func(s *sql.Selector) {
+		joinT := sql.Table(player.GamePlayersTable)
+		s.Join(joinT).On(s.C(gameplayer.FieldID), joinT.C(player.GamePlayersPrimaryKey[1]))
+		s.Where(sql.InValues(joinT.C(player.GamePlayersPrimaryKey[0]), edgeIDs...))
+		columns := s.SelectedColumns()
+		s.Select(joinT.C(player.GamePlayersPrimaryKey[0]))
+		s.AppendSelect(columns...)
+		s.SetDistinct(false)
+	})
+	if err := query.prepareQuery(ctx); err != nil {
+		return err
+	}
+	neighbors, err := query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
+		assign := spec.Assign
+		values := spec.ScanValues
+		spec.ScanValues = func(columns []string) ([]any, error) {
+			values, err := values(columns[1:])
+			if err != nil {
+				return nil, err
+			}
+			return append([]any{new(uuid.UUID)}, values...), nil
+		}
+		spec.Assign = func(columns []string, values []any) error {
+			outValue := *values[0].(*uuid.UUID)
+			inValue := *values[1].(*uuid.UUID)
+			if nids[inValue] == nil {
+				nids[inValue] = map[*Player]struct{}{byID[outValue]: {}}
+				return assign(columns[1:], values[1:])
+			}
+			nids[inValue][byID[outValue]] = struct{}{}
+			return nil
+		}
+	})
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected "game_players" node returned %v`, n.ID)
+		}
+		for kn := range nodes {
+			assign(kn, n)
+		}
+	}
+	return nil
 }
 
 func (pq *PlayerQuery) sqlCount(ctx context.Context) (int, error) {
@@ -345,7 +477,7 @@ func (pq *PlayerQuery) querySpec() *sqlgraph.QuerySpec {
 			Table:   player.Table,
 			Columns: player.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: player.FieldID,
 			},
 		},

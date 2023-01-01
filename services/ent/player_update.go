@@ -6,10 +6,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/gameplayer"
 	"github.com/kanade0404/tenhou-log/services/ent/player"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 )
@@ -27,9 +30,65 @@ func (pu *PlayerUpdate) Where(ps ...predicate.Player) *PlayerUpdate {
 	return pu
 }
 
+// SetSex sets the "sex" field.
+func (pu *PlayerUpdate) SetSex(s string) *PlayerUpdate {
+	pu.mutation.SetSex(s)
+	return pu
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (pu *PlayerUpdate) SetCreatedAt(t time.Time) *PlayerUpdate {
+	pu.mutation.SetCreatedAt(t)
+	return pu
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (pu *PlayerUpdate) SetNillableCreatedAt(t *time.Time) *PlayerUpdate {
+	if t != nil {
+		pu.SetCreatedAt(*t)
+	}
+	return pu
+}
+
+// AddGamePlayerIDs adds the "game_players" edge to the GamePlayer entity by IDs.
+func (pu *PlayerUpdate) AddGamePlayerIDs(ids ...uuid.UUID) *PlayerUpdate {
+	pu.mutation.AddGamePlayerIDs(ids...)
+	return pu
+}
+
+// AddGamePlayers adds the "game_players" edges to the GamePlayer entity.
+func (pu *PlayerUpdate) AddGamePlayers(g ...*GamePlayer) *PlayerUpdate {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return pu.AddGamePlayerIDs(ids...)
+}
+
 // Mutation returns the PlayerMutation object of the builder.
 func (pu *PlayerUpdate) Mutation() *PlayerMutation {
 	return pu.mutation
+}
+
+// ClearGamePlayers clears all "game_players" edges to the GamePlayer entity.
+func (pu *PlayerUpdate) ClearGamePlayers() *PlayerUpdate {
+	pu.mutation.ClearGamePlayers()
+	return pu
+}
+
+// RemoveGamePlayerIDs removes the "game_players" edge to GamePlayer entities by IDs.
+func (pu *PlayerUpdate) RemoveGamePlayerIDs(ids ...uuid.UUID) *PlayerUpdate {
+	pu.mutation.RemoveGamePlayerIDs(ids...)
+	return pu
+}
+
+// RemoveGamePlayers removes "game_players" edges to GamePlayer entities.
+func (pu *PlayerUpdate) RemoveGamePlayers(g ...*GamePlayer) *PlayerUpdate {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return pu.RemoveGamePlayerIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -39,12 +98,18 @@ func (pu *PlayerUpdate) Save(ctx context.Context) (int, error) {
 		affected int
 	)
 	if len(pu.hooks) == 0 {
+		if err = pu.check(); err != nil {
+			return 0, err
+		}
 		affected, err = pu.sqlSave(ctx)
 	} else {
 		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 			mutation, ok := m.(*PlayerMutation)
 			if !ok {
 				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			if err = pu.check(); err != nil {
+				return 0, err
 			}
 			pu.mutation = mutation
 			affected, err = pu.sqlSave(ctx)
@@ -86,13 +151,23 @@ func (pu *PlayerUpdate) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (pu *PlayerUpdate) check() error {
+	if v, ok := pu.mutation.Sex(); ok {
+		if err := player.SexValidator(v); err != nil {
+			return &ValidationError{Name: "sex", err: fmt.Errorf(`ent: validator failed for field "Player.sex": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (pu *PlayerUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	_spec := &sqlgraph.UpdateSpec{
 		Node: &sqlgraph.NodeSpec{
 			Table:   player.Table,
 			Columns: player.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: player.FieldID,
 			},
 		},
@@ -103,6 +178,66 @@ func (pu *PlayerUpdate) sqlSave(ctx context.Context) (n int, err error) {
 				ps[i](selector)
 			}
 		}
+	}
+	if value, ok := pu.mutation.Sex(); ok {
+		_spec.SetField(player.FieldSex, field.TypeString, value)
+	}
+	if value, ok := pu.mutation.CreatedAt(); ok {
+		_spec.SetField(player.FieldCreatedAt, field.TypeTime, value)
+	}
+	if pu.mutation.GamePlayersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   player.GamePlayersTable,
+			Columns: player.GamePlayersPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: gameplayer.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := pu.mutation.RemovedGamePlayersIDs(); len(nodes) > 0 && !pu.mutation.GamePlayersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   player.GamePlayersTable,
+			Columns: player.GamePlayersPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: gameplayer.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := pu.mutation.GamePlayersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   player.GamePlayersTable,
+			Columns: player.GamePlayersPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: gameplayer.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, pu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -123,9 +258,65 @@ type PlayerUpdateOne struct {
 	mutation *PlayerMutation
 }
 
+// SetSex sets the "sex" field.
+func (puo *PlayerUpdateOne) SetSex(s string) *PlayerUpdateOne {
+	puo.mutation.SetSex(s)
+	return puo
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (puo *PlayerUpdateOne) SetCreatedAt(t time.Time) *PlayerUpdateOne {
+	puo.mutation.SetCreatedAt(t)
+	return puo
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (puo *PlayerUpdateOne) SetNillableCreatedAt(t *time.Time) *PlayerUpdateOne {
+	if t != nil {
+		puo.SetCreatedAt(*t)
+	}
+	return puo
+}
+
+// AddGamePlayerIDs adds the "game_players" edge to the GamePlayer entity by IDs.
+func (puo *PlayerUpdateOne) AddGamePlayerIDs(ids ...uuid.UUID) *PlayerUpdateOne {
+	puo.mutation.AddGamePlayerIDs(ids...)
+	return puo
+}
+
+// AddGamePlayers adds the "game_players" edges to the GamePlayer entity.
+func (puo *PlayerUpdateOne) AddGamePlayers(g ...*GamePlayer) *PlayerUpdateOne {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return puo.AddGamePlayerIDs(ids...)
+}
+
 // Mutation returns the PlayerMutation object of the builder.
 func (puo *PlayerUpdateOne) Mutation() *PlayerMutation {
 	return puo.mutation
+}
+
+// ClearGamePlayers clears all "game_players" edges to the GamePlayer entity.
+func (puo *PlayerUpdateOne) ClearGamePlayers() *PlayerUpdateOne {
+	puo.mutation.ClearGamePlayers()
+	return puo
+}
+
+// RemoveGamePlayerIDs removes the "game_players" edge to GamePlayer entities by IDs.
+func (puo *PlayerUpdateOne) RemoveGamePlayerIDs(ids ...uuid.UUID) *PlayerUpdateOne {
+	puo.mutation.RemoveGamePlayerIDs(ids...)
+	return puo
+}
+
+// RemoveGamePlayers removes "game_players" edges to GamePlayer entities.
+func (puo *PlayerUpdateOne) RemoveGamePlayers(g ...*GamePlayer) *PlayerUpdateOne {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return puo.RemoveGamePlayerIDs(ids...)
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -142,12 +333,18 @@ func (puo *PlayerUpdateOne) Save(ctx context.Context) (*Player, error) {
 		node *Player
 	)
 	if len(puo.hooks) == 0 {
+		if err = puo.check(); err != nil {
+			return nil, err
+		}
 		node, err = puo.sqlSave(ctx)
 	} else {
 		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 			mutation, ok := m.(*PlayerMutation)
 			if !ok {
 				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			if err = puo.check(); err != nil {
+				return nil, err
 			}
 			puo.mutation = mutation
 			node, err = puo.sqlSave(ctx)
@@ -195,13 +392,23 @@ func (puo *PlayerUpdateOne) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (puo *PlayerUpdateOne) check() error {
+	if v, ok := puo.mutation.Sex(); ok {
+		if err := player.SexValidator(v); err != nil {
+			return &ValidationError{Name: "sex", err: fmt.Errorf(`ent: validator failed for field "Player.sex": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (puo *PlayerUpdateOne) sqlSave(ctx context.Context) (_node *Player, err error) {
 	_spec := &sqlgraph.UpdateSpec{
 		Node: &sqlgraph.NodeSpec{
 			Table:   player.Table,
 			Columns: player.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: player.FieldID,
 			},
 		},
@@ -229,6 +436,66 @@ func (puo *PlayerUpdateOne) sqlSave(ctx context.Context) (_node *Player, err err
 				ps[i](selector)
 			}
 		}
+	}
+	if value, ok := puo.mutation.Sex(); ok {
+		_spec.SetField(player.FieldSex, field.TypeString, value)
+	}
+	if value, ok := puo.mutation.CreatedAt(); ok {
+		_spec.SetField(player.FieldCreatedAt, field.TypeTime, value)
+	}
+	if puo.mutation.GamePlayersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   player.GamePlayersTable,
+			Columns: player.GamePlayersPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: gameplayer.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := puo.mutation.RemovedGamePlayersIDs(); len(nodes) > 0 && !puo.mutation.GamePlayersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   player.GamePlayersTable,
+			Columns: player.GamePlayersPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: gameplayer.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := puo.mutation.GamePlayersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   player.GamePlayersTable,
+			Columns: player.GamePlayersPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: gameplayer.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &Player{config: puo.config}
 	_spec.Assign = _node.assignValues

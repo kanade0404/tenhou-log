@@ -619,6 +619,22 @@ func (c *GamePlayerClient) GetX(ctx context.Context, id uuid.UUID) *GamePlayer {
 	return obj
 }
 
+// QueryPlayers queries the players edge of a GamePlayer.
+func (c *GamePlayerClient) QueryPlayers(gp *GamePlayer) *PlayerQuery {
+	query := &PlayerQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := gp.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(gameplayer.Table, gameplayer.FieldID, id),
+			sqlgraph.To(player.Table, player.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, gameplayer.PlayersTable, gameplayer.PlayersPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(gp.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *GamePlayerClient) Hooks() []Hook {
 	return c.hooks.GamePlayer
@@ -1268,7 +1284,7 @@ func (c *PlayerClient) UpdateOne(pl *Player) *PlayerUpdateOne {
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *PlayerClient) UpdateOneID(id int) *PlayerUpdateOne {
+func (c *PlayerClient) UpdateOneID(id uuid.UUID) *PlayerUpdateOne {
 	mutation := newPlayerMutation(c.config, OpUpdateOne, withPlayerID(id))
 	return &PlayerUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
@@ -1285,7 +1301,7 @@ func (c *PlayerClient) DeleteOne(pl *Player) *PlayerDeleteOne {
 }
 
 // DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *PlayerClient) DeleteOneID(id int) *PlayerDeleteOne {
+func (c *PlayerClient) DeleteOneID(id uuid.UUID) *PlayerDeleteOne {
 	builder := c.Delete().Where(player.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
@@ -1300,17 +1316,33 @@ func (c *PlayerClient) Query() *PlayerQuery {
 }
 
 // Get returns a Player entity by its id.
-func (c *PlayerClient) Get(ctx context.Context, id int) (*Player, error) {
+func (c *PlayerClient) Get(ctx context.Context, id uuid.UUID) (*Player, error) {
 	return c.Query().Where(player.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *PlayerClient) GetX(ctx context.Context, id int) *Player {
+func (c *PlayerClient) GetX(ctx context.Context, id uuid.UUID) *Player {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)
 	}
 	return obj
+}
+
+// QueryGamePlayers queries the game_players edge of a Player.
+func (c *PlayerClient) QueryGamePlayers(pl *Player) *GamePlayerQuery {
+	query := &GamePlayerQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := pl.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(player.Table, player.FieldID, id),
+			sqlgraph.To(gameplayer.Table, gameplayer.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, player.GamePlayersTable, player.GamePlayersPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(pl.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.

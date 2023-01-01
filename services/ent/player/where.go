@@ -3,33 +3,37 @@
 package player
 
 import (
+	"time"
+
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 )
 
 // ID filters vertices based on their ID field.
-func ID(id int) predicate.Player {
+func ID(id uuid.UUID) predicate.Player {
 	return predicate.Player(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldID), id))
 	})
 }
 
 // IDEQ applies the EQ predicate on the ID field.
-func IDEQ(id int) predicate.Player {
+func IDEQ(id uuid.UUID) predicate.Player {
 	return predicate.Player(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldID), id))
 	})
 }
 
 // IDNEQ applies the NEQ predicate on the ID field.
-func IDNEQ(id int) predicate.Player {
+func IDNEQ(id uuid.UUID) predicate.Player {
 	return predicate.Player(func(s *sql.Selector) {
 		s.Where(sql.NEQ(s.C(FieldID), id))
 	})
 }
 
 // IDIn applies the In predicate on the ID field.
-func IDIn(ids ...int) predicate.Player {
+func IDIn(ids ...uuid.UUID) predicate.Player {
 	return predicate.Player(func(s *sql.Selector) {
 		v := make([]any, len(ids))
 		for i := range v {
@@ -40,7 +44,7 @@ func IDIn(ids ...int) predicate.Player {
 }
 
 // IDNotIn applies the NotIn predicate on the ID field.
-func IDNotIn(ids ...int) predicate.Player {
+func IDNotIn(ids ...uuid.UUID) predicate.Player {
 	return predicate.Player(func(s *sql.Selector) {
 		v := make([]any, len(ids))
 		for i := range v {
@@ -51,30 +55,341 @@ func IDNotIn(ids ...int) predicate.Player {
 }
 
 // IDGT applies the GT predicate on the ID field.
-func IDGT(id int) predicate.Player {
+func IDGT(id uuid.UUID) predicate.Player {
 	return predicate.Player(func(s *sql.Selector) {
 		s.Where(sql.GT(s.C(FieldID), id))
 	})
 }
 
 // IDGTE applies the GTE predicate on the ID field.
-func IDGTE(id int) predicate.Player {
+func IDGTE(id uuid.UUID) predicate.Player {
 	return predicate.Player(func(s *sql.Selector) {
 		s.Where(sql.GTE(s.C(FieldID), id))
 	})
 }
 
 // IDLT applies the LT predicate on the ID field.
-func IDLT(id int) predicate.Player {
+func IDLT(id uuid.UUID) predicate.Player {
 	return predicate.Player(func(s *sql.Selector) {
 		s.Where(sql.LT(s.C(FieldID), id))
 	})
 }
 
 // IDLTE applies the LTE predicate on the ID field.
-func IDLTE(id int) predicate.Player {
+func IDLTE(id uuid.UUID) predicate.Player {
 	return predicate.Player(func(s *sql.Selector) {
 		s.Where(sql.LTE(s.C(FieldID), id))
+	})
+}
+
+// Name applies equality check predicate on the "name" field. It's identical to NameEQ.
+func Name(v string) predicate.Player {
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldName), v))
+	})
+}
+
+// Sex applies equality check predicate on the "sex" field. It's identical to SexEQ.
+func Sex(v string) predicate.Player {
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldSex), v))
+	})
+}
+
+// CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
+func CreatedAt(v time.Time) predicate.Player {
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldCreatedAt), v))
+	})
+}
+
+// NameEQ applies the EQ predicate on the "name" field.
+func NameEQ(v string) predicate.Player {
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldName), v))
+	})
+}
+
+// NameNEQ applies the NEQ predicate on the "name" field.
+func NameNEQ(v string) predicate.Player {
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.NEQ(s.C(FieldName), v))
+	})
+}
+
+// NameIn applies the In predicate on the "name" field.
+func NameIn(vs ...string) predicate.Player {
+	v := make([]any, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.In(s.C(FieldName), v...))
+	})
+}
+
+// NameNotIn applies the NotIn predicate on the "name" field.
+func NameNotIn(vs ...string) predicate.Player {
+	v := make([]any, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.NotIn(s.C(FieldName), v...))
+	})
+}
+
+// NameGT applies the GT predicate on the "name" field.
+func NameGT(v string) predicate.Player {
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.GT(s.C(FieldName), v))
+	})
+}
+
+// NameGTE applies the GTE predicate on the "name" field.
+func NameGTE(v string) predicate.Player {
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.GTE(s.C(FieldName), v))
+	})
+}
+
+// NameLT applies the LT predicate on the "name" field.
+func NameLT(v string) predicate.Player {
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.LT(s.C(FieldName), v))
+	})
+}
+
+// NameLTE applies the LTE predicate on the "name" field.
+func NameLTE(v string) predicate.Player {
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.LTE(s.C(FieldName), v))
+	})
+}
+
+// NameContains applies the Contains predicate on the "name" field.
+func NameContains(v string) predicate.Player {
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.Contains(s.C(FieldName), v))
+	})
+}
+
+// NameHasPrefix applies the HasPrefix predicate on the "name" field.
+func NameHasPrefix(v string) predicate.Player {
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.HasPrefix(s.C(FieldName), v))
+	})
+}
+
+// NameHasSuffix applies the HasSuffix predicate on the "name" field.
+func NameHasSuffix(v string) predicate.Player {
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.HasSuffix(s.C(FieldName), v))
+	})
+}
+
+// NameEqualFold applies the EqualFold predicate on the "name" field.
+func NameEqualFold(v string) predicate.Player {
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.EqualFold(s.C(FieldName), v))
+	})
+}
+
+// NameContainsFold applies the ContainsFold predicate on the "name" field.
+func NameContainsFold(v string) predicate.Player {
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.ContainsFold(s.C(FieldName), v))
+	})
+}
+
+// SexEQ applies the EQ predicate on the "sex" field.
+func SexEQ(v string) predicate.Player {
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldSex), v))
+	})
+}
+
+// SexNEQ applies the NEQ predicate on the "sex" field.
+func SexNEQ(v string) predicate.Player {
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.NEQ(s.C(FieldSex), v))
+	})
+}
+
+// SexIn applies the In predicate on the "sex" field.
+func SexIn(vs ...string) predicate.Player {
+	v := make([]any, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.In(s.C(FieldSex), v...))
+	})
+}
+
+// SexNotIn applies the NotIn predicate on the "sex" field.
+func SexNotIn(vs ...string) predicate.Player {
+	v := make([]any, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.NotIn(s.C(FieldSex), v...))
+	})
+}
+
+// SexGT applies the GT predicate on the "sex" field.
+func SexGT(v string) predicate.Player {
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.GT(s.C(FieldSex), v))
+	})
+}
+
+// SexGTE applies the GTE predicate on the "sex" field.
+func SexGTE(v string) predicate.Player {
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.GTE(s.C(FieldSex), v))
+	})
+}
+
+// SexLT applies the LT predicate on the "sex" field.
+func SexLT(v string) predicate.Player {
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.LT(s.C(FieldSex), v))
+	})
+}
+
+// SexLTE applies the LTE predicate on the "sex" field.
+func SexLTE(v string) predicate.Player {
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.LTE(s.C(FieldSex), v))
+	})
+}
+
+// SexContains applies the Contains predicate on the "sex" field.
+func SexContains(v string) predicate.Player {
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.Contains(s.C(FieldSex), v))
+	})
+}
+
+// SexHasPrefix applies the HasPrefix predicate on the "sex" field.
+func SexHasPrefix(v string) predicate.Player {
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.HasPrefix(s.C(FieldSex), v))
+	})
+}
+
+// SexHasSuffix applies the HasSuffix predicate on the "sex" field.
+func SexHasSuffix(v string) predicate.Player {
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.HasSuffix(s.C(FieldSex), v))
+	})
+}
+
+// SexEqualFold applies the EqualFold predicate on the "sex" field.
+func SexEqualFold(v string) predicate.Player {
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.EqualFold(s.C(FieldSex), v))
+	})
+}
+
+// SexContainsFold applies the ContainsFold predicate on the "sex" field.
+func SexContainsFold(v string) predicate.Player {
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.ContainsFold(s.C(FieldSex), v))
+	})
+}
+
+// CreatedAtEQ applies the EQ predicate on the "created_at" field.
+func CreatedAtEQ(v time.Time) predicate.Player {
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldCreatedAt), v))
+	})
+}
+
+// CreatedAtNEQ applies the NEQ predicate on the "created_at" field.
+func CreatedAtNEQ(v time.Time) predicate.Player {
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.NEQ(s.C(FieldCreatedAt), v))
+	})
+}
+
+// CreatedAtIn applies the In predicate on the "created_at" field.
+func CreatedAtIn(vs ...time.Time) predicate.Player {
+	v := make([]any, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.In(s.C(FieldCreatedAt), v...))
+	})
+}
+
+// CreatedAtNotIn applies the NotIn predicate on the "created_at" field.
+func CreatedAtNotIn(vs ...time.Time) predicate.Player {
+	v := make([]any, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.NotIn(s.C(FieldCreatedAt), v...))
+	})
+}
+
+// CreatedAtGT applies the GT predicate on the "created_at" field.
+func CreatedAtGT(v time.Time) predicate.Player {
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.GT(s.C(FieldCreatedAt), v))
+	})
+}
+
+// CreatedAtGTE applies the GTE predicate on the "created_at" field.
+func CreatedAtGTE(v time.Time) predicate.Player {
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.GTE(s.C(FieldCreatedAt), v))
+	})
+}
+
+// CreatedAtLT applies the LT predicate on the "created_at" field.
+func CreatedAtLT(v time.Time) predicate.Player {
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.LT(s.C(FieldCreatedAt), v))
+	})
+}
+
+// CreatedAtLTE applies the LTE predicate on the "created_at" field.
+func CreatedAtLTE(v time.Time) predicate.Player {
+	return predicate.Player(func(s *sql.Selector) {
+		s.Where(sql.LTE(s.C(FieldCreatedAt), v))
+	})
+}
+
+// HasGamePlayers applies the HasEdge predicate on the "game_players" edge.
+func HasGamePlayers() predicate.Player {
+	return predicate.Player(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(GamePlayersTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, GamePlayersTable, GamePlayersPrimaryKey...),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasGamePlayersWith applies the HasEdge predicate on the "game_players" edge with a given conditions (other predicates).
+func HasGamePlayersWith(preds ...predicate.GamePlayer) predicate.Player {
+	return predicate.Player(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(GamePlayersInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, GamePlayersTable, GamePlayersPrimaryKey...),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
 	})
 }
 

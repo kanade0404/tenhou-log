@@ -10,7 +10,9 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayer"
+	"github.com/kanade0404/tenhou-log/services/ent/player"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 )
 
@@ -27,9 +29,45 @@ func (gpu *GamePlayerUpdate) Where(ps ...predicate.GamePlayer) *GamePlayerUpdate
 	return gpu
 }
 
+// AddPlayerIDs adds the "players" edge to the Player entity by IDs.
+func (gpu *GamePlayerUpdate) AddPlayerIDs(ids ...uuid.UUID) *GamePlayerUpdate {
+	gpu.mutation.AddPlayerIDs(ids...)
+	return gpu
+}
+
+// AddPlayers adds the "players" edges to the Player entity.
+func (gpu *GamePlayerUpdate) AddPlayers(p ...*Player) *GamePlayerUpdate {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return gpu.AddPlayerIDs(ids...)
+}
+
 // Mutation returns the GamePlayerMutation object of the builder.
 func (gpu *GamePlayerUpdate) Mutation() *GamePlayerMutation {
 	return gpu.mutation
+}
+
+// ClearPlayers clears all "players" edges to the Player entity.
+func (gpu *GamePlayerUpdate) ClearPlayers() *GamePlayerUpdate {
+	gpu.mutation.ClearPlayers()
+	return gpu
+}
+
+// RemovePlayerIDs removes the "players" edge to Player entities by IDs.
+func (gpu *GamePlayerUpdate) RemovePlayerIDs(ids ...uuid.UUID) *GamePlayerUpdate {
+	gpu.mutation.RemovePlayerIDs(ids...)
+	return gpu
+}
+
+// RemovePlayers removes "players" edges to Player entities.
+func (gpu *GamePlayerUpdate) RemovePlayers(p ...*Player) *GamePlayerUpdate {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return gpu.RemovePlayerIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -104,6 +142,60 @@ func (gpu *GamePlayerUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			}
 		}
 	}
+	if gpu.mutation.PlayersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   gameplayer.PlayersTable,
+			Columns: gameplayer.PlayersPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: player.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := gpu.mutation.RemovedPlayersIDs(); len(nodes) > 0 && !gpu.mutation.PlayersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   gameplayer.PlayersTable,
+			Columns: gameplayer.PlayersPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: player.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := gpu.mutation.PlayersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   gameplayer.PlayersTable,
+			Columns: gameplayer.PlayersPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: player.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, gpu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{gameplayer.Label}
@@ -123,9 +215,45 @@ type GamePlayerUpdateOne struct {
 	mutation *GamePlayerMutation
 }
 
+// AddPlayerIDs adds the "players" edge to the Player entity by IDs.
+func (gpuo *GamePlayerUpdateOne) AddPlayerIDs(ids ...uuid.UUID) *GamePlayerUpdateOne {
+	gpuo.mutation.AddPlayerIDs(ids...)
+	return gpuo
+}
+
+// AddPlayers adds the "players" edges to the Player entity.
+func (gpuo *GamePlayerUpdateOne) AddPlayers(p ...*Player) *GamePlayerUpdateOne {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return gpuo.AddPlayerIDs(ids...)
+}
+
 // Mutation returns the GamePlayerMutation object of the builder.
 func (gpuo *GamePlayerUpdateOne) Mutation() *GamePlayerMutation {
 	return gpuo.mutation
+}
+
+// ClearPlayers clears all "players" edges to the Player entity.
+func (gpuo *GamePlayerUpdateOne) ClearPlayers() *GamePlayerUpdateOne {
+	gpuo.mutation.ClearPlayers()
+	return gpuo
+}
+
+// RemovePlayerIDs removes the "players" edge to Player entities by IDs.
+func (gpuo *GamePlayerUpdateOne) RemovePlayerIDs(ids ...uuid.UUID) *GamePlayerUpdateOne {
+	gpuo.mutation.RemovePlayerIDs(ids...)
+	return gpuo
+}
+
+// RemovePlayers removes "players" edges to Player entities.
+func (gpuo *GamePlayerUpdateOne) RemovePlayers(p ...*Player) *GamePlayerUpdateOne {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return gpuo.RemovePlayerIDs(ids...)
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -229,6 +357,60 @@ func (gpuo *GamePlayerUpdateOne) sqlSave(ctx context.Context) (_node *GamePlayer
 				ps[i](selector)
 			}
 		}
+	}
+	if gpuo.mutation.PlayersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   gameplayer.PlayersTable,
+			Columns: gameplayer.PlayersPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: player.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := gpuo.mutation.RemovedPlayersIDs(); len(nodes) > 0 && !gpuo.mutation.PlayersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   gameplayer.PlayersTable,
+			Columns: gameplayer.PlayersPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: player.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := gpuo.mutation.PlayersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   gameplayer.PlayersTable,
+			Columns: gameplayer.PlayersPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: player.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &GamePlayer{config: gpuo.config}
 	_spec.Assign = _node.assignValues

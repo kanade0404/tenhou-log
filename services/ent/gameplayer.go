@@ -18,6 +18,27 @@ type GamePlayer struct {
 	ID uuid.UUID `json:"id,omitempty"`
 	// Rate holds the value of the "rate" field.
 	Rate float64 `json:"rate,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the GamePlayerQuery when eager-loading is set.
+	Edges GamePlayerEdges `json:"edges"`
+}
+
+// GamePlayerEdges holds the relations/edges for other nodes in the graph.
+type GamePlayerEdges struct {
+	// Players holds the value of the players edge.
+	Players []*Player `json:"players,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// PlayersOrErr returns the Players value or an error if the edge
+// was not loaded in eager-loading.
+func (e GamePlayerEdges) PlayersOrErr() ([]*Player, error) {
+	if e.loadedTypes[0] {
+		return e.Players, nil
+	}
+	return nil, &NotLoadedError{edge: "players"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -59,6 +80,11 @@ func (gp *GamePlayer) assignValues(columns []string, values []any) error {
 		}
 	}
 	return nil
+}
+
+// QueryPlayers queries the "players" edge of the GamePlayer entity.
+func (gp *GamePlayer) QueryPlayers() *PlayerQuery {
+	return (&GamePlayerClient{config: gp.config}).QueryPlayers(gp)
 }
 
 // Update returns a builder for updating this GamePlayer.

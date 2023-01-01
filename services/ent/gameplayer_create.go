@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayer"
+	"github.com/kanade0404/tenhou-log/services/ent/player"
 )
 
 // GamePlayerCreate is the builder for creating a GamePlayer entity.
@@ -38,6 +39,21 @@ func (gpc *GamePlayerCreate) SetNillableID(u *uuid.UUID) *GamePlayerCreate {
 		gpc.SetID(*u)
 	}
 	return gpc
+}
+
+// AddPlayerIDs adds the "players" edge to the Player entity by IDs.
+func (gpc *GamePlayerCreate) AddPlayerIDs(ids ...uuid.UUID) *GamePlayerCreate {
+	gpc.mutation.AddPlayerIDs(ids...)
+	return gpc
+}
+
+// AddPlayers adds the "players" edges to the Player entity.
+func (gpc *GamePlayerCreate) AddPlayers(p ...*Player) *GamePlayerCreate {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return gpc.AddPlayerIDs(ids...)
 }
 
 // Mutation returns the GamePlayerMutation object of the builder.
@@ -167,6 +183,25 @@ func (gpc *GamePlayerCreate) createSpec() (*GamePlayer, *sqlgraph.CreateSpec) {
 	if value, ok := gpc.mutation.Rate(); ok {
 		_spec.SetField(gameplayer.FieldRate, field.TypeFloat64, value)
 		_node.Rate = value
+	}
+	if nodes := gpc.mutation.PlayersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   gameplayer.PlayersTable,
+			Columns: gameplayer.PlayersPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: player.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

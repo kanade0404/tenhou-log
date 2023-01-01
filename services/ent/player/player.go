@@ -2,19 +2,47 @@
 
 package player
 
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
+
 const (
 	// Label holds the string label denoting the player type in the database.
 	Label = "player"
 	// FieldID holds the string denoting the id field in the database.
-	FieldID = "id"
+	FieldID = "oid"
+	// FieldName holds the string denoting the name field in the database.
+	FieldName = "name"
+	// FieldSex holds the string denoting the sex field in the database.
+	FieldSex = "sex"
+	// FieldCreatedAt holds the string denoting the created_at field in the database.
+	FieldCreatedAt = "created_at"
+	// EdgeGamePlayers holds the string denoting the game_players edge name in mutations.
+	EdgeGamePlayers = "game_players"
 	// Table holds the table name of the player in the database.
 	Table = "players"
+	// GamePlayersTable is the table that holds the game_players relation/edge. The primary key declared below.
+	GamePlayersTable = "player_game_players"
+	// GamePlayersInverseTable is the table name for the GamePlayer entity.
+	// It exists in this package in order to avoid circular dependency with the "gameplayer" package.
+	GamePlayersInverseTable = "game_players"
 )
 
 // Columns holds all SQL columns for player fields.
 var Columns = []string{
 	FieldID,
+	FieldName,
+	FieldSex,
+	FieldCreatedAt,
 }
+
+var (
+	// GamePlayersPrimaryKey and GamePlayersColumn2 are the table columns denoting the
+	// primary key for the game_players relation (M2M).
+	GamePlayersPrimaryKey = []string{"player_id", "game_player_id"}
+)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
@@ -25,3 +53,12 @@ func ValidColumn(column string) bool {
 	}
 	return false
 }
+
+var (
+	// SexValidator is a validator for the "sex" field. It is called by the builders before save.
+	SexValidator func(string) error
+	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
+	DefaultCreatedAt func() time.Time
+	// DefaultID holds the default value on creation for the "id" field.
+	DefaultID func() uuid.UUID
+)

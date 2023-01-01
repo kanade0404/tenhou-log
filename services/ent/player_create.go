@@ -4,10 +4,14 @@ package ent
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"time"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/gameplayer"
 	"github.com/kanade0404/tenhou-log/services/ent/player"
 )
 
@@ -16,6 +20,61 @@ type PlayerCreate struct {
 	config
 	mutation *PlayerMutation
 	hooks    []Hook
+}
+
+// SetName sets the "name" field.
+func (pc *PlayerCreate) SetName(s string) *PlayerCreate {
+	pc.mutation.SetName(s)
+	return pc
+}
+
+// SetSex sets the "sex" field.
+func (pc *PlayerCreate) SetSex(s string) *PlayerCreate {
+	pc.mutation.SetSex(s)
+	return pc
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (pc *PlayerCreate) SetCreatedAt(t time.Time) *PlayerCreate {
+	pc.mutation.SetCreatedAt(t)
+	return pc
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (pc *PlayerCreate) SetNillableCreatedAt(t *time.Time) *PlayerCreate {
+	if t != nil {
+		pc.SetCreatedAt(*t)
+	}
+	return pc
+}
+
+// SetID sets the "id" field.
+func (pc *PlayerCreate) SetID(u uuid.UUID) *PlayerCreate {
+	pc.mutation.SetID(u)
+	return pc
+}
+
+// SetNillableID sets the "id" field if the given value is not nil.
+func (pc *PlayerCreate) SetNillableID(u *uuid.UUID) *PlayerCreate {
+	if u != nil {
+		pc.SetID(*u)
+	}
+	return pc
+}
+
+// AddGamePlayerIDs adds the "game_players" edge to the GamePlayer entity by IDs.
+func (pc *PlayerCreate) AddGamePlayerIDs(ids ...uuid.UUID) *PlayerCreate {
+	pc.mutation.AddGamePlayerIDs(ids...)
+	return pc
+}
+
+// AddGamePlayers adds the "game_players" edges to the GamePlayer entity.
+func (pc *PlayerCreate) AddGamePlayers(g ...*GamePlayer) *PlayerCreate {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return pc.AddGamePlayerIDs(ids...)
 }
 
 // Mutation returns the PlayerMutation object of the builder.
@@ -29,6 +88,7 @@ func (pc *PlayerCreate) Save(ctx context.Context) (*Player, error) {
 		err  error
 		node *Player
 	)
+	pc.defaults()
 	if len(pc.hooks) == 0 {
 		if err = pc.check(); err != nil {
 			return nil, err
@@ -92,8 +152,34 @@ func (pc *PlayerCreate) ExecX(ctx context.Context) {
 	}
 }
 
+// defaults sets the default values of the builder before save.
+func (pc *PlayerCreate) defaults() {
+	if _, ok := pc.mutation.CreatedAt(); !ok {
+		v := player.DefaultCreatedAt()
+		pc.mutation.SetCreatedAt(v)
+	}
+	if _, ok := pc.mutation.ID(); !ok {
+		v := player.DefaultID()
+		pc.mutation.SetID(v)
+	}
+}
+
 // check runs all checks and user-defined validators on the builder.
 func (pc *PlayerCreate) check() error {
+	if _, ok := pc.mutation.Name(); !ok {
+		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "Player.name"`)}
+	}
+	if _, ok := pc.mutation.Sex(); !ok {
+		return &ValidationError{Name: "sex", err: errors.New(`ent: missing required field "Player.sex"`)}
+	}
+	if v, ok := pc.mutation.Sex(); ok {
+		if err := player.SexValidator(v); err != nil {
+			return &ValidationError{Name: "sex", err: fmt.Errorf(`ent: validator failed for field "Player.sex": %w`, err)}
+		}
+	}
+	if _, ok := pc.mutation.CreatedAt(); !ok {
+		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Player.created_at"`)}
+	}
 	return nil
 }
 
@@ -105,8 +191,13 @@ func (pc *PlayerCreate) sqlSave(ctx context.Context) (*Player, error) {
 		}
 		return nil, err
 	}
-	id := _spec.ID.Value.(int64)
-	_node.ID = int(id)
+	if _spec.ID.Value != nil {
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
+	}
 	return _node, nil
 }
 
@@ -116,11 +207,46 @@ func (pc *PlayerCreate) createSpec() (*Player, *sqlgraph.CreateSpec) {
 		_spec = &sqlgraph.CreateSpec{
 			Table: player.Table,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: player.FieldID,
 			},
 		}
 	)
+	if id, ok := pc.mutation.ID(); ok {
+		_node.ID = id
+		_spec.ID.Value = &id
+	}
+	if value, ok := pc.mutation.Name(); ok {
+		_spec.SetField(player.FieldName, field.TypeString, value)
+		_node.Name = value
+	}
+	if value, ok := pc.mutation.Sex(); ok {
+		_spec.SetField(player.FieldSex, field.TypeString, value)
+		_node.Sex = value
+	}
+	if value, ok := pc.mutation.CreatedAt(); ok {
+		_spec.SetField(player.FieldCreatedAt, field.TypeTime, value)
+		_node.CreatedAt = value
+	}
+	if nodes := pc.mutation.GamePlayersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   player.GamePlayersTable,
+			Columns: player.GamePlayersPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: gameplayer.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
 	return _node, _spec
 }
 
@@ -138,6 +264,7 @@ func (pcb *PlayerCreateBulk) Save(ctx context.Context) ([]*Player, error) {
 	for i := range pcb.builders {
 		func(i int, root context.Context) {
 			builder := pcb.builders[i]
+			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*PlayerMutation)
 				if !ok {
@@ -164,10 +291,6 @@ func (pcb *PlayerCreateBulk) Save(ctx context.Context) ([]*Player, error) {
 					return nil, err
 				}
 				mutation.id = &nodes[i].ID
-				if specs[i].ID.Value != nil {
-					id := specs[i].ID.Value.(int64)
-					nodes[i].ID = int(id)
-				}
 				mutation.done = true
 				return nodes[i], nil
 			})
