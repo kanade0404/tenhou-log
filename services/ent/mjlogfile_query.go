@@ -24,7 +24,6 @@ type MJLogFileQuery struct {
 	order      []OrderFunc
 	fields     []string
 	predicates []predicate.MJLogFile
-	withFKs    bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -322,13 +321,9 @@ func (mlfq *MJLogFileQuery) prepareQuery(ctx context.Context) error {
 
 func (mlfq *MJLogFileQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*MJLogFile, error) {
 	var (
-		nodes   = []*MJLogFile{}
-		withFKs = mlfq.withFKs
-		_spec   = mlfq.querySpec()
+		nodes = []*MJLogFile{}
+		_spec = mlfq.querySpec()
 	)
-	if withFKs {
-		_spec.Node.Columns = append(_spec.Node.Columns, mjlogfile.ForeignKeys...)
-	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*MJLogFile).scanValues(nil, columns)
 	}

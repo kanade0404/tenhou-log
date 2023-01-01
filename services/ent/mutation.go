@@ -60,8 +60,7 @@ type CompressedMJLogMutation struct {
 	size               *uint
 	addsize            *int
 	clearedFields      map[string]struct{}
-	mjlog_files        map[uuid.UUID]struct{}
-	removedmjlog_files map[uuid.UUID]struct{}
+	mjlog_files        *uuid.UUID
 	clearedmjlog_files bool
 	done               bool
 	oldValue           func(context.Context) (*CompressedMJLog, error)
@@ -264,49 +263,35 @@ func (m *CompressedMJLogMutation) ResetSize() {
 	m.addsize = nil
 }
 
-// AddMjlogFileIDs adds the "mjlog_files" edge to the MJLogFile entity by ids.
-func (m *CompressedMJLogMutation) AddMjlogFileIDs(ids ...uuid.UUID) {
-	if m.mjlog_files == nil {
-		m.mjlog_files = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		m.mjlog_files[ids[i]] = struct{}{}
-	}
+// SetMjlogFilesID sets the "mjlog_files" edge to the MJLogFileCompressed entity by id.
+func (m *CompressedMJLogMutation) SetMjlogFilesID(id uuid.UUID) {
+	m.mjlog_files = &id
 }
 
-// ClearMjlogFiles clears the "mjlog_files" edge to the MJLogFile entity.
+// ClearMjlogFiles clears the "mjlog_files" edge to the MJLogFileCompressed entity.
 func (m *CompressedMJLogMutation) ClearMjlogFiles() {
 	m.clearedmjlog_files = true
 }
 
-// MjlogFilesCleared reports if the "mjlog_files" edge to the MJLogFile entity was cleared.
+// MjlogFilesCleared reports if the "mjlog_files" edge to the MJLogFileCompressed entity was cleared.
 func (m *CompressedMJLogMutation) MjlogFilesCleared() bool {
 	return m.clearedmjlog_files
 }
 
-// RemoveMjlogFileIDs removes the "mjlog_files" edge to the MJLogFile entity by IDs.
-func (m *CompressedMJLogMutation) RemoveMjlogFileIDs(ids ...uuid.UUID) {
-	if m.removedmjlog_files == nil {
-		m.removedmjlog_files = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		delete(m.mjlog_files, ids[i])
-		m.removedmjlog_files[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedMjlogFiles returns the removed IDs of the "mjlog_files" edge to the MJLogFile entity.
-func (m *CompressedMJLogMutation) RemovedMjlogFilesIDs() (ids []uuid.UUID) {
-	for id := range m.removedmjlog_files {
-		ids = append(ids, id)
+// MjlogFilesID returns the "mjlog_files" edge ID in the mutation.
+func (m *CompressedMJLogMutation) MjlogFilesID() (id uuid.UUID, exists bool) {
+	if m.mjlog_files != nil {
+		return *m.mjlog_files, true
 	}
 	return
 }
 
 // MjlogFilesIDs returns the "mjlog_files" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// MjlogFilesID instead. It exists only for internal usage by the builders.
 func (m *CompressedMJLogMutation) MjlogFilesIDs() (ids []uuid.UUID) {
-	for id := range m.mjlog_files {
-		ids = append(ids, id)
+	if id := m.mjlog_files; id != nil {
+		ids = append(ids, *id)
 	}
 	return
 }
@@ -315,7 +300,6 @@ func (m *CompressedMJLogMutation) MjlogFilesIDs() (ids []uuid.UUID) {
 func (m *CompressedMJLogMutation) ResetMjlogFiles() {
 	m.mjlog_files = nil
 	m.clearedmjlog_files = false
-	m.removedmjlog_files = nil
 }
 
 // Where appends a list predicates to the CompressedMJLogMutation builder.
@@ -480,11 +464,9 @@ func (m *CompressedMJLogMutation) AddedEdges() []string {
 func (m *CompressedMJLogMutation) AddedIDs(name string) []ent.Value {
 	switch name {
 	case compressedmjlog.EdgeMjlogFiles:
-		ids := make([]ent.Value, 0, len(m.mjlog_files))
-		for id := range m.mjlog_files {
-			ids = append(ids, id)
+		if id := m.mjlog_files; id != nil {
+			return []ent.Value{*id}
 		}
-		return ids
 	}
 	return nil
 }
@@ -492,23 +474,12 @@ func (m *CompressedMJLogMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *CompressedMJLogMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 1)
-	if m.removedmjlog_files != nil {
-		edges = append(edges, compressedmjlog.EdgeMjlogFiles)
-	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *CompressedMJLogMutation) RemovedIDs(name string) []ent.Value {
-	switch name {
-	case compressedmjlog.EdgeMjlogFiles:
-		ids := make([]ent.Value, 0, len(m.removedmjlog_files))
-		for id := range m.removedmjlog_files {
-			ids = append(ids, id)
-		}
-		return ids
-	}
 	return nil
 }
 
@@ -535,6 +506,9 @@ func (m *CompressedMJLogMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *CompressedMJLogMutation) ClearEdge(name string) error {
 	switch name {
+	case compressedmjlog.EdgeMjlogFiles:
+		m.ClearMjlogFiles()
+		return nil
 	}
 	return fmt.Errorf("unknown CompressedMJLog unique edge %s", name)
 }
@@ -3384,8 +3358,7 @@ type MJLogFileCompressedMutation struct {
 	typ                           string
 	id                            *uuid.UUID
 	clearedFields                 map[string]struct{}
-	compressed_mjlog_files        map[uuid.UUID]struct{}
-	removedcompressed_mjlog_files map[uuid.UUID]struct{}
+	compressed_mjlog_files        *uuid.UUID
 	clearedcompressed_mjlog_files bool
 	done                          bool
 	oldValue                      func(context.Context) (*MJLogFileCompressed, error)
@@ -3496,14 +3469,9 @@ func (m *MJLogFileCompressedMutation) IDs(ctx context.Context) ([]uuid.UUID, err
 	}
 }
 
-// AddCompressedMjlogFileIDs adds the "compressed_mjlog_files" edge to the CompressedMJLog entity by ids.
-func (m *MJLogFileCompressedMutation) AddCompressedMjlogFileIDs(ids ...uuid.UUID) {
-	if m.compressed_mjlog_files == nil {
-		m.compressed_mjlog_files = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		m.compressed_mjlog_files[ids[i]] = struct{}{}
-	}
+// SetCompressedMjlogFilesID sets the "compressed_mjlog_files" edge to the CompressedMJLog entity by id.
+func (m *MJLogFileCompressedMutation) SetCompressedMjlogFilesID(id uuid.UUID) {
+	m.compressed_mjlog_files = &id
 }
 
 // ClearCompressedMjlogFiles clears the "compressed_mjlog_files" edge to the CompressedMJLog entity.
@@ -3516,29 +3484,20 @@ func (m *MJLogFileCompressedMutation) CompressedMjlogFilesCleared() bool {
 	return m.clearedcompressed_mjlog_files
 }
 
-// RemoveCompressedMjlogFileIDs removes the "compressed_mjlog_files" edge to the CompressedMJLog entity by IDs.
-func (m *MJLogFileCompressedMutation) RemoveCompressedMjlogFileIDs(ids ...uuid.UUID) {
-	if m.removedcompressed_mjlog_files == nil {
-		m.removedcompressed_mjlog_files = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		delete(m.compressed_mjlog_files, ids[i])
-		m.removedcompressed_mjlog_files[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedCompressedMjlogFiles returns the removed IDs of the "compressed_mjlog_files" edge to the CompressedMJLog entity.
-func (m *MJLogFileCompressedMutation) RemovedCompressedMjlogFilesIDs() (ids []uuid.UUID) {
-	for id := range m.removedcompressed_mjlog_files {
-		ids = append(ids, id)
+// CompressedMjlogFilesID returns the "compressed_mjlog_files" edge ID in the mutation.
+func (m *MJLogFileCompressedMutation) CompressedMjlogFilesID() (id uuid.UUID, exists bool) {
+	if m.compressed_mjlog_files != nil {
+		return *m.compressed_mjlog_files, true
 	}
 	return
 }
 
 // CompressedMjlogFilesIDs returns the "compressed_mjlog_files" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// CompressedMjlogFilesID instead. It exists only for internal usage by the builders.
 func (m *MJLogFileCompressedMutation) CompressedMjlogFilesIDs() (ids []uuid.UUID) {
-	for id := range m.compressed_mjlog_files {
-		ids = append(ids, id)
+	if id := m.compressed_mjlog_files; id != nil {
+		ids = append(ids, *id)
 	}
 	return
 }
@@ -3547,7 +3506,6 @@ func (m *MJLogFileCompressedMutation) CompressedMjlogFilesIDs() (ids []uuid.UUID
 func (m *MJLogFileCompressedMutation) ResetCompressedMjlogFiles() {
 	m.compressed_mjlog_files = nil
 	m.clearedcompressed_mjlog_files = false
-	m.removedcompressed_mjlog_files = nil
 }
 
 // Where appends a list predicates to the MJLogFileCompressedMutation builder.
@@ -3655,11 +3613,9 @@ func (m *MJLogFileCompressedMutation) AddedEdges() []string {
 func (m *MJLogFileCompressedMutation) AddedIDs(name string) []ent.Value {
 	switch name {
 	case mjlogfilecompressed.EdgeCompressedMjlogFiles:
-		ids := make([]ent.Value, 0, len(m.compressed_mjlog_files))
-		for id := range m.compressed_mjlog_files {
-			ids = append(ids, id)
+		if id := m.compressed_mjlog_files; id != nil {
+			return []ent.Value{*id}
 		}
-		return ids
 	}
 	return nil
 }
@@ -3667,23 +3623,12 @@ func (m *MJLogFileCompressedMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *MJLogFileCompressedMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 1)
-	if m.removedcompressed_mjlog_files != nil {
-		edges = append(edges, mjlogfilecompressed.EdgeCompressedMjlogFiles)
-	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *MJLogFileCompressedMutation) RemovedIDs(name string) []ent.Value {
-	switch name {
-	case mjlogfilecompressed.EdgeCompressedMjlogFiles:
-		ids := make([]ent.Value, 0, len(m.removedcompressed_mjlog_files))
-		for id := range m.removedcompressed_mjlog_files {
-			ids = append(ids, id)
-		}
-		return ids
-	}
 	return nil
 }
 
@@ -3710,6 +3655,9 @@ func (m *MJLogFileCompressedMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *MJLogFileCompressedMutation) ClearEdge(name string) error {
 	switch name {
+	case mjlogfilecompressed.EdgeCompressedMjlogFiles:
+		m.ClearCompressedMjlogFiles()
+		return nil
 	}
 	return fmt.Errorf("unknown MJLogFileCompressed unique edge %s", name)
 }

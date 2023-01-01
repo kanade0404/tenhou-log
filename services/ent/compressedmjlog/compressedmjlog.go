@@ -20,12 +20,12 @@ const (
 	// Table holds the table name of the compressedmjlog in the database.
 	Table = "compressed_mj_logs"
 	// MjlogFilesTable is the table that holds the mjlog_files relation/edge.
-	MjlogFilesTable = "mj_log_files"
-	// MjlogFilesInverseTable is the table name for the MJLogFile entity.
-	// It exists in this package in order to avoid circular dependency with the "mjlogfile" package.
-	MjlogFilesInverseTable = "mj_log_files"
+	MjlogFilesTable = "compressed_mj_logs"
+	// MjlogFilesInverseTable is the table name for the MJLogFileCompressed entity.
+	// It exists in this package in order to avoid circular dependency with the "mjlogfilecompressed" package.
+	MjlogFilesInverseTable = "mj_log_file_compresseds"
 	// MjlogFilesColumn is the table column denoting the mjlog_files relation/edge.
-	MjlogFilesColumn = "compressed_mj_log_mjlog_files"
+	MjlogFilesColumn = "mj_log_file_compressed_compressed_mjlog_files"
 )
 
 // Columns holds all SQL columns for compressedmjlog fields.

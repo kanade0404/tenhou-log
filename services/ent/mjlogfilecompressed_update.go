@@ -29,19 +29,23 @@ func (mlfcu *MJLogFileCompressedUpdate) Where(ps ...predicate.MJLogFileCompresse
 	return mlfcu
 }
 
-// AddCompressedMjlogFileIDs adds the "compressed_mjlog_files" edge to the CompressedMJLog entity by IDs.
-func (mlfcu *MJLogFileCompressedUpdate) AddCompressedMjlogFileIDs(ids ...uuid.UUID) *MJLogFileCompressedUpdate {
-	mlfcu.mutation.AddCompressedMjlogFileIDs(ids...)
+// SetCompressedMjlogFilesID sets the "compressed_mjlog_files" edge to the CompressedMJLog entity by ID.
+func (mlfcu *MJLogFileCompressedUpdate) SetCompressedMjlogFilesID(id uuid.UUID) *MJLogFileCompressedUpdate {
+	mlfcu.mutation.SetCompressedMjlogFilesID(id)
 	return mlfcu
 }
 
-// AddCompressedMjlogFiles adds the "compressed_mjlog_files" edges to the CompressedMJLog entity.
-func (mlfcu *MJLogFileCompressedUpdate) AddCompressedMjlogFiles(c ...*CompressedMJLog) *MJLogFileCompressedUpdate {
-	ids := make([]uuid.UUID, len(c))
-	for i := range c {
-		ids[i] = c[i].ID
+// SetNillableCompressedMjlogFilesID sets the "compressed_mjlog_files" edge to the CompressedMJLog entity by ID if the given value is not nil.
+func (mlfcu *MJLogFileCompressedUpdate) SetNillableCompressedMjlogFilesID(id *uuid.UUID) *MJLogFileCompressedUpdate {
+	if id != nil {
+		mlfcu = mlfcu.SetCompressedMjlogFilesID(*id)
 	}
-	return mlfcu.AddCompressedMjlogFileIDs(ids...)
+	return mlfcu
+}
+
+// SetCompressedMjlogFiles sets the "compressed_mjlog_files" edge to the CompressedMJLog entity.
+func (mlfcu *MJLogFileCompressedUpdate) SetCompressedMjlogFiles(c *CompressedMJLog) *MJLogFileCompressedUpdate {
+	return mlfcu.SetCompressedMjlogFilesID(c.ID)
 }
 
 // Mutation returns the MJLogFileCompressedMutation object of the builder.
@@ -49,25 +53,10 @@ func (mlfcu *MJLogFileCompressedUpdate) Mutation() *MJLogFileCompressedMutation 
 	return mlfcu.mutation
 }
 
-// ClearCompressedMjlogFiles clears all "compressed_mjlog_files" edges to the CompressedMJLog entity.
+// ClearCompressedMjlogFiles clears the "compressed_mjlog_files" edge to the CompressedMJLog entity.
 func (mlfcu *MJLogFileCompressedUpdate) ClearCompressedMjlogFiles() *MJLogFileCompressedUpdate {
 	mlfcu.mutation.ClearCompressedMjlogFiles()
 	return mlfcu
-}
-
-// RemoveCompressedMjlogFileIDs removes the "compressed_mjlog_files" edge to CompressedMJLog entities by IDs.
-func (mlfcu *MJLogFileCompressedUpdate) RemoveCompressedMjlogFileIDs(ids ...uuid.UUID) *MJLogFileCompressedUpdate {
-	mlfcu.mutation.RemoveCompressedMjlogFileIDs(ids...)
-	return mlfcu
-}
-
-// RemoveCompressedMjlogFiles removes "compressed_mjlog_files" edges to CompressedMJLog entities.
-func (mlfcu *MJLogFileCompressedUpdate) RemoveCompressedMjlogFiles(c ...*CompressedMJLog) *MJLogFileCompressedUpdate {
-	ids := make([]uuid.UUID, len(c))
-	for i := range c {
-		ids[i] = c[i].ID
-	}
-	return mlfcu.RemoveCompressedMjlogFileIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -144,7 +133,7 @@ func (mlfcu *MJLogFileCompressedUpdate) sqlSave(ctx context.Context) (n int, err
 	}
 	if mlfcu.mutation.CompressedMjlogFilesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.O2O,
 			Inverse: false,
 			Table:   mjlogfilecompressed.CompressedMjlogFilesTable,
 			Columns: []string{mjlogfilecompressed.CompressedMjlogFilesColumn},
@@ -155,31 +144,12 @@ func (mlfcu *MJLogFileCompressedUpdate) sqlSave(ctx context.Context) (n int, err
 					Column: compressedmjlog.FieldID,
 				},
 			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := mlfcu.mutation.RemovedCompressedMjlogFilesIDs(); len(nodes) > 0 && !mlfcu.mutation.CompressedMjlogFilesCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   mjlogfilecompressed.CompressedMjlogFilesTable,
-			Columns: []string{mjlogfilecompressed.CompressedMjlogFilesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: compressedmjlog.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
 	if nodes := mlfcu.mutation.CompressedMjlogFilesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.O2O,
 			Inverse: false,
 			Table:   mjlogfilecompressed.CompressedMjlogFilesTable,
 			Columns: []string{mjlogfilecompressed.CompressedMjlogFilesColumn},
@@ -215,19 +185,23 @@ type MJLogFileCompressedUpdateOne struct {
 	mutation *MJLogFileCompressedMutation
 }
 
-// AddCompressedMjlogFileIDs adds the "compressed_mjlog_files" edge to the CompressedMJLog entity by IDs.
-func (mlfcuo *MJLogFileCompressedUpdateOne) AddCompressedMjlogFileIDs(ids ...uuid.UUID) *MJLogFileCompressedUpdateOne {
-	mlfcuo.mutation.AddCompressedMjlogFileIDs(ids...)
+// SetCompressedMjlogFilesID sets the "compressed_mjlog_files" edge to the CompressedMJLog entity by ID.
+func (mlfcuo *MJLogFileCompressedUpdateOne) SetCompressedMjlogFilesID(id uuid.UUID) *MJLogFileCompressedUpdateOne {
+	mlfcuo.mutation.SetCompressedMjlogFilesID(id)
 	return mlfcuo
 }
 
-// AddCompressedMjlogFiles adds the "compressed_mjlog_files" edges to the CompressedMJLog entity.
-func (mlfcuo *MJLogFileCompressedUpdateOne) AddCompressedMjlogFiles(c ...*CompressedMJLog) *MJLogFileCompressedUpdateOne {
-	ids := make([]uuid.UUID, len(c))
-	for i := range c {
-		ids[i] = c[i].ID
+// SetNillableCompressedMjlogFilesID sets the "compressed_mjlog_files" edge to the CompressedMJLog entity by ID if the given value is not nil.
+func (mlfcuo *MJLogFileCompressedUpdateOne) SetNillableCompressedMjlogFilesID(id *uuid.UUID) *MJLogFileCompressedUpdateOne {
+	if id != nil {
+		mlfcuo = mlfcuo.SetCompressedMjlogFilesID(*id)
 	}
-	return mlfcuo.AddCompressedMjlogFileIDs(ids...)
+	return mlfcuo
+}
+
+// SetCompressedMjlogFiles sets the "compressed_mjlog_files" edge to the CompressedMJLog entity.
+func (mlfcuo *MJLogFileCompressedUpdateOne) SetCompressedMjlogFiles(c *CompressedMJLog) *MJLogFileCompressedUpdateOne {
+	return mlfcuo.SetCompressedMjlogFilesID(c.ID)
 }
 
 // Mutation returns the MJLogFileCompressedMutation object of the builder.
@@ -235,25 +209,10 @@ func (mlfcuo *MJLogFileCompressedUpdateOne) Mutation() *MJLogFileCompressedMutat
 	return mlfcuo.mutation
 }
 
-// ClearCompressedMjlogFiles clears all "compressed_mjlog_files" edges to the CompressedMJLog entity.
+// ClearCompressedMjlogFiles clears the "compressed_mjlog_files" edge to the CompressedMJLog entity.
 func (mlfcuo *MJLogFileCompressedUpdateOne) ClearCompressedMjlogFiles() *MJLogFileCompressedUpdateOne {
 	mlfcuo.mutation.ClearCompressedMjlogFiles()
 	return mlfcuo
-}
-
-// RemoveCompressedMjlogFileIDs removes the "compressed_mjlog_files" edge to CompressedMJLog entities by IDs.
-func (mlfcuo *MJLogFileCompressedUpdateOne) RemoveCompressedMjlogFileIDs(ids ...uuid.UUID) *MJLogFileCompressedUpdateOne {
-	mlfcuo.mutation.RemoveCompressedMjlogFileIDs(ids...)
-	return mlfcuo
-}
-
-// RemoveCompressedMjlogFiles removes "compressed_mjlog_files" edges to CompressedMJLog entities.
-func (mlfcuo *MJLogFileCompressedUpdateOne) RemoveCompressedMjlogFiles(c ...*CompressedMJLog) *MJLogFileCompressedUpdateOne {
-	ids := make([]uuid.UUID, len(c))
-	for i := range c {
-		ids[i] = c[i].ID
-	}
-	return mlfcuo.RemoveCompressedMjlogFileIDs(ids...)
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -360,7 +319,7 @@ func (mlfcuo *MJLogFileCompressedUpdateOne) sqlSave(ctx context.Context) (_node 
 	}
 	if mlfcuo.mutation.CompressedMjlogFilesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.O2O,
 			Inverse: false,
 			Table:   mjlogfilecompressed.CompressedMjlogFilesTable,
 			Columns: []string{mjlogfilecompressed.CompressedMjlogFilesColumn},
@@ -371,31 +330,12 @@ func (mlfcuo *MJLogFileCompressedUpdateOne) sqlSave(ctx context.Context) (_node 
 					Column: compressedmjlog.FieldID,
 				},
 			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := mlfcuo.mutation.RemovedCompressedMjlogFilesIDs(); len(nodes) > 0 && !mlfcuo.mutation.CompressedMjlogFilesCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   mjlogfilecompressed.CompressedMjlogFilesTable,
-			Columns: []string{mjlogfilecompressed.CompressedMjlogFilesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: compressedmjlog.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
 	if nodes := mlfcuo.mutation.CompressedMjlogFilesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.O2O,
 			Inverse: false,
 			Table:   mjlogfilecompressed.CompressedMjlogFilesTable,
 			Columns: []string{mjlogfilecompressed.CompressedMjlogFilesColumn},

@@ -11,7 +11,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/compressedmjlog"
-	"github.com/kanade0404/tenhou-log/services/ent/mjlogfile"
+	"github.com/kanade0404/tenhou-log/services/ent/mjlogfilecompressed"
 )
 
 // CompressedMJLogCreate is the builder for creating a CompressedMJLog entity.
@@ -47,19 +47,15 @@ func (cmlc *CompressedMJLogCreate) SetNillableID(u *uuid.UUID) *CompressedMJLogC
 	return cmlc
 }
 
-// AddMjlogFileIDs adds the "mjlog_files" edge to the MJLogFile entity by IDs.
-func (cmlc *CompressedMJLogCreate) AddMjlogFileIDs(ids ...uuid.UUID) *CompressedMJLogCreate {
-	cmlc.mutation.AddMjlogFileIDs(ids...)
+// SetMjlogFilesID sets the "mjlog_files" edge to the MJLogFileCompressed entity by ID.
+func (cmlc *CompressedMJLogCreate) SetMjlogFilesID(id uuid.UUID) *CompressedMJLogCreate {
+	cmlc.mutation.SetMjlogFilesID(id)
 	return cmlc
 }
 
-// AddMjlogFiles adds the "mjlog_files" edges to the MJLogFile entity.
-func (cmlc *CompressedMJLogCreate) AddMjlogFiles(m ...*MJLogFile) *CompressedMJLogCreate {
-	ids := make([]uuid.UUID, len(m))
-	for i := range m {
-		ids[i] = m[i].ID
-	}
-	return cmlc.AddMjlogFileIDs(ids...)
+// SetMjlogFiles sets the "mjlog_files" edge to the MJLogFileCompressed entity.
+func (cmlc *CompressedMJLogCreate) SetMjlogFiles(m *MJLogFileCompressed) *CompressedMJLogCreate {
+	return cmlc.SetMjlogFilesID(m.ID)
 }
 
 // Mutation returns the CompressedMJLogMutation object of the builder.
@@ -153,6 +149,9 @@ func (cmlc *CompressedMJLogCreate) check() error {
 	if _, ok := cmlc.mutation.Size(); !ok {
 		return &ValidationError{Name: "size", err: errors.New(`ent: missing required field "CompressedMJLog.size"`)}
 	}
+	if _, ok := cmlc.mutation.MjlogFilesID(); !ok {
+		return &ValidationError{Name: "mjlog_files", err: errors.New(`ent: missing required edge "CompressedMJLog.mjlog_files"`)}
+	}
 	return nil
 }
 
@@ -199,21 +198,22 @@ func (cmlc *CompressedMJLogCreate) createSpec() (*CompressedMJLog, *sqlgraph.Cre
 	}
 	if nodes := cmlc.mutation.MjlogFilesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
 			Table:   compressedmjlog.MjlogFilesTable,
 			Columns: []string{compressedmjlog.MjlogFilesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
-					Column: mjlogfile.FieldID,
+					Column: mjlogfilecompressed.FieldID,
 				},
 			},
 		}
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
+		_node.mj_log_file_compressed_compressed_mjlog_files = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

@@ -13,7 +13,7 @@ var (
 		{Name: "oid", Type: field.TypeUUID},
 		{Name: "name", Type: field.TypeString, Unique: true},
 		{Name: "size", Type: field.TypeUint},
-		{Name: "mj_log_file_compressed_compressed_mjlog_files", Type: field.TypeUUID, Nullable: true},
+		{Name: "mj_log_file_compressed_compressed_mjlog_files", Type: field.TypeUUID, Unique: true},
 	}
 	// CompressedMjLogsTable holds the schema information for the "compressed_mj_logs" table.
 	CompressedMjLogsTable = &schema.Table{
@@ -25,7 +25,7 @@ var (
 				Symbol:     "compressed_mj_logs_mj_log_file_compresseds_compressed_mjlog_files",
 				Columns:    []*schema.Column{CompressedMjLogsColumns[3]},
 				RefColumns: []*schema.Column{MjLogFileCompressedsColumns[0]},
-				OnDelete:   schema.SetNull,
+				OnDelete:   schema.NoAction,
 			},
 		},
 	}
@@ -120,21 +120,12 @@ var (
 	MjLogFilesColumns = []*schema.Column{
 		{Name: "oid", Type: field.TypeUUID},
 		{Name: "name", Type: field.TypeString, Unique: true},
-		{Name: "compressed_mj_log_mjlog_files", Type: field.TypeUUID, Nullable: true},
 	}
 	// MjLogFilesTable holds the schema information for the "mj_log_files" table.
 	MjLogFilesTable = &schema.Table{
 		Name:       "mj_log_files",
 		Columns:    MjLogFilesColumns,
 		PrimaryKey: []*schema.Column{MjLogFilesColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "mj_log_files_compressed_mj_logs_mjlog_files",
-				Columns:    []*schema.Column{MjLogFilesColumns[2]},
-				RefColumns: []*schema.Column{CompressedMjLogsColumns[0]},
-				OnDelete:   schema.SetNull,
-			},
-		},
 	}
 	// MjLogFileCompressedsColumns holds the columns for the "mj_log_file_compresseds" table.
 	MjLogFileCompressedsColumns = []*schema.Column{
@@ -210,5 +201,4 @@ var (
 
 func init() {
 	CompressedMjLogsTable.ForeignKeys[0].RefTable = MjLogFileCompressedsTable
-	MjLogFilesTable.ForeignKeys[0].RefTable = CompressedMjLogsTable
 }

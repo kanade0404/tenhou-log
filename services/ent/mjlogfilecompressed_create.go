@@ -34,19 +34,23 @@ func (mlfcc *MJLogFileCompressedCreate) SetNillableID(u *uuid.UUID) *MJLogFileCo
 	return mlfcc
 }
 
-// AddCompressedMjlogFileIDs adds the "compressed_mjlog_files" edge to the CompressedMJLog entity by IDs.
-func (mlfcc *MJLogFileCompressedCreate) AddCompressedMjlogFileIDs(ids ...uuid.UUID) *MJLogFileCompressedCreate {
-	mlfcc.mutation.AddCompressedMjlogFileIDs(ids...)
+// SetCompressedMjlogFilesID sets the "compressed_mjlog_files" edge to the CompressedMJLog entity by ID.
+func (mlfcc *MJLogFileCompressedCreate) SetCompressedMjlogFilesID(id uuid.UUID) *MJLogFileCompressedCreate {
+	mlfcc.mutation.SetCompressedMjlogFilesID(id)
 	return mlfcc
 }
 
-// AddCompressedMjlogFiles adds the "compressed_mjlog_files" edges to the CompressedMJLog entity.
-func (mlfcc *MJLogFileCompressedCreate) AddCompressedMjlogFiles(c ...*CompressedMJLog) *MJLogFileCompressedCreate {
-	ids := make([]uuid.UUID, len(c))
-	for i := range c {
-		ids[i] = c[i].ID
+// SetNillableCompressedMjlogFilesID sets the "compressed_mjlog_files" edge to the CompressedMJLog entity by ID if the given value is not nil.
+func (mlfcc *MJLogFileCompressedCreate) SetNillableCompressedMjlogFilesID(id *uuid.UUID) *MJLogFileCompressedCreate {
+	if id != nil {
+		mlfcc = mlfcc.SetCompressedMjlogFilesID(*id)
 	}
-	return mlfcc.AddCompressedMjlogFileIDs(ids...)
+	return mlfcc
+}
+
+// SetCompressedMjlogFiles sets the "compressed_mjlog_files" edge to the CompressedMJLog entity.
+func (mlfcc *MJLogFileCompressedCreate) SetCompressedMjlogFiles(c *CompressedMJLog) *MJLogFileCompressedCreate {
+	return mlfcc.SetCompressedMjlogFilesID(c.ID)
 }
 
 // Mutation returns the MJLogFileCompressedMutation object of the builder.
@@ -172,7 +176,7 @@ func (mlfcc *MJLogFileCompressedCreate) createSpec() (*MJLogFileCompressed, *sql
 	}
 	if nodes := mlfcc.mutation.CompressedMjlogFilesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.O2O,
 			Inverse: false,
 			Table:   mjlogfilecompressed.CompressedMjlogFilesTable,
 			Columns: []string{mjlogfilecompressed.CompressedMjlogFilesColumn},

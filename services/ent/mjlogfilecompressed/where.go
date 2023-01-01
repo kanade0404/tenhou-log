@@ -86,7 +86,7 @@ func HasCompressedMjlogFiles() predicate.MJLogFileCompressed {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
 			sqlgraph.To(CompressedMjlogFilesTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, CompressedMjlogFilesTable, CompressedMjlogFilesColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, CompressedMjlogFilesTable, CompressedMjlogFilesColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
@@ -98,7 +98,7 @@ func HasCompressedMjlogFilesWith(preds ...predicate.CompressedMJLog) predicate.M
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
 			sqlgraph.To(CompressedMjlogFilesInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, CompressedMjlogFilesTable, CompressedMjlogFilesColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, CompressedMjlogFilesTable, CompressedMjlogFilesColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

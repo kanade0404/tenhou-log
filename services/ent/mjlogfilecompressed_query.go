@@ -77,7 +77,7 @@ func (mlfcq *MJLogFileCompressedQuery) QueryCompressedMjlogFiles() *CompressedMJ
 		step := sqlgraph.NewStep(
 			sqlgraph.From(mjlogfilecompressed.Table, mjlogfilecompressed.FieldID, selector),
 			sqlgraph.To(compressedmjlog.Table, compressedmjlog.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, mjlogfilecompressed.CompressedMjlogFilesTable, mjlogfilecompressed.CompressedMjlogFilesColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, mjlogfilecompressed.CompressedMjlogFilesTable, mjlogfilecompressed.CompressedMjlogFilesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(mlfcq.driver.Dialect(), step)
 		return fromU, nil
@@ -359,11 +359,8 @@ func (mlfcq *MJLogFileCompressedQuery) sqlAll(ctx context.Context, hooks ...quer
 		return nodes, nil
 	}
 	if query := mlfcq.withCompressedMjlogFiles; query != nil {
-		if err := mlfcq.loadCompressedMjlogFiles(ctx, query, nodes,
-			func(n *MJLogFileCompressed) { n.Edges.CompressedMjlogFiles = []*CompressedMJLog{} },
-			func(n *MJLogFileCompressed, e *CompressedMJLog) {
-				n.Edges.CompressedMjlogFiles = append(n.Edges.CompressedMjlogFiles, e)
-			}); err != nil {
+		if err := mlfcq.loadCompressedMjlogFiles(ctx, query, nodes, nil,
+			func(n *MJLogFileCompressed, e *CompressedMJLog) { n.Edges.CompressedMjlogFiles = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -376,9 +373,6 @@ func (mlfcq *MJLogFileCompressedQuery) loadCompressedMjlogFiles(ctx context.Cont
 	for i := range nodes {
 		fks = append(fks, nodes[i].ID)
 		nodeids[nodes[i].ID] = nodes[i]
-		if init != nil {
-			init(nodes[i])
-		}
 	}
 	query.withFKs = true
 	query.Where(predicate.CompressedMJLog(func(s *sql.Selector) {

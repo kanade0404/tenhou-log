@@ -12,7 +12,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/compressedmjlog"
-	"github.com/kanade0404/tenhou-log/services/ent/mjlogfile"
+	"github.com/kanade0404/tenhou-log/services/ent/mjlogfilecompressed"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 )
 
@@ -42,19 +42,15 @@ func (cmlu *CompressedMJLogUpdate) AddSize(u int) *CompressedMJLogUpdate {
 	return cmlu
 }
 
-// AddMjlogFileIDs adds the "mjlog_files" edge to the MJLogFile entity by IDs.
-func (cmlu *CompressedMJLogUpdate) AddMjlogFileIDs(ids ...uuid.UUID) *CompressedMJLogUpdate {
-	cmlu.mutation.AddMjlogFileIDs(ids...)
+// SetMjlogFilesID sets the "mjlog_files" edge to the MJLogFileCompressed entity by ID.
+func (cmlu *CompressedMJLogUpdate) SetMjlogFilesID(id uuid.UUID) *CompressedMJLogUpdate {
+	cmlu.mutation.SetMjlogFilesID(id)
 	return cmlu
 }
 
-// AddMjlogFiles adds the "mjlog_files" edges to the MJLogFile entity.
-func (cmlu *CompressedMJLogUpdate) AddMjlogFiles(m ...*MJLogFile) *CompressedMJLogUpdate {
-	ids := make([]uuid.UUID, len(m))
-	for i := range m {
-		ids[i] = m[i].ID
-	}
-	return cmlu.AddMjlogFileIDs(ids...)
+// SetMjlogFiles sets the "mjlog_files" edge to the MJLogFileCompressed entity.
+func (cmlu *CompressedMJLogUpdate) SetMjlogFiles(m *MJLogFileCompressed) *CompressedMJLogUpdate {
+	return cmlu.SetMjlogFilesID(m.ID)
 }
 
 // Mutation returns the CompressedMJLogMutation object of the builder.
@@ -62,25 +58,10 @@ func (cmlu *CompressedMJLogUpdate) Mutation() *CompressedMJLogMutation {
 	return cmlu.mutation
 }
 
-// ClearMjlogFiles clears all "mjlog_files" edges to the MJLogFile entity.
+// ClearMjlogFiles clears the "mjlog_files" edge to the MJLogFileCompressed entity.
 func (cmlu *CompressedMJLogUpdate) ClearMjlogFiles() *CompressedMJLogUpdate {
 	cmlu.mutation.ClearMjlogFiles()
 	return cmlu
-}
-
-// RemoveMjlogFileIDs removes the "mjlog_files" edge to MJLogFile entities by IDs.
-func (cmlu *CompressedMJLogUpdate) RemoveMjlogFileIDs(ids ...uuid.UUID) *CompressedMJLogUpdate {
-	cmlu.mutation.RemoveMjlogFileIDs(ids...)
-	return cmlu
-}
-
-// RemoveMjlogFiles removes "mjlog_files" edges to MJLogFile entities.
-func (cmlu *CompressedMJLogUpdate) RemoveMjlogFiles(m ...*MJLogFile) *CompressedMJLogUpdate {
-	ids := make([]uuid.UUID, len(m))
-	for i := range m {
-		ids[i] = m[i].ID
-	}
-	return cmlu.RemoveMjlogFileIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -90,12 +71,18 @@ func (cmlu *CompressedMJLogUpdate) Save(ctx context.Context) (int, error) {
 		affected int
 	)
 	if len(cmlu.hooks) == 0 {
+		if err = cmlu.check(); err != nil {
+			return 0, err
+		}
 		affected, err = cmlu.sqlSave(ctx)
 	} else {
 		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 			mutation, ok := m.(*CompressedMJLogMutation)
 			if !ok {
 				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			if err = cmlu.check(); err != nil {
+				return 0, err
 			}
 			cmlu.mutation = mutation
 			affected, err = cmlu.sqlSave(ctx)
@@ -137,6 +124,14 @@ func (cmlu *CompressedMJLogUpdate) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (cmlu *CompressedMJLogUpdate) check() error {
+	if _, ok := cmlu.mutation.MjlogFilesID(); cmlu.mutation.MjlogFilesCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "CompressedMJLog.mjlog_files"`)
+	}
+	return nil
+}
+
 func (cmlu *CompressedMJLogUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	_spec := &sqlgraph.UpdateSpec{
 		Node: &sqlgraph.NodeSpec{
@@ -163,50 +158,31 @@ func (cmlu *CompressedMJLogUpdate) sqlSave(ctx context.Context) (n int, err erro
 	}
 	if cmlu.mutation.MjlogFilesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
 			Table:   compressedmjlog.MjlogFilesTable,
 			Columns: []string{compressedmjlog.MjlogFilesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
-					Column: mjlogfile.FieldID,
+					Column: mjlogfilecompressed.FieldID,
 				},
 			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := cmlu.mutation.RemovedMjlogFilesIDs(); len(nodes) > 0 && !cmlu.mutation.MjlogFilesCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   compressedmjlog.MjlogFilesTable,
-			Columns: []string{compressedmjlog.MjlogFilesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: mjlogfile.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
 	if nodes := cmlu.mutation.MjlogFilesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
 			Table:   compressedmjlog.MjlogFilesTable,
 			Columns: []string{compressedmjlog.MjlogFilesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
-					Column: mjlogfile.FieldID,
+					Column: mjlogfilecompressed.FieldID,
 				},
 			},
 		}
@@ -247,19 +223,15 @@ func (cmluo *CompressedMJLogUpdateOne) AddSize(u int) *CompressedMJLogUpdateOne 
 	return cmluo
 }
 
-// AddMjlogFileIDs adds the "mjlog_files" edge to the MJLogFile entity by IDs.
-func (cmluo *CompressedMJLogUpdateOne) AddMjlogFileIDs(ids ...uuid.UUID) *CompressedMJLogUpdateOne {
-	cmluo.mutation.AddMjlogFileIDs(ids...)
+// SetMjlogFilesID sets the "mjlog_files" edge to the MJLogFileCompressed entity by ID.
+func (cmluo *CompressedMJLogUpdateOne) SetMjlogFilesID(id uuid.UUID) *CompressedMJLogUpdateOne {
+	cmluo.mutation.SetMjlogFilesID(id)
 	return cmluo
 }
 
-// AddMjlogFiles adds the "mjlog_files" edges to the MJLogFile entity.
-func (cmluo *CompressedMJLogUpdateOne) AddMjlogFiles(m ...*MJLogFile) *CompressedMJLogUpdateOne {
-	ids := make([]uuid.UUID, len(m))
-	for i := range m {
-		ids[i] = m[i].ID
-	}
-	return cmluo.AddMjlogFileIDs(ids...)
+// SetMjlogFiles sets the "mjlog_files" edge to the MJLogFileCompressed entity.
+func (cmluo *CompressedMJLogUpdateOne) SetMjlogFiles(m *MJLogFileCompressed) *CompressedMJLogUpdateOne {
+	return cmluo.SetMjlogFilesID(m.ID)
 }
 
 // Mutation returns the CompressedMJLogMutation object of the builder.
@@ -267,25 +239,10 @@ func (cmluo *CompressedMJLogUpdateOne) Mutation() *CompressedMJLogMutation {
 	return cmluo.mutation
 }
 
-// ClearMjlogFiles clears all "mjlog_files" edges to the MJLogFile entity.
+// ClearMjlogFiles clears the "mjlog_files" edge to the MJLogFileCompressed entity.
 func (cmluo *CompressedMJLogUpdateOne) ClearMjlogFiles() *CompressedMJLogUpdateOne {
 	cmluo.mutation.ClearMjlogFiles()
 	return cmluo
-}
-
-// RemoveMjlogFileIDs removes the "mjlog_files" edge to MJLogFile entities by IDs.
-func (cmluo *CompressedMJLogUpdateOne) RemoveMjlogFileIDs(ids ...uuid.UUID) *CompressedMJLogUpdateOne {
-	cmluo.mutation.RemoveMjlogFileIDs(ids...)
-	return cmluo
-}
-
-// RemoveMjlogFiles removes "mjlog_files" edges to MJLogFile entities.
-func (cmluo *CompressedMJLogUpdateOne) RemoveMjlogFiles(m ...*MJLogFile) *CompressedMJLogUpdateOne {
-	ids := make([]uuid.UUID, len(m))
-	for i := range m {
-		ids[i] = m[i].ID
-	}
-	return cmluo.RemoveMjlogFileIDs(ids...)
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -302,12 +259,18 @@ func (cmluo *CompressedMJLogUpdateOne) Save(ctx context.Context) (*CompressedMJL
 		node *CompressedMJLog
 	)
 	if len(cmluo.hooks) == 0 {
+		if err = cmluo.check(); err != nil {
+			return nil, err
+		}
 		node, err = cmluo.sqlSave(ctx)
 	} else {
 		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 			mutation, ok := m.(*CompressedMJLogMutation)
 			if !ok {
 				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			if err = cmluo.check(); err != nil {
+				return nil, err
 			}
 			cmluo.mutation = mutation
 			node, err = cmluo.sqlSave(ctx)
@@ -355,6 +318,14 @@ func (cmluo *CompressedMJLogUpdateOne) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (cmluo *CompressedMJLogUpdateOne) check() error {
+	if _, ok := cmluo.mutation.MjlogFilesID(); cmluo.mutation.MjlogFilesCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "CompressedMJLog.mjlog_files"`)
+	}
+	return nil
+}
+
 func (cmluo *CompressedMJLogUpdateOne) sqlSave(ctx context.Context) (_node *CompressedMJLog, err error) {
 	_spec := &sqlgraph.UpdateSpec{
 		Node: &sqlgraph.NodeSpec{
@@ -398,50 +369,31 @@ func (cmluo *CompressedMJLogUpdateOne) sqlSave(ctx context.Context) (_node *Comp
 	}
 	if cmluo.mutation.MjlogFilesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
 			Table:   compressedmjlog.MjlogFilesTable,
 			Columns: []string{compressedmjlog.MjlogFilesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
-					Column: mjlogfile.FieldID,
+					Column: mjlogfilecompressed.FieldID,
 				},
 			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := cmluo.mutation.RemovedMjlogFilesIDs(); len(nodes) > 0 && !cmluo.mutation.MjlogFilesCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   compressedmjlog.MjlogFilesTable,
-			Columns: []string{compressedmjlog.MjlogFilesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: mjlogfile.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
 	if nodes := cmluo.mutation.MjlogFilesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
 			Table:   compressedmjlog.MjlogFilesTable,
 			Columns: []string{compressedmjlog.MjlogFilesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
-					Column: mjlogfile.FieldID,
+					Column: mjlogfilecompressed.FieldID,
 				},
 			},
 		}

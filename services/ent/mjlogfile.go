@@ -17,8 +17,7 @@ type MJLogFile struct {
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
 	// Name holds the value of the "name" field.
-	Name                          string `json:"name,omitempty"`
-	compressed_mj_log_mjlog_files *uuid.UUID
+	Name string `json:"name,omitempty"`
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -30,8 +29,6 @@ func (*MJLogFile) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullString)
 		case mjlogfile.FieldID:
 			values[i] = new(uuid.UUID)
-		case mjlogfile.ForeignKeys[0]: // compressed_mj_log_mjlog_files
-			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type MJLogFile", columns[i])
 		}
@@ -58,13 +55,6 @@ func (mlf *MJLogFile) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field name", values[i])
 			} else if value.Valid {
 				mlf.Name = value.String
-			}
-		case mjlogfile.ForeignKeys[0]:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field compressed_mj_log_mjlog_files", values[i])
-			} else if value.Valid {
-				mlf.compressed_mj_log_mjlog_files = new(uuid.UUID)
-				*mlf.compressed_mj_log_mjlog_files = *value.S.(*uuid.UUID)
 			}
 		}
 	}

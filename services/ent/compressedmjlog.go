@@ -9,6 +9,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/compressedmjlog"
+	"github.com/kanade0404/tenhou-log/services/ent/mjlogfilecompressed"
 )
 
 // CompressedMJLog is the model entity for the CompressedMJLog schema.
@@ -29,16 +30,20 @@ type CompressedMJLog struct {
 // CompressedMJLogEdges holds the relations/edges for other nodes in the graph.
 type CompressedMJLogEdges struct {
 	// MjlogFiles holds the value of the mjlog_files edge.
-	MjlogFiles []*MJLogFile `json:"mjlog_files,omitempty"`
+	MjlogFiles *MJLogFileCompressed `json:"mjlog_files,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [1]bool
 }
 
 // MjlogFilesOrErr returns the MjlogFiles value or an error if the edge
-// was not loaded in eager-loading.
-func (e CompressedMJLogEdges) MjlogFilesOrErr() ([]*MJLogFile, error) {
+// was not loaded in eager-loading, or loaded but was not found.
+func (e CompressedMJLogEdges) MjlogFilesOrErr() (*MJLogFileCompressed, error) {
 	if e.loadedTypes[0] {
+		if e.MjlogFiles == nil {
+			// Edge was loaded but was not found.
+			return nil, &NotFoundError{label: mjlogfilecompressed.Label}
+		}
 		return e.MjlogFiles, nil
 	}
 	return nil, &NotLoadedError{edge: "mjlog_files"}
@@ -103,7 +108,7 @@ func (cml *CompressedMJLog) assignValues(columns []string, values []any) error {
 }
 
 // QueryMjlogFiles queries the "mjlog_files" edge of the CompressedMJLog entity.
-func (cml *CompressedMJLog) QueryMjlogFiles() *MJLogFileQuery {
+func (cml *CompressedMJLog) QueryMjlogFiles() *MJLogFileCompressedQuery {
 	return (&CompressedMJLogClient{config: cml.config}).QueryMjlogFiles(cml)
 }
 

@@ -309,14 +309,14 @@ func (c *CompressedMJLogClient) GetX(ctx context.Context, id uuid.UUID) *Compres
 }
 
 // QueryMjlogFiles queries the mjlog_files edge of a CompressedMJLog.
-func (c *CompressedMJLogClient) QueryMjlogFiles(cml *CompressedMJLog) *MJLogFileQuery {
-	query := &MJLogFileQuery{config: c.config}
+func (c *CompressedMJLogClient) QueryMjlogFiles(cml *CompressedMJLog) *MJLogFileCompressedQuery {
+	query := &MJLogFileCompressedQuery{config: c.config}
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := cml.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(compressedmjlog.Table, compressedmjlog.FieldID, id),
-			sqlgraph.To(mjlogfile.Table, mjlogfile.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, compressedmjlog.MjlogFilesTable, compressedmjlog.MjlogFilesColumn),
+			sqlgraph.To(mjlogfilecompressed.Table, mjlogfilecompressed.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, compressedmjlog.MjlogFilesTable, compressedmjlog.MjlogFilesColumn),
 		)
 		fromV = sqlgraph.Neighbors(cml.driver.Dialect(), step)
 		return fromV, nil
@@ -1232,7 +1232,7 @@ func (c *MJLogFileCompressedClient) QueryCompressedMjlogFiles(mlfc *MJLogFileCom
 		step := sqlgraph.NewStep(
 			sqlgraph.From(mjlogfilecompressed.Table, mjlogfilecompressed.FieldID, id),
 			sqlgraph.To(compressedmjlog.Table, compressedmjlog.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, mjlogfilecompressed.CompressedMjlogFilesTable, mjlogfilecompressed.CompressedMjlogFilesColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, mjlogfilecompressed.CompressedMjlogFilesTable, mjlogfilecompressed.CompressedMjlogFilesColumn),
 		)
 		fromV = sqlgraph.Neighbors(mlfc.driver.Dialect(), step)
 		return fromV, nil
