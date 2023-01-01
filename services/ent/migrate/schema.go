@@ -196,12 +196,21 @@ var (
 	// RoundsColumns holds the columns for the "rounds" table.
 	RoundsColumns = []*schema.Column{
 		{Name: "oid", Type: field.TypeUUID},
+		{Name: "wind_rounds", Type: field.TypeUUID, Nullable: true},
 	}
 	// RoundsTable holds the schema information for the "rounds" table.
 	RoundsTable = &schema.Table{
 		Name:       "rounds",
 		Columns:    RoundsColumns,
 		PrimaryKey: []*schema.Column{RoundsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "rounds_winds_rounds",
+				Columns:    []*schema.Column{RoundsColumns[1]},
+				RefColumns: []*schema.Column{WindsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
 	}
 	// WindsColumns holds the columns for the "winds" table.
 	WindsColumns = []*schema.Column{
@@ -266,6 +275,7 @@ func init() {
 	MjLogsTable.ForeignKeys[0].RefTable = GamesTable
 	MjLogsTable.ForeignKeys[1].RefTable = MjLogFilesTable
 	MjLogFilesTable.ForeignKeys[0].RefTable = CompressedMjLogsTable
+	RoundsTable.ForeignKeys[0].RefTable = WindsTable
 	GameGamePlayersTable.ForeignKeys[0].RefTable = GamesTable
 	GameGamePlayersTable.ForeignKeys[1].RefTable = GamePlayersTable
 }

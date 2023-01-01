@@ -10,7 +10,9 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
+	"github.com/kanade0404/tenhou-log/services/ent/round"
 	"github.com/kanade0404/tenhou-log/services/ent/wind"
 )
 
@@ -27,9 +29,45 @@ func (wu *WindUpdate) Where(ps ...predicate.Wind) *WindUpdate {
 	return wu
 }
 
+// AddRoundIDs adds the "rounds" edge to the Round entity by IDs.
+func (wu *WindUpdate) AddRoundIDs(ids ...uuid.UUID) *WindUpdate {
+	wu.mutation.AddRoundIDs(ids...)
+	return wu
+}
+
+// AddRounds adds the "rounds" edges to the Round entity.
+func (wu *WindUpdate) AddRounds(r ...*Round) *WindUpdate {
+	ids := make([]uuid.UUID, len(r))
+	for i := range r {
+		ids[i] = r[i].ID
+	}
+	return wu.AddRoundIDs(ids...)
+}
+
 // Mutation returns the WindMutation object of the builder.
 func (wu *WindUpdate) Mutation() *WindMutation {
 	return wu.mutation
+}
+
+// ClearRounds clears all "rounds" edges to the Round entity.
+func (wu *WindUpdate) ClearRounds() *WindUpdate {
+	wu.mutation.ClearRounds()
+	return wu
+}
+
+// RemoveRoundIDs removes the "rounds" edge to Round entities by IDs.
+func (wu *WindUpdate) RemoveRoundIDs(ids ...uuid.UUID) *WindUpdate {
+	wu.mutation.RemoveRoundIDs(ids...)
+	return wu
+}
+
+// RemoveRounds removes "rounds" edges to Round entities.
+func (wu *WindUpdate) RemoveRounds(r ...*Round) *WindUpdate {
+	ids := make([]uuid.UUID, len(r))
+	for i := range r {
+		ids[i] = r[i].ID
+	}
+	return wu.RemoveRoundIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -104,6 +142,60 @@ func (wu *WindUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			}
 		}
 	}
+	if wu.mutation.RoundsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   wind.RoundsTable,
+			Columns: []string{wind.RoundsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: round.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := wu.mutation.RemovedRoundsIDs(); len(nodes) > 0 && !wu.mutation.RoundsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   wind.RoundsTable,
+			Columns: []string{wind.RoundsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: round.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := wu.mutation.RoundsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   wind.RoundsTable,
+			Columns: []string{wind.RoundsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: round.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, wu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{wind.Label}
@@ -123,9 +215,45 @@ type WindUpdateOne struct {
 	mutation *WindMutation
 }
 
+// AddRoundIDs adds the "rounds" edge to the Round entity by IDs.
+func (wuo *WindUpdateOne) AddRoundIDs(ids ...uuid.UUID) *WindUpdateOne {
+	wuo.mutation.AddRoundIDs(ids...)
+	return wuo
+}
+
+// AddRounds adds the "rounds" edges to the Round entity.
+func (wuo *WindUpdateOne) AddRounds(r ...*Round) *WindUpdateOne {
+	ids := make([]uuid.UUID, len(r))
+	for i := range r {
+		ids[i] = r[i].ID
+	}
+	return wuo.AddRoundIDs(ids...)
+}
+
 // Mutation returns the WindMutation object of the builder.
 func (wuo *WindUpdateOne) Mutation() *WindMutation {
 	return wuo.mutation
+}
+
+// ClearRounds clears all "rounds" edges to the Round entity.
+func (wuo *WindUpdateOne) ClearRounds() *WindUpdateOne {
+	wuo.mutation.ClearRounds()
+	return wuo
+}
+
+// RemoveRoundIDs removes the "rounds" edge to Round entities by IDs.
+func (wuo *WindUpdateOne) RemoveRoundIDs(ids ...uuid.UUID) *WindUpdateOne {
+	wuo.mutation.RemoveRoundIDs(ids...)
+	return wuo
+}
+
+// RemoveRounds removes "rounds" edges to Round entities.
+func (wuo *WindUpdateOne) RemoveRounds(r ...*Round) *WindUpdateOne {
+	ids := make([]uuid.UUID, len(r))
+	for i := range r {
+		ids[i] = r[i].ID
+	}
+	return wuo.RemoveRoundIDs(ids...)
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -229,6 +357,60 @@ func (wuo *WindUpdateOne) sqlSave(ctx context.Context) (_node *Wind, err error) 
 				ps[i](selector)
 			}
 		}
+	}
+	if wuo.mutation.RoundsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   wind.RoundsTable,
+			Columns: []string{wind.RoundsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: round.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := wuo.mutation.RemovedRoundsIDs(); len(nodes) > 0 && !wuo.mutation.RoundsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   wind.RoundsTable,
+			Columns: []string{wind.RoundsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: round.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := wuo.mutation.RoundsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   wind.RoundsTable,
+			Columns: []string{wind.RoundsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: round.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &Wind{config: wuo.config}
 	_spec.Assign = _node.assignValues

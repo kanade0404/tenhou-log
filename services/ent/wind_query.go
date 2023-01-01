@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -12,6 +13,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
+	"github.com/kanade0404/tenhou-log/services/ent/round"
 	"github.com/kanade0404/tenhou-log/services/ent/wind"
 )
 
@@ -24,6 +26,7 @@ type WindQuery struct {
 	order      []OrderFunc
 	fields     []string
 	predicates []predicate.Wind
+	withRounds *RoundQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -58,6 +61,28 @@ func (wq *WindQuery) Unique(unique bool) *WindQuery {
 func (wq *WindQuery) Order(o ...OrderFunc) *WindQuery {
 	wq.order = append(wq.order, o...)
 	return wq
+}
+
+// QueryRounds chains the current query on the "rounds" edge.
+func (wq *WindQuery) QueryRounds() *RoundQuery {
+	query := &RoundQuery{config: wq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := wq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := wq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(wind.Table, wind.FieldID, selector),
+			sqlgraph.To(round.Table, round.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, wind.RoundsTable, wind.RoundsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(wq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first Wind entity from the query.
@@ -241,11 +266,23 @@ func (wq *WindQuery) Clone() *WindQuery {
 		offset:     wq.offset,
 		order:      append([]OrderFunc{}, wq.order...),
 		predicates: append([]predicate.Wind{}, wq.predicates...),
+		withRounds: wq.withRounds.Clone(),
 		// clone intermediate query.
 		sql:    wq.sql.Clone(),
 		path:   wq.path,
 		unique: wq.unique,
 	}
+}
+
+// WithRounds tells the query-builder to eager-load the nodes that are connected to
+// the "rounds" edge. The optional arguments are used to configure the query builder of the edge.
+func (wq *WindQuery) WithRounds(opts ...func(*RoundQuery)) *WindQuery {
+	query := &RoundQuery{config: wq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	wq.withRounds = query
+	return wq
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -321,8 +358,11 @@ func (wq *WindQuery) prepareQuery(ctx context.Context) error {
 
 func (wq *WindQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Wind, error) {
 	var (
-		nodes = []*Wind{}
-		_spec = wq.querySpec()
+		nodes       = []*Wind{}
+		_spec       = wq.querySpec()
+		loadedTypes = [1]bool{
+			wq.withRounds != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Wind).scanValues(nil, columns)
@@ -330,6 +370,7 @@ func (wq *WindQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Wind, e
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &Wind{config: wq.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -341,7 +382,46 @@ func (wq *WindQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Wind, e
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := wq.withRounds; query != nil {
+		if err := wq.loadRounds(ctx, query, nodes,
+			func(n *Wind) { n.Edges.Rounds = []*Round{} },
+			func(n *Wind, e *Round) { n.Edges.Rounds = append(n.Edges.Rounds, e) }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (wq *WindQuery) loadRounds(ctx context.Context, query *RoundQuery, nodes []*Wind, init func(*Wind), assign func(*Wind, *Round)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Wind)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.Round(func(s *sql.Selector) {
+		s.Where(sql.InValues(wind.RoundsColumn, fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.wind_rounds
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "wind_rounds" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "wind_rounds" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
 }
 
 func (wq *WindQuery) sqlCount(ctx context.Context) (int, error) {

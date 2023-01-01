@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 	"github.com/kanade0404/tenhou-log/services/ent/round"
+	"github.com/kanade0404/tenhou-log/services/ent/wind"
 )
 
 // RoundQuery is the builder for querying Round entities.
@@ -24,6 +25,8 @@ type RoundQuery struct {
 	order      []OrderFunc
 	fields     []string
 	predicates []predicate.Round
+	withWinds  *WindQuery
+	withFKs    bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -58,6 +61,28 @@ func (rq *RoundQuery) Unique(unique bool) *RoundQuery {
 func (rq *RoundQuery) Order(o ...OrderFunc) *RoundQuery {
 	rq.order = append(rq.order, o...)
 	return rq
+}
+
+// QueryWinds chains the current query on the "winds" edge.
+func (rq *RoundQuery) QueryWinds() *WindQuery {
+	query := &WindQuery{config: rq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := rq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := rq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(round.Table, round.FieldID, selector),
+			sqlgraph.To(wind.Table, wind.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, round.WindsTable, round.WindsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(rq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first Round entity from the query.
@@ -241,11 +266,23 @@ func (rq *RoundQuery) Clone() *RoundQuery {
 		offset:     rq.offset,
 		order:      append([]OrderFunc{}, rq.order...),
 		predicates: append([]predicate.Round{}, rq.predicates...),
+		withWinds:  rq.withWinds.Clone(),
 		// clone intermediate query.
 		sql:    rq.sql.Clone(),
 		path:   rq.path,
 		unique: rq.unique,
 	}
+}
+
+// WithWinds tells the query-builder to eager-load the nodes that are connected to
+// the "winds" edge. The optional arguments are used to configure the query builder of the edge.
+func (rq *RoundQuery) WithWinds(opts ...func(*WindQuery)) *RoundQuery {
+	query := &WindQuery{config: rq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	rq.withWinds = query
+	return rq
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -297,15 +334,26 @@ func (rq *RoundQuery) prepareQuery(ctx context.Context) error {
 
 func (rq *RoundQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Round, error) {
 	var (
-		nodes = []*Round{}
-		_spec = rq.querySpec()
+		nodes       = []*Round{}
+		withFKs     = rq.withFKs
+		_spec       = rq.querySpec()
+		loadedTypes = [1]bool{
+			rq.withWinds != nil,
+		}
 	)
+	if rq.withWinds != nil {
+		withFKs = true
+	}
+	if withFKs {
+		_spec.Node.Columns = append(_spec.Node.Columns, round.ForeignKeys...)
+	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Round).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &Round{config: rq.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -317,7 +365,43 @@ func (rq *RoundQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Round,
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := rq.withWinds; query != nil {
+		if err := rq.loadWinds(ctx, query, nodes, nil,
+			func(n *Round, e *Wind) { n.Edges.Winds = e }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (rq *RoundQuery) loadWinds(ctx context.Context, query *WindQuery, nodes []*Round, init func(*Round), assign func(*Round, *Wind)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Round)
+	for i := range nodes {
+		if nodes[i].wind_rounds == nil {
+			continue
+		}
+		fk := *nodes[i].wind_rounds
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	query.Where(wind.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "wind_rounds" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
 }
 
 func (rq *RoundQuery) sqlCount(ctx context.Context) (int, error) {

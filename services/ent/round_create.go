@@ -10,6 +10,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/round"
+	"github.com/kanade0404/tenhou-log/services/ent/wind"
 )
 
 // RoundCreate is the builder for creating a Round entity.
@@ -31,6 +32,25 @@ func (rc *RoundCreate) SetNillableID(u *uuid.UUID) *RoundCreate {
 		rc.SetID(*u)
 	}
 	return rc
+}
+
+// SetWindsID sets the "winds" edge to the Wind entity by ID.
+func (rc *RoundCreate) SetWindsID(id uuid.UUID) *RoundCreate {
+	rc.mutation.SetWindsID(id)
+	return rc
+}
+
+// SetNillableWindsID sets the "winds" edge to the Wind entity by ID if the given value is not nil.
+func (rc *RoundCreate) SetNillableWindsID(id *uuid.UUID) *RoundCreate {
+	if id != nil {
+		rc = rc.SetWindsID(*id)
+	}
+	return rc
+}
+
+// SetWinds sets the "winds" edge to the Wind entity.
+func (rc *RoundCreate) SetWinds(w *Wind) *RoundCreate {
+	return rc.SetWindsID(w.ID)
 }
 
 // Mutation returns the RoundMutation object of the builder.
@@ -153,6 +173,26 @@ func (rc *RoundCreate) createSpec() (*Round, *sqlgraph.CreateSpec) {
 	if id, ok := rc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
+	}
+	if nodes := rc.mutation.WindsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   round.WindsTable,
+			Columns: []string{round.WindsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: wind.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.wind_rounds = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

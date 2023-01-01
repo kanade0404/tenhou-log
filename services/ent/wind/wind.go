@@ -13,8 +13,17 @@ const (
 	FieldID = "oid"
 	// FieldName holds the string denoting the name field in the database.
 	FieldName = "name"
+	// EdgeRounds holds the string denoting the rounds edge name in mutations.
+	EdgeRounds = "rounds"
 	// Table holds the table name of the wind in the database.
 	Table = "winds"
+	// RoundsTable is the table that holds the rounds relation/edge.
+	RoundsTable = "rounds"
+	// RoundsInverseTable is the table name for the Round entity.
+	// It exists in this package in order to avoid circular dependency with the "round" package.
+	RoundsInverseTable = "rounds"
+	// RoundsColumn is the table column denoting the rounds relation/edge.
+	RoundsColumn = "wind_rounds"
 )
 
 // Columns holds all SQL columns for wind fields.
@@ -34,6 +43,8 @@ func ValidColumn(column string) bool {
 }
 
 var (
+	// NameValidator is a validator for the "name" field. It is called by the builders before save.
+	NameValidator func(string) error
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )

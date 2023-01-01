@@ -10,6 +10,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/round"
 	"github.com/kanade0404/tenhou-log/services/ent/wind"
 )
 
@@ -38,6 +39,21 @@ func (wc *WindCreate) SetNillableID(u *uuid.UUID) *WindCreate {
 		wc.SetID(*u)
 	}
 	return wc
+}
+
+// AddRoundIDs adds the "rounds" edge to the Round entity by IDs.
+func (wc *WindCreate) AddRoundIDs(ids ...uuid.UUID) *WindCreate {
+	wc.mutation.AddRoundIDs(ids...)
+	return wc
+}
+
+// AddRounds adds the "rounds" edges to the Round entity.
+func (wc *WindCreate) AddRounds(r ...*Round) *WindCreate {
+	ids := make([]uuid.UUID, len(r))
+	for i := range r {
+		ids[i] = r[i].ID
+	}
+	return wc.AddRoundIDs(ids...)
 }
 
 // Mutation returns the WindMutation object of the builder.
@@ -128,6 +144,11 @@ func (wc *WindCreate) check() error {
 	if _, ok := wc.mutation.Name(); !ok {
 		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "Wind.name"`)}
 	}
+	if v, ok := wc.mutation.Name(); ok {
+		if err := wind.NameValidator(v); err != nil {
+			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "Wind.name": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -167,6 +188,25 @@ func (wc *WindCreate) createSpec() (*Wind, *sqlgraph.CreateSpec) {
 	if value, ok := wc.mutation.Name(); ok {
 		_spec.SetField(wind.FieldName, field.TypeString, value)
 		_node.Name = value
+	}
+	if nodes := wc.mutation.RoundsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   wind.RoundsTable,
+			Columns: []string{wind.RoundsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: round.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

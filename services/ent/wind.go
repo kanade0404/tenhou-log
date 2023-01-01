@@ -18,6 +18,27 @@ type Wind struct {
 	ID uuid.UUID `json:"id,omitempty"`
 	// Name holds the value of the "name" field.
 	Name string `json:"name,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the WindQuery when eager-loading is set.
+	Edges WindEdges `json:"edges"`
+}
+
+// WindEdges holds the relations/edges for other nodes in the graph.
+type WindEdges struct {
+	// Rounds holds the value of the rounds edge.
+	Rounds []*Round `json:"rounds,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// RoundsOrErr returns the Rounds value or an error if the edge
+// was not loaded in eager-loading.
+func (e WindEdges) RoundsOrErr() ([]*Round, error) {
+	if e.loadedTypes[0] {
+		return e.Rounds, nil
+	}
+	return nil, &NotLoadedError{edge: "rounds"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -59,6 +80,11 @@ func (w *Wind) assignValues(columns []string, values []any) error {
 		}
 	}
 	return nil
+}
+
+// QueryRounds queries the "rounds" edge of the Wind entity.
+func (w *Wind) QueryRounds() *RoundQuery {
+	return (&WindClient{config: w.config}).QueryRounds(w)
 }
 
 // Update returns a builder for updating this Wind.

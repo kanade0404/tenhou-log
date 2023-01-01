@@ -105,6 +105,10 @@ func init() {
 	round.DefaultID = roundDescID.Default.(func() uuid.UUID)
 	windFields := schema.Wind{}.Fields()
 	_ = windFields
+	// windDescName is the schema descriptor for name field.
+	windDescName := windFields[1].Descriptor()
+	// wind.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	wind.NameValidator = windDescName.Validators[0].(func(string) error)
 	// windDescID is the schema descriptor for id field.
 	windDescID := windFields[0].Descriptor()
 	// wind.DefaultID holds the default value on creation for the id field.

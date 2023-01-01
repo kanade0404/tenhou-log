@@ -11,8 +11,17 @@ const (
 	Label = "round"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "oid"
+	// EdgeWinds holds the string denoting the winds edge name in mutations.
+	EdgeWinds = "winds"
 	// Table holds the table name of the round in the database.
 	Table = "rounds"
+	// WindsTable is the table that holds the winds relation/edge.
+	WindsTable = "rounds"
+	// WindsInverseTable is the table name for the Wind entity.
+	// It exists in this package in order to avoid circular dependency with the "wind" package.
+	WindsInverseTable = "winds"
+	// WindsColumn is the table column denoting the winds relation/edge.
+	WindsColumn = "wind_rounds"
 )
 
 // Columns holds all SQL columns for round fields.
@@ -20,10 +29,21 @@ var Columns = []string{
 	FieldID,
 }
 
+// ForeignKeys holds the SQL foreign-keys that are owned by the "rounds"
+// table and are not defined as standalone fields in the schema.
+var ForeignKeys = []string{
+	"wind_rounds",
+}
+
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
+			return true
+		}
+	}
+	for i := range ForeignKeys {
+		if column == ForeignKeys[i] {
 			return true
 		}
 	}

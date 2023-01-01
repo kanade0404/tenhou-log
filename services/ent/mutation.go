@@ -19,6 +19,7 @@ import (
 	"github.com/kanade0404/tenhou-log/services/ent/player"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 	"github.com/kanade0404/tenhou-log/services/ent/room"
+	"github.com/kanade0404/tenhou-log/services/ent/round"
 	"github.com/kanade0404/tenhou-log/services/ent/wind"
 
 	"entgo.io/ent"
@@ -5106,6 +5107,8 @@ type RoundMutation struct {
 	typ           string
 	id            *uuid.UUID
 	clearedFields map[string]struct{}
+	winds         *uuid.UUID
+	clearedwinds  bool
 	done          bool
 	oldValue      func(context.Context) (*Round, error)
 	predicates    []predicate.Round
@@ -5215,6 +5218,45 @@ func (m *RoundMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	}
 }
 
+// SetWindsID sets the "winds" edge to the Wind entity by id.
+func (m *RoundMutation) SetWindsID(id uuid.UUID) {
+	m.winds = &id
+}
+
+// ClearWinds clears the "winds" edge to the Wind entity.
+func (m *RoundMutation) ClearWinds() {
+	m.clearedwinds = true
+}
+
+// WindsCleared reports if the "winds" edge to the Wind entity was cleared.
+func (m *RoundMutation) WindsCleared() bool {
+	return m.clearedwinds
+}
+
+// WindsID returns the "winds" edge ID in the mutation.
+func (m *RoundMutation) WindsID() (id uuid.UUID, exists bool) {
+	if m.winds != nil {
+		return *m.winds, true
+	}
+	return
+}
+
+// WindsIDs returns the "winds" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// WindsID instead. It exists only for internal usage by the builders.
+func (m *RoundMutation) WindsIDs() (ids []uuid.UUID) {
+	if id := m.winds; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetWinds resets all changes to the "winds" edge.
+func (m *RoundMutation) ResetWinds() {
+	m.winds = nil
+	m.clearedwinds = false
+}
+
 // Where appends a list predicates to the RoundMutation builder.
 func (m *RoundMutation) Where(ps ...predicate.Round) {
 	m.predicates = append(m.predicates, ps...)
@@ -5308,19 +5350,28 @@ func (m *RoundMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *RoundMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.winds != nil {
+		edges = append(edges, round.EdgeWinds)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *RoundMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case round.EdgeWinds:
+		if id := m.winds; id != nil {
+			return []ent.Value{*id}
+		}
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *RoundMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
 	return edges
 }
 
@@ -5332,25 +5383,42 @@ func (m *RoundMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *RoundMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.clearedwinds {
+		edges = append(edges, round.EdgeWinds)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *RoundMutation) EdgeCleared(name string) bool {
+	switch name {
+	case round.EdgeWinds:
+		return m.clearedwinds
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *RoundMutation) ClearEdge(name string) error {
+	switch name {
+	case round.EdgeWinds:
+		m.ClearWinds()
+		return nil
+	}
 	return fmt.Errorf("unknown Round unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *RoundMutation) ResetEdge(name string) error {
+	switch name {
+	case round.EdgeWinds:
+		m.ResetWinds()
+		return nil
+	}
 	return fmt.Errorf("unknown Round edge %s", name)
 }
 
@@ -5362,6 +5430,9 @@ type WindMutation struct {
 	id            *uuid.UUID
 	name          *string
 	clearedFields map[string]struct{}
+	rounds        map[uuid.UUID]struct{}
+	removedrounds map[uuid.UUID]struct{}
+	clearedrounds bool
 	done          bool
 	oldValue      func(context.Context) (*Wind, error)
 	predicates    []predicate.Wind
@@ -5507,6 +5578,60 @@ func (m *WindMutation) ResetName() {
 	m.name = nil
 }
 
+// AddRoundIDs adds the "rounds" edge to the Round entity by ids.
+func (m *WindMutation) AddRoundIDs(ids ...uuid.UUID) {
+	if m.rounds == nil {
+		m.rounds = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.rounds[ids[i]] = struct{}{}
+	}
+}
+
+// ClearRounds clears the "rounds" edge to the Round entity.
+func (m *WindMutation) ClearRounds() {
+	m.clearedrounds = true
+}
+
+// RoundsCleared reports if the "rounds" edge to the Round entity was cleared.
+func (m *WindMutation) RoundsCleared() bool {
+	return m.clearedrounds
+}
+
+// RemoveRoundIDs removes the "rounds" edge to the Round entity by IDs.
+func (m *WindMutation) RemoveRoundIDs(ids ...uuid.UUID) {
+	if m.removedrounds == nil {
+		m.removedrounds = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.rounds, ids[i])
+		m.removedrounds[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedRounds returns the removed IDs of the "rounds" edge to the Round entity.
+func (m *WindMutation) RemovedRoundsIDs() (ids []uuid.UUID) {
+	for id := range m.removedrounds {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// RoundsIDs returns the "rounds" edge IDs in the mutation.
+func (m *WindMutation) RoundsIDs() (ids []uuid.UUID) {
+	for id := range m.rounds {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetRounds resets all changes to the "rounds" edge.
+func (m *WindMutation) ResetRounds() {
+	m.rounds = nil
+	m.clearedrounds = false
+	m.removedrounds = nil
+}
+
 // Where appends a list predicates to the WindMutation builder.
 func (m *WindMutation) Where(ps ...predicate.Wind) {
 	m.predicates = append(m.predicates, ps...)
@@ -5625,48 +5750,84 @@ func (m *WindMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *WindMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.rounds != nil {
+		edges = append(edges, wind.EdgeRounds)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *WindMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case wind.EdgeRounds:
+		ids := make([]ent.Value, 0, len(m.rounds))
+		for id := range m.rounds {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *WindMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.removedrounds != nil {
+		edges = append(edges, wind.EdgeRounds)
+	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *WindMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case wind.EdgeRounds:
+		ids := make([]ent.Value, 0, len(m.removedrounds))
+		for id := range m.removedrounds {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *WindMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.clearedrounds {
+		edges = append(edges, wind.EdgeRounds)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *WindMutation) EdgeCleared(name string) bool {
+	switch name {
+	case wind.EdgeRounds:
+		return m.clearedrounds
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *WindMutation) ClearEdge(name string) error {
+	switch name {
+	}
 	return fmt.Errorf("unknown Wind unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *WindMutation) ResetEdge(name string) error {
+	switch name {
+	case wind.EdgeRounds:
+		m.ResetRounds()
+		return nil
+	}
 	return fmt.Errorf("unknown Wind edge %s", name)
 }

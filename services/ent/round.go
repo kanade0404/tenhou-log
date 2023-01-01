@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"strings"
 
+	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/round"
+	"github.com/kanade0404/tenhou-log/services/ent/wind"
 )
 
 // Round is the model entity for the Round schema.
@@ -15,6 +17,32 @@ type Round struct {
 	config
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the RoundQuery when eager-loading is set.
+	Edges       RoundEdges `json:"edges"`
+	wind_rounds *uuid.UUID
+}
+
+// RoundEdges holds the relations/edges for other nodes in the graph.
+type RoundEdges struct {
+	// Winds holds the value of the winds edge.
+	Winds *Wind `json:"winds,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// WindsOrErr returns the Winds value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e RoundEdges) WindsOrErr() (*Wind, error) {
+	if e.loadedTypes[0] {
+		if e.Winds == nil {
+			// Edge was loaded but was not found.
+			return nil, &NotFoundError{label: wind.Label}
+		}
+		return e.Winds, nil
+	}
+	return nil, &NotLoadedError{edge: "winds"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -24,6 +52,8 @@ func (*Round) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case round.FieldID:
 			values[i] = new(uuid.UUID)
+		case round.ForeignKeys[0]: // wind_rounds
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Round", columns[i])
 		}
@@ -45,9 +75,21 @@ func (r *Round) assignValues(columns []string, values []any) error {
 			} else if value != nil {
 				r.ID = *value
 			}
+		case round.ForeignKeys[0]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field wind_rounds", values[i])
+			} else if value.Valid {
+				r.wind_rounds = new(uuid.UUID)
+				*r.wind_rounds = *value.S.(*uuid.UUID)
+			}
 		}
 	}
 	return nil
+}
+
+// QueryWinds queries the "winds" edge of the Round entity.
+func (r *Round) QueryWinds() *WindQuery {
+	return (&RoundClient{config: r.config}).QueryWinds(r)
 }
 
 // Update returns a builder for updating this Round.

@@ -4,6 +4,7 @@ package round
 
 import (
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 )
@@ -76,6 +77,34 @@ func IDLT(id uuid.UUID) predicate.Round {
 func IDLTE(id uuid.UUID) predicate.Round {
 	return predicate.Round(func(s *sql.Selector) {
 		s.Where(sql.LTE(s.C(FieldID), id))
+	})
+}
+
+// HasWinds applies the HasEdge predicate on the "winds" edge.
+func HasWinds() predicate.Round {
+	return predicate.Round(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(WindsTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, WindsTable, WindsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasWindsWith applies the HasEdge predicate on the "winds" edge with a given conditions (other predicates).
+func HasWindsWith(preds ...predicate.Wind) predicate.Round {
+	return predicate.Round(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(WindsInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, WindsTable, WindsColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
 	})
 }
 

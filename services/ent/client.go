@@ -1605,6 +1605,22 @@ func (c *RoundClient) GetX(ctx context.Context, id uuid.UUID) *Round {
 	return obj
 }
 
+// QueryWinds queries the winds edge of a Round.
+func (c *RoundClient) QueryWinds(r *Round) *WindQuery {
+	query := &WindQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := r.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(round.Table, round.FieldID, id),
+			sqlgraph.To(wind.Table, wind.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, round.WindsTable, round.WindsColumn),
+		)
+		fromV = sqlgraph.Neighbors(r.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *RoundClient) Hooks() []Hook {
 	return c.hooks.Round
@@ -1693,6 +1709,22 @@ func (c *WindClient) GetX(ctx context.Context, id uuid.UUID) *Wind {
 		panic(err)
 	}
 	return obj
+}
+
+// QueryRounds queries the rounds edge of a Wind.
+func (c *WindClient) QueryRounds(w *Wind) *RoundQuery {
+	query := &RoundQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := w.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(wind.Table, wind.FieldID, id),
+			sqlgraph.To(round.Table, round.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, wind.RoundsTable, wind.RoundsColumn),
+		)
+		fromV = sqlgraph.Neighbors(w.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.
