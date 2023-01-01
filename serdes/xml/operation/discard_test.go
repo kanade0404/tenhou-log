@@ -18,7 +18,7 @@ func TestDiscard(t *testing.T) {
 	}
 	type args struct {
 		discardType string
-		haiID       uint
+		haiID       int
 		gameInfo    *xml.GameInfo
 	}
 	tests := []struct {

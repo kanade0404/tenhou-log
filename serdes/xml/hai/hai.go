@@ -17,10 +17,13 @@ type IHai interface {
 type HaiType string
 
 const (
-	CharactersType HaiType = "萬子"
-	BamboosType    HaiType = "索子"
-	CirclesType    HaiType = "筒子"
-	HonorsType     HaiType = "字牌"
+	CharactersType  HaiType = "萬子"
+	BamboosType     HaiType = "索子"
+	CirclesType     HaiType = "筒子"
+	HonorsType      HaiType = "字牌"
+	CharactersRedID         = 16
+	CirclesRedID            = 52
+	BambooRedID             = 88
 )
 
 type Hai struct {
@@ -35,20 +38,52 @@ func (h *Hai) String() string {
 	return fmt.Sprintf("id:%d,num:%d,haiType:%s,isRedRule:%t", h.id, h.num, h.haiType, h.isRedRule)
 }
 
-func NewHai(id uint, isRed bool) (IHai, error) {
+func NewHai(id int, isRed bool) (IHai, error) {
 	if id < 0 || id > 135 {
 		return nil, fmt.Errorf("unexpected argument id: %d, IsRed: %t", id, isRed)
-	} else if id >= 0 && id <= 107 {
+	}
+	i := uint(id)
+	if id >= 0 && id <= 107 {
 		if id >= 0 && id <= 35 {
-			return newCharacters(id, isRed)
+			return newCharacters(i, isRed)
 		} else if id >= 36 && id <= 71 {
-			return newCircles(id, isRed)
+			return newCircles(i, isRed)
 		} else {
-			return newBamboos(id, isRed)
+			return newBamboos(i, isRed)
 		}
 	} else {
-		return newHonours(id, isRed)
+		return newHonours(i, isRed)
 	}
+}
+
+func Reds(isRed bool) []IHai {
+	if !isRed {
+		return []IHai{}
+	}
+	return []IHai{&Characters{
+		Hai: &Hai{
+			id:        CharactersRedID,
+			num:       5,
+			haiType:   CharactersType,
+			isRedRule: true,
+		},
+	},
+		&Circles{
+			Hai: &Hai{
+				id:        CirclesRedID,
+				num:       5,
+				haiType:   CirclesType,
+				isRedRule: true,
+			},
+		},
+		&Bamboos{
+			Hai: &Hai{
+				id:        BambooRedID,
+				num:       5,
+				haiType:   BamboosType,
+				isRedRule: true,
+			},
+		}}
 }
 
 type ICharacters interface {
@@ -76,7 +111,7 @@ func (c *Characters) Type() HaiType {
 }
 
 func (c *Characters) IsRed() bool {
-	return c.id == 16 && c.isRedRule
+	return c.id == CharactersRedID && c.isRedRule
 }
 
 func (c *Characters) Name() string {
@@ -137,7 +172,7 @@ func (c *Circles) Type() HaiType {
 }
 
 func (c *Circles) IsRed() bool {
-	return c.id == 52 && c.isRedRule
+	return c.id == CirclesRedID && c.isRedRule
 }
 
 func (c *Circles) Name() string {
@@ -197,7 +232,7 @@ func (b *Bamboos) Type() HaiType {
 }
 
 func (b *Bamboos) IsRed() bool {
-	return b.id == 88 && b.isRedRule
+	return b.id == BambooRedID && b.isRedRule
 }
 
 func (b *Bamboos) Name() string {

@@ -20,21 +20,21 @@ func TestHandHais_Marshal(t *testing.T) {
 		_     struct{}
 	}
 	for i := 0; i < 13; i++ {
-		h, err := hai.NewHai(uint(i), false)
+		h, err := hai.NewHai(i, false)
 		if err != nil {
 			t.Fatal(err)
 		}
 		test1Hais = append(test1Hais, h)
 	}
 	for i := 52; i < 65; i++ {
-		h, err := hai.NewHai(uint(i), true)
+		h, err := hai.NewHai(i, true)
 		if err != nil {
 			t.Fatal(err)
 		}
 		test2Hais = append(test2Hais, h)
 	}
 	for i := 72; i < 85; i++ {
-		h, err := hai.NewHai(uint(i), true)
+		h, err := hai.NewHai(i, true)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -86,21 +86,21 @@ func TestHandHais_Unmarshal(t *testing.T) {
 		test3Hais []hai.IHai
 	)
 	for i := 0; i < 13; i++ {
-		h, err := hai.NewHai(uint(i), false)
+		h, err := hai.NewHai(i, false)
 		if err != nil {
 			t.Fatal(err)
 		}
 		test1Hais = append(test1Hais, h)
 	}
 	for i := 52; i < 65; i++ {
-		h, err := hai.NewHai(uint(i), true)
+		h, err := hai.NewHai(i, true)
 		if err != nil {
 			t.Fatal(err)
 		}
 		test2Hais = append(test2Hais, h)
 	}
 	for i := 72; i < 85; i++ {
-		h, err := hai.NewHai(uint(i), true)
+		h, err := hai.NewHai(i, true)
 		if err != nil {
 			t.Fatal(err)
 		}
