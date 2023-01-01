@@ -9,7 +9,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/compressedmjlog"
-	"github.com/kanade0404/tenhou-log/services/ent/mjlogfilecompressed"
+	"github.com/kanade0404/tenhou-log/services/ent/mjlogfile"
 )
 
 // CompressedMJLog is the model entity for the CompressedMJLog schema.
@@ -23,14 +23,13 @@ type CompressedMJLog struct {
 	Size uint `json:"size,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the CompressedMJLogQuery when eager-loading is set.
-	Edges                                         CompressedMJLogEdges `json:"edges"`
-	mj_log_file_compressed_compressed_mjlog_files *uuid.UUID
+	Edges CompressedMJLogEdges `json:"edges"`
 }
 
 // CompressedMJLogEdges holds the relations/edges for other nodes in the graph.
 type CompressedMJLogEdges struct {
 	// MjlogFiles holds the value of the mjlog_files edge.
-	MjlogFiles *MJLogFileCompressed `json:"mjlog_files,omitempty"`
+	MjlogFiles *MJLogFile `json:"mjlog_files,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [1]bool
@@ -38,11 +37,11 @@ type CompressedMJLogEdges struct {
 
 // MjlogFilesOrErr returns the MjlogFiles value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
-func (e CompressedMJLogEdges) MjlogFilesOrErr() (*MJLogFileCompressed, error) {
+func (e CompressedMJLogEdges) MjlogFilesOrErr() (*MJLogFile, error) {
 	if e.loadedTypes[0] {
 		if e.MjlogFiles == nil {
 			// Edge was loaded but was not found.
-			return nil, &NotFoundError{label: mjlogfilecompressed.Label}
+			return nil, &NotFoundError{label: mjlogfile.Label}
 		}
 		return e.MjlogFiles, nil
 	}
@@ -60,8 +59,6 @@ func (*CompressedMJLog) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullString)
 		case compressedmjlog.FieldID:
 			values[i] = new(uuid.UUID)
-		case compressedmjlog.ForeignKeys[0]: // mj_log_file_compressed_compressed_mjlog_files
-			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type CompressedMJLog", columns[i])
 		}
@@ -95,20 +92,13 @@ func (cml *CompressedMJLog) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				cml.Size = uint(value.Int64)
 			}
-		case compressedmjlog.ForeignKeys[0]:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field mj_log_file_compressed_compressed_mjlog_files", values[i])
-			} else if value.Valid {
-				cml.mj_log_file_compressed_compressed_mjlog_files = new(uuid.UUID)
-				*cml.mj_log_file_compressed_compressed_mjlog_files = *value.S.(*uuid.UUID)
-			}
 		}
 	}
 	return nil
 }
 
 // QueryMjlogFiles queries the "mjlog_files" edge of the CompressedMJLog entity.
-func (cml *CompressedMJLog) QueryMjlogFiles() *MJLogFileCompressedQuery {
+func (cml *CompressedMJLog) QueryMjlogFiles() *MJLogFileQuery {
 	return (&CompressedMJLogClient{config: cml.config}).QueryMjlogFiles(cml)
 }
 

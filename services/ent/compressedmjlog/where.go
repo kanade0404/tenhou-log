@@ -263,19 +263,19 @@ func HasMjlogFiles() predicate.CompressedMJLog {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
 			sqlgraph.To(MjlogFilesTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, MjlogFilesTable, MjlogFilesColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, MjlogFilesTable, MjlogFilesColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
 // HasMjlogFilesWith applies the HasEdge predicate on the "mjlog_files" edge with a given conditions (other predicates).
-func HasMjlogFilesWith(preds ...predicate.MJLogFileCompressed) predicate.CompressedMJLog {
+func HasMjlogFilesWith(preds ...predicate.MJLogFile) predicate.CompressedMJLog {
 	return predicate.CompressedMJLog(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
 			sqlgraph.To(MjlogFilesInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, MjlogFilesTable, MjlogFilesColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, MjlogFilesTable, MjlogFilesColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

@@ -4,6 +4,7 @@ package mjlogfile
 
 import (
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 )
@@ -182,6 +183,34 @@ func NameEqualFold(v string) predicate.MJLogFile {
 func NameContainsFold(v string) predicate.MJLogFile {
 	return predicate.MJLogFile(func(s *sql.Selector) {
 		s.Where(sql.ContainsFold(s.C(FieldName), v))
+	})
+}
+
+// HasCompressedMjlogFiles applies the HasEdge predicate on the "compressed_mjlog_files" edge.
+func HasCompressedMjlogFiles() predicate.MJLogFile {
+	return predicate.MJLogFile(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(CompressedMjlogFilesTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, CompressedMjlogFilesTable, CompressedMjlogFilesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasCompressedMjlogFilesWith applies the HasEdge predicate on the "compressed_mjlog_files" edge with a given conditions (other predicates).
+func HasCompressedMjlogFilesWith(preds ...predicate.CompressedMJLog) predicate.MJLogFile {
+	return predicate.MJLogFile(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(CompressedMjlogFilesInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, CompressedMjlogFilesTable, CompressedMjlogFilesColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
 	})
 }
 

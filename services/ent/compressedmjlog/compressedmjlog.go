@@ -20,12 +20,12 @@ const (
 	// Table holds the table name of the compressedmjlog in the database.
 	Table = "compressed_mj_logs"
 	// MjlogFilesTable is the table that holds the mjlog_files relation/edge.
-	MjlogFilesTable = "compressed_mj_logs"
-	// MjlogFilesInverseTable is the table name for the MJLogFileCompressed entity.
-	// It exists in this package in order to avoid circular dependency with the "mjlogfilecompressed" package.
-	MjlogFilesInverseTable = "mj_log_file_compresseds"
+	MjlogFilesTable = "mj_log_files"
+	// MjlogFilesInverseTable is the table name for the MJLogFile entity.
+	// It exists in this package in order to avoid circular dependency with the "mjlogfile" package.
+	MjlogFilesInverseTable = "mj_log_files"
 	// MjlogFilesColumn is the table column denoting the mjlog_files relation/edge.
-	MjlogFilesColumn = "mj_log_file_compressed_compressed_mjlog_files"
+	MjlogFilesColumn = "compressed_mj_log_mjlog_files"
 )
 
 // Columns holds all SQL columns for compressedmjlog fields.
@@ -35,21 +35,10 @@ var Columns = []string{
 	FieldSize,
 }
 
-// ForeignKeys holds the SQL foreign-keys that are owned by the "compressed_mj_logs"
-// table and are not defined as standalone fields in the schema.
-var ForeignKeys = []string{
-	"mj_log_file_compressed_compressed_mjlog_files",
-}
-
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
-			return true
-		}
-	}
-	for i := range ForeignKeys {
-		if column == ForeignKeys[i] {
 			return true
 		}
 	}

@@ -14,7 +14,6 @@ import (
 	"github.com/kanade0404/tenhou-log/services/ent/hand"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlog"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlogfile"
-	"github.com/kanade0404/tenhou-log/services/ent/mjlogfilecompressed"
 	"github.com/kanade0404/tenhou-log/services/ent/room"
 	"github.com/kanade0404/tenhou-log/services/ent/round"
 	"github.com/kanade0404/tenhou-log/services/ent/schema"
@@ -77,12 +76,6 @@ func init() {
 	mjlogfileDescID := mjlogfileFields[0].Descriptor()
 	// mjlogfile.DefaultID holds the default value on creation for the id field.
 	mjlogfile.DefaultID = mjlogfileDescID.Default.(func() uuid.UUID)
-	mjlogfilecompressedFields := schema.MJLogFileCompressed{}.Fields()
-	_ = mjlogfilecompressedFields
-	// mjlogfilecompressedDescID is the schema descriptor for id field.
-	mjlogfilecompressedDescID := mjlogfilecompressedFields[0].Descriptor()
-	// mjlogfilecompressed.DefaultID holds the default value on creation for the id field.
-	mjlogfilecompressed.DefaultID = mjlogfilecompressedDescID.Default.(func() uuid.UUID)
 	roomFields := schema.Room{}.Fields()
 	_ = roomFields
 	// roomDescID is the schema descriptor for id field.

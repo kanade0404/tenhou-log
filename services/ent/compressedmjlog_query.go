@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -12,7 +13,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/compressedmjlog"
-	"github.com/kanade0404/tenhou-log/services/ent/mjlogfilecompressed"
+	"github.com/kanade0404/tenhou-log/services/ent/mjlogfile"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 )
 
@@ -25,8 +26,7 @@ type CompressedMJLogQuery struct {
 	order          []OrderFunc
 	fields         []string
 	predicates     []predicate.CompressedMJLog
-	withMjlogFiles *MJLogFileCompressedQuery
-	withFKs        bool
+	withMjlogFiles *MJLogFileQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -64,8 +64,8 @@ func (cmlq *CompressedMJLogQuery) Order(o ...OrderFunc) *CompressedMJLogQuery {
 }
 
 // QueryMjlogFiles chains the current query on the "mjlog_files" edge.
-func (cmlq *CompressedMJLogQuery) QueryMjlogFiles() *MJLogFileCompressedQuery {
-	query := &MJLogFileCompressedQuery{config: cmlq.config}
+func (cmlq *CompressedMJLogQuery) QueryMjlogFiles() *MJLogFileQuery {
+	query := &MJLogFileQuery{config: cmlq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := cmlq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -76,8 +76,8 @@ func (cmlq *CompressedMJLogQuery) QueryMjlogFiles() *MJLogFileCompressedQuery {
 		}
 		step := sqlgraph.NewStep(
 			sqlgraph.From(compressedmjlog.Table, compressedmjlog.FieldID, selector),
-			sqlgraph.To(mjlogfilecompressed.Table, mjlogfilecompressed.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, compressedmjlog.MjlogFilesTable, compressedmjlog.MjlogFilesColumn),
+			sqlgraph.To(mjlogfile.Table, mjlogfile.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, compressedmjlog.MjlogFilesTable, compressedmjlog.MjlogFilesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(cmlq.driver.Dialect(), step)
 		return fromU, nil
@@ -276,8 +276,8 @@ func (cmlq *CompressedMJLogQuery) Clone() *CompressedMJLogQuery {
 
 // WithMjlogFiles tells the query-builder to eager-load the nodes that are connected to
 // the "mjlog_files" edge. The optional arguments are used to configure the query builder of the edge.
-func (cmlq *CompressedMJLogQuery) WithMjlogFiles(opts ...func(*MJLogFileCompressedQuery)) *CompressedMJLogQuery {
-	query := &MJLogFileCompressedQuery{config: cmlq.config}
+func (cmlq *CompressedMJLogQuery) WithMjlogFiles(opts ...func(*MJLogFileQuery)) *CompressedMJLogQuery {
+	query := &MJLogFileQuery{config: cmlq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -359,18 +359,11 @@ func (cmlq *CompressedMJLogQuery) prepareQuery(ctx context.Context) error {
 func (cmlq *CompressedMJLogQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*CompressedMJLog, error) {
 	var (
 		nodes       = []*CompressedMJLog{}
-		withFKs     = cmlq.withFKs
 		_spec       = cmlq.querySpec()
 		loadedTypes = [1]bool{
 			cmlq.withMjlogFiles != nil,
 		}
 	)
-	if cmlq.withMjlogFiles != nil {
-		withFKs = true
-	}
-	if withFKs {
-		_spec.Node.Columns = append(_spec.Node.Columns, compressedmjlog.ForeignKeys...)
-	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*CompressedMJLog).scanValues(nil, columns)
 	}
@@ -391,39 +384,38 @@ func (cmlq *CompressedMJLogQuery) sqlAll(ctx context.Context, hooks ...queryHook
 	}
 	if query := cmlq.withMjlogFiles; query != nil {
 		if err := cmlq.loadMjlogFiles(ctx, query, nodes, nil,
-			func(n *CompressedMJLog, e *MJLogFileCompressed) { n.Edges.MjlogFiles = e }); err != nil {
+			func(n *CompressedMJLog, e *MJLogFile) { n.Edges.MjlogFiles = e }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (cmlq *CompressedMJLogQuery) loadMjlogFiles(ctx context.Context, query *MJLogFileCompressedQuery, nodes []*CompressedMJLog, init func(*CompressedMJLog), assign func(*CompressedMJLog, *MJLogFileCompressed)) error {
-	ids := make([]uuid.UUID, 0, len(nodes))
-	nodeids := make(map[uuid.UUID][]*CompressedMJLog)
+func (cmlq *CompressedMJLogQuery) loadMjlogFiles(ctx context.Context, query *MJLogFileQuery, nodes []*CompressedMJLog, init func(*CompressedMJLog), assign func(*CompressedMJLog, *MJLogFile)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*CompressedMJLog)
 	for i := range nodes {
-		if nodes[i].mj_log_file_compressed_compressed_mjlog_files == nil {
-			continue
-		}
-		fk := *nodes[i].mj_log_file_compressed_compressed_mjlog_files
-		if _, ok := nodeids[fk]; !ok {
-			ids = append(ids, fk)
-		}
-		nodeids[fk] = append(nodeids[fk], nodes[i])
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
 	}
-	query.Where(mjlogfilecompressed.IDIn(ids...))
+	query.withFKs = true
+	query.Where(predicate.MJLogFile(func(s *sql.Selector) {
+		s.Where(sql.InValues(compressedmjlog.MjlogFilesColumn, fks...))
+	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		nodes, ok := nodeids[n.ID]
+		fk := n.compressed_mj_log_mjlog_files
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "compressed_mj_log_mjlog_files" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "mj_log_file_compressed_compressed_mjlog_files" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "compressed_mj_log_mjlog_files" returned %v for node %v`, *fk, n.ID)
 		}
-		for i := range nodes {
-			assign(nodes[i], n)
-		}
+		assign(node, n)
 	}
 	return nil
 }

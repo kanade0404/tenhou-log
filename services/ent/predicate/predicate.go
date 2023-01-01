@@ -36,9 +36,6 @@ type MJLog func(*sql.Selector)
 // MJLogFile is the predicate function for mjlogfile builders.
 type MJLogFile func(*sql.Selector)
 
-// MJLogFileCompressed is the predicate function for mjlogfilecompressed builders.
-type MJLogFileCompressed func(*sql.Selector)
-
 // Player is the predicate function for player builders.
 type Player func(*sql.Selector)
 

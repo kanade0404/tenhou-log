@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/compressedmjlog"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlogfile"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 )
@@ -18,12 +19,14 @@ import (
 // MJLogFileQuery is the builder for querying MJLogFile entities.
 type MJLogFileQuery struct {
 	config
-	limit      *int
-	offset     *int
-	unique     *bool
-	order      []OrderFunc
-	fields     []string
-	predicates []predicate.MJLogFile
+	limit                    *int
+	offset                   *int
+	unique                   *bool
+	order                    []OrderFunc
+	fields                   []string
+	predicates               []predicate.MJLogFile
+	withCompressedMjlogFiles *CompressedMJLogQuery
+	withFKs                  bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -58,6 +61,28 @@ func (mlfq *MJLogFileQuery) Unique(unique bool) *MJLogFileQuery {
 func (mlfq *MJLogFileQuery) Order(o ...OrderFunc) *MJLogFileQuery {
 	mlfq.order = append(mlfq.order, o...)
 	return mlfq
+}
+
+// QueryCompressedMjlogFiles chains the current query on the "compressed_mjlog_files" edge.
+func (mlfq *MJLogFileQuery) QueryCompressedMjlogFiles() *CompressedMJLogQuery {
+	query := &CompressedMJLogQuery{config: mlfq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := mlfq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := mlfq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(mjlogfile.Table, mjlogfile.FieldID, selector),
+			sqlgraph.To(compressedmjlog.Table, compressedmjlog.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, mjlogfile.CompressedMjlogFilesTable, mjlogfile.CompressedMjlogFilesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(mlfq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first MJLogFile entity from the query.
@@ -236,16 +261,28 @@ func (mlfq *MJLogFileQuery) Clone() *MJLogFileQuery {
 		return nil
 	}
 	return &MJLogFileQuery{
-		config:     mlfq.config,
-		limit:      mlfq.limit,
-		offset:     mlfq.offset,
-		order:      append([]OrderFunc{}, mlfq.order...),
-		predicates: append([]predicate.MJLogFile{}, mlfq.predicates...),
+		config:                   mlfq.config,
+		limit:                    mlfq.limit,
+		offset:                   mlfq.offset,
+		order:                    append([]OrderFunc{}, mlfq.order...),
+		predicates:               append([]predicate.MJLogFile{}, mlfq.predicates...),
+		withCompressedMjlogFiles: mlfq.withCompressedMjlogFiles.Clone(),
 		// clone intermediate query.
 		sql:    mlfq.sql.Clone(),
 		path:   mlfq.path,
 		unique: mlfq.unique,
 	}
+}
+
+// WithCompressedMjlogFiles tells the query-builder to eager-load the nodes that are connected to
+// the "compressed_mjlog_files" edge. The optional arguments are used to configure the query builder of the edge.
+func (mlfq *MJLogFileQuery) WithCompressedMjlogFiles(opts ...func(*CompressedMJLogQuery)) *MJLogFileQuery {
+	query := &CompressedMJLogQuery{config: mlfq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	mlfq.withCompressedMjlogFiles = query
+	return mlfq
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -321,15 +358,26 @@ func (mlfq *MJLogFileQuery) prepareQuery(ctx context.Context) error {
 
 func (mlfq *MJLogFileQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*MJLogFile, error) {
 	var (
-		nodes = []*MJLogFile{}
-		_spec = mlfq.querySpec()
+		nodes       = []*MJLogFile{}
+		withFKs     = mlfq.withFKs
+		_spec       = mlfq.querySpec()
+		loadedTypes = [1]bool{
+			mlfq.withCompressedMjlogFiles != nil,
+		}
 	)
+	if mlfq.withCompressedMjlogFiles != nil {
+		withFKs = true
+	}
+	if withFKs {
+		_spec.Node.Columns = append(_spec.Node.Columns, mjlogfile.ForeignKeys...)
+	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*MJLogFile).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &MJLogFile{config: mlfq.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -341,7 +389,43 @@ func (mlfq *MJLogFileQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := mlfq.withCompressedMjlogFiles; query != nil {
+		if err := mlfq.loadCompressedMjlogFiles(ctx, query, nodes, nil,
+			func(n *MJLogFile, e *CompressedMJLog) { n.Edges.CompressedMjlogFiles = e }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (mlfq *MJLogFileQuery) loadCompressedMjlogFiles(ctx context.Context, query *CompressedMJLogQuery, nodes []*MJLogFile, init func(*MJLogFile), assign func(*MJLogFile, *CompressedMJLog)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*MJLogFile)
+	for i := range nodes {
+		if nodes[i].compressed_mj_log_mjlog_files == nil {
+			continue
+		}
+		fk := *nodes[i].compressed_mj_log_mjlog_files
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	query.Where(compressedmjlog.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "compressed_mj_log_mjlog_files" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
 }
 
 func (mlfq *MJLogFileQuery) sqlCount(ctx context.Context) (int, error) {

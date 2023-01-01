@@ -24,21 +24,20 @@ type config struct {
 
 // hooks per client, for fast access.
 type hooks struct {
-	CompressedMJLog     []ent.Hook
-	Dan                 []ent.Hook
-	Game                []ent.Hook
-	GamePlayer          []ent.Hook
-	GamePlayerHandHai   []ent.Hook
-	GamePlayerPoint     []ent.Hook
-	GoAround            []ent.Hook
-	Hand                []ent.Hook
-	MJLog               []ent.Hook
-	MJLogFile           []ent.Hook
-	MJLogFileCompressed []ent.Hook
-	Player              []ent.Hook
-	Room                []ent.Hook
-	Round               []ent.Hook
-	Wind                []ent.Hook
+	CompressedMJLog   []ent.Hook
+	Dan               []ent.Hook
+	Game              []ent.Hook
+	GamePlayer        []ent.Hook
+	GamePlayerHandHai []ent.Hook
+	GamePlayerPoint   []ent.Hook
+	GoAround          []ent.Hook
+	Hand              []ent.Hook
+	MJLog             []ent.Hook
+	MJLogFile         []ent.Hook
+	Player            []ent.Hook
+	Room              []ent.Hook
+	Round             []ent.Hook
+	Wind              []ent.Hook
 }
 
 // Options applies the options on the config object.

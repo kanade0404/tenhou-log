@@ -21,7 +21,6 @@ import (
 	"github.com/kanade0404/tenhou-log/services/ent/hand"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlog"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlogfile"
-	"github.com/kanade0404/tenhou-log/services/ent/mjlogfilecompressed"
 	"github.com/kanade0404/tenhou-log/services/ent/player"
 	"github.com/kanade0404/tenhou-log/services/ent/room"
 	"github.com/kanade0404/tenhou-log/services/ent/round"
@@ -57,8 +56,6 @@ type Client struct {
 	MJLog *MJLogClient
 	// MJLogFile is the client for interacting with the MJLogFile builders.
 	MJLogFile *MJLogFileClient
-	// MJLogFileCompressed is the client for interacting with the MJLogFileCompressed builders.
-	MJLogFileCompressed *MJLogFileCompressedClient
 	// Player is the client for interacting with the Player builders.
 	Player *PlayerClient
 	// Room is the client for interacting with the Room builders.
@@ -90,7 +87,6 @@ func (c *Client) init() {
 	c.Hand = NewHandClient(c.config)
 	c.MJLog = NewMJLogClient(c.config)
 	c.MJLogFile = NewMJLogFileClient(c.config)
-	c.MJLogFileCompressed = NewMJLogFileCompressedClient(c.config)
 	c.Player = NewPlayerClient(c.config)
 	c.Room = NewRoomClient(c.config)
 	c.Round = NewRoundClient(c.config)
@@ -126,23 +122,22 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:                 ctx,
-		config:              cfg,
-		CompressedMJLog:     NewCompressedMJLogClient(cfg),
-		Dan:                 NewDanClient(cfg),
-		Game:                NewGameClient(cfg),
-		GamePlayer:          NewGamePlayerClient(cfg),
-		GamePlayerHandHai:   NewGamePlayerHandHaiClient(cfg),
-		GamePlayerPoint:     NewGamePlayerPointClient(cfg),
-		GoAround:            NewGoAroundClient(cfg),
-		Hand:                NewHandClient(cfg),
-		MJLog:               NewMJLogClient(cfg),
-		MJLogFile:           NewMJLogFileClient(cfg),
-		MJLogFileCompressed: NewMJLogFileCompressedClient(cfg),
-		Player:              NewPlayerClient(cfg),
-		Room:                NewRoomClient(cfg),
-		Round:               NewRoundClient(cfg),
-		Wind:                NewWindClient(cfg),
+		ctx:               ctx,
+		config:            cfg,
+		CompressedMJLog:   NewCompressedMJLogClient(cfg),
+		Dan:               NewDanClient(cfg),
+		Game:              NewGameClient(cfg),
+		GamePlayer:        NewGamePlayerClient(cfg),
+		GamePlayerHandHai: NewGamePlayerHandHaiClient(cfg),
+		GamePlayerPoint:   NewGamePlayerPointClient(cfg),
+		GoAround:          NewGoAroundClient(cfg),
+		Hand:              NewHandClient(cfg),
+		MJLog:             NewMJLogClient(cfg),
+		MJLogFile:         NewMJLogFileClient(cfg),
+		Player:            NewPlayerClient(cfg),
+		Room:              NewRoomClient(cfg),
+		Round:             NewRoundClient(cfg),
+		Wind:              NewWindClient(cfg),
 	}, nil
 }
 
@@ -160,23 +155,22 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:                 ctx,
-		config:              cfg,
-		CompressedMJLog:     NewCompressedMJLogClient(cfg),
-		Dan:                 NewDanClient(cfg),
-		Game:                NewGameClient(cfg),
-		GamePlayer:          NewGamePlayerClient(cfg),
-		GamePlayerHandHai:   NewGamePlayerHandHaiClient(cfg),
-		GamePlayerPoint:     NewGamePlayerPointClient(cfg),
-		GoAround:            NewGoAroundClient(cfg),
-		Hand:                NewHandClient(cfg),
-		MJLog:               NewMJLogClient(cfg),
-		MJLogFile:           NewMJLogFileClient(cfg),
-		MJLogFileCompressed: NewMJLogFileCompressedClient(cfg),
-		Player:              NewPlayerClient(cfg),
-		Room:                NewRoomClient(cfg),
-		Round:               NewRoundClient(cfg),
-		Wind:                NewWindClient(cfg),
+		ctx:               ctx,
+		config:            cfg,
+		CompressedMJLog:   NewCompressedMJLogClient(cfg),
+		Dan:               NewDanClient(cfg),
+		Game:              NewGameClient(cfg),
+		GamePlayer:        NewGamePlayerClient(cfg),
+		GamePlayerHandHai: NewGamePlayerHandHaiClient(cfg),
+		GamePlayerPoint:   NewGamePlayerPointClient(cfg),
+		GoAround:          NewGoAroundClient(cfg),
+		Hand:              NewHandClient(cfg),
+		MJLog:             NewMJLogClient(cfg),
+		MJLogFile:         NewMJLogFileClient(cfg),
+		Player:            NewPlayerClient(cfg),
+		Room:              NewRoomClient(cfg),
+		Round:             NewRoundClient(cfg),
+		Wind:              NewWindClient(cfg),
 	}, nil
 }
 
@@ -216,7 +210,6 @@ func (c *Client) Use(hooks ...Hook) {
 	c.Hand.Use(hooks...)
 	c.MJLog.Use(hooks...)
 	c.MJLogFile.Use(hooks...)
-	c.MJLogFileCompressed.Use(hooks...)
 	c.Player.Use(hooks...)
 	c.Room.Use(hooks...)
 	c.Round.Use(hooks...)
@@ -309,14 +302,14 @@ func (c *CompressedMJLogClient) GetX(ctx context.Context, id uuid.UUID) *Compres
 }
 
 // QueryMjlogFiles queries the mjlog_files edge of a CompressedMJLog.
-func (c *CompressedMJLogClient) QueryMjlogFiles(cml *CompressedMJLog) *MJLogFileCompressedQuery {
-	query := &MJLogFileCompressedQuery{config: c.config}
+func (c *CompressedMJLogClient) QueryMjlogFiles(cml *CompressedMJLog) *MJLogFileQuery {
+	query := &MJLogFileQuery{config: c.config}
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := cml.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(compressedmjlog.Table, compressedmjlog.FieldID, id),
-			sqlgraph.To(mjlogfilecompressed.Table, mjlogfilecompressed.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, compressedmjlog.MjlogFilesTable, compressedmjlog.MjlogFilesColumn),
+			sqlgraph.To(mjlogfile.Table, mjlogfile.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, compressedmjlog.MjlogFilesTable, compressedmjlog.MjlogFilesColumn),
 		)
 		fromV = sqlgraph.Neighbors(cml.driver.Dialect(), step)
 		return fromV, nil
@@ -1134,115 +1127,25 @@ func (c *MJLogFileClient) GetX(ctx context.Context, id uuid.UUID) *MJLogFile {
 	return obj
 }
 
-// Hooks returns the client hooks.
-func (c *MJLogFileClient) Hooks() []Hook {
-	return c.hooks.MJLogFile
-}
-
-// MJLogFileCompressedClient is a client for the MJLogFileCompressed schema.
-type MJLogFileCompressedClient struct {
-	config
-}
-
-// NewMJLogFileCompressedClient returns a client for the MJLogFileCompressed from the given config.
-func NewMJLogFileCompressedClient(c config) *MJLogFileCompressedClient {
-	return &MJLogFileCompressedClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `mjlogfilecompressed.Hooks(f(g(h())))`.
-func (c *MJLogFileCompressedClient) Use(hooks ...Hook) {
-	c.hooks.MJLogFileCompressed = append(c.hooks.MJLogFileCompressed, hooks...)
-}
-
-// Create returns a builder for creating a MJLogFileCompressed entity.
-func (c *MJLogFileCompressedClient) Create() *MJLogFileCompressedCreate {
-	mutation := newMJLogFileCompressedMutation(c.config, OpCreate)
-	return &MJLogFileCompressedCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of MJLogFileCompressed entities.
-func (c *MJLogFileCompressedClient) CreateBulk(builders ...*MJLogFileCompressedCreate) *MJLogFileCompressedCreateBulk {
-	return &MJLogFileCompressedCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for MJLogFileCompressed.
-func (c *MJLogFileCompressedClient) Update() *MJLogFileCompressedUpdate {
-	mutation := newMJLogFileCompressedMutation(c.config, OpUpdate)
-	return &MJLogFileCompressedUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *MJLogFileCompressedClient) UpdateOne(mlfc *MJLogFileCompressed) *MJLogFileCompressedUpdateOne {
-	mutation := newMJLogFileCompressedMutation(c.config, OpUpdateOne, withMJLogFileCompressed(mlfc))
-	return &MJLogFileCompressedUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *MJLogFileCompressedClient) UpdateOneID(id uuid.UUID) *MJLogFileCompressedUpdateOne {
-	mutation := newMJLogFileCompressedMutation(c.config, OpUpdateOne, withMJLogFileCompressedID(id))
-	return &MJLogFileCompressedUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for MJLogFileCompressed.
-func (c *MJLogFileCompressedClient) Delete() *MJLogFileCompressedDelete {
-	mutation := newMJLogFileCompressedMutation(c.config, OpDelete)
-	return &MJLogFileCompressedDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *MJLogFileCompressedClient) DeleteOne(mlfc *MJLogFileCompressed) *MJLogFileCompressedDeleteOne {
-	return c.DeleteOneID(mlfc.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *MJLogFileCompressedClient) DeleteOneID(id uuid.UUID) *MJLogFileCompressedDeleteOne {
-	builder := c.Delete().Where(mjlogfilecompressed.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &MJLogFileCompressedDeleteOne{builder}
-}
-
-// Query returns a query builder for MJLogFileCompressed.
-func (c *MJLogFileCompressedClient) Query() *MJLogFileCompressedQuery {
-	return &MJLogFileCompressedQuery{
-		config: c.config,
-	}
-}
-
-// Get returns a MJLogFileCompressed entity by its id.
-func (c *MJLogFileCompressedClient) Get(ctx context.Context, id uuid.UUID) (*MJLogFileCompressed, error) {
-	return c.Query().Where(mjlogfilecompressed.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *MJLogFileCompressedClient) GetX(ctx context.Context, id uuid.UUID) *MJLogFileCompressed {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// QueryCompressedMjlogFiles queries the compressed_mjlog_files edge of a MJLogFileCompressed.
-func (c *MJLogFileCompressedClient) QueryCompressedMjlogFiles(mlfc *MJLogFileCompressed) *CompressedMJLogQuery {
+// QueryCompressedMjlogFiles queries the compressed_mjlog_files edge of a MJLogFile.
+func (c *MJLogFileClient) QueryCompressedMjlogFiles(mlf *MJLogFile) *CompressedMJLogQuery {
 	query := &CompressedMJLogQuery{config: c.config}
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := mlfc.ID
+		id := mlf.ID
 		step := sqlgraph.NewStep(
-			sqlgraph.From(mjlogfilecompressed.Table, mjlogfilecompressed.FieldID, id),
+			sqlgraph.From(mjlogfile.Table, mjlogfile.FieldID, id),
 			sqlgraph.To(compressedmjlog.Table, compressedmjlog.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, mjlogfilecompressed.CompressedMjlogFilesTable, mjlogfilecompressed.CompressedMjlogFilesColumn),
+			sqlgraph.Edge(sqlgraph.O2O, true, mjlogfile.CompressedMjlogFilesTable, mjlogfile.CompressedMjlogFilesColumn),
 		)
-		fromV = sqlgraph.Neighbors(mlfc.driver.Dialect(), step)
+		fromV = sqlgraph.Neighbors(mlf.driver.Dialect(), step)
 		return fromV, nil
 	}
 	return query
 }
 
 // Hooks returns the client hooks.
-func (c *MJLogFileCompressedClient) Hooks() []Hook {
-	return c.hooks.MJLogFileCompressed
+func (c *MJLogFileClient) Hooks() []Hook {
+	return c.hooks.MJLogFile
 }
 
 // PlayerClient is a client for the Player schema.

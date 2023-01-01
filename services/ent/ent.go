@@ -20,7 +20,6 @@ import (
 	"github.com/kanade0404/tenhou-log/services/ent/hand"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlog"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlogfile"
-	"github.com/kanade0404/tenhou-log/services/ent/mjlogfilecompressed"
 	"github.com/kanade0404/tenhou-log/services/ent/player"
 	"github.com/kanade0404/tenhou-log/services/ent/room"
 	"github.com/kanade0404/tenhou-log/services/ent/round"
@@ -45,21 +44,20 @@ type OrderFunc func(*sql.Selector)
 // columnChecker returns a function indicates if the column exists in the given column.
 func columnChecker(table string) func(string) error {
 	checks := map[string]func(string) bool{
-		compressedmjlog.Table:     compressedmjlog.ValidColumn,
-		dan.Table:                 dan.ValidColumn,
-		game.Table:                game.ValidColumn,
-		gameplayer.Table:          gameplayer.ValidColumn,
-		gameplayerhandhai.Table:   gameplayerhandhai.ValidColumn,
-		gameplayerpoint.Table:     gameplayerpoint.ValidColumn,
-		goaround.Table:            goaround.ValidColumn,
-		hand.Table:                hand.ValidColumn,
-		mjlog.Table:               mjlog.ValidColumn,
-		mjlogfile.Table:           mjlogfile.ValidColumn,
-		mjlogfilecompressed.Table: mjlogfilecompressed.ValidColumn,
-		player.Table:              player.ValidColumn,
-		room.Table:                room.ValidColumn,
-		round.Table:               round.ValidColumn,
-		wind.Table:                wind.ValidColumn,
+		compressedmjlog.Table:   compressedmjlog.ValidColumn,
+		dan.Table:               dan.ValidColumn,
+		game.Table:              game.ValidColumn,
+		gameplayer.Table:        gameplayer.ValidColumn,
+		gameplayerhandhai.Table: gameplayerhandhai.ValidColumn,
+		gameplayerpoint.Table:   gameplayerpoint.ValidColumn,
+		goaround.Table:          goaround.ValidColumn,
+		hand.Table:              hand.ValidColumn,
+		mjlog.Table:             mjlog.ValidColumn,
+		mjlogfile.Table:         mjlogfile.ValidColumn,
+		player.Table:            player.ValidColumn,
+		room.Table:              room.ValidColumn,
+		round.Table:             round.ValidColumn,
+		wind.Table:              wind.ValidColumn,
 	}
 	check, ok := checks[table]
 	if !ok {

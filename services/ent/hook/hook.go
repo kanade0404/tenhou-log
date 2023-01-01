@@ -139,19 +139,6 @@ func (f MJLogFileFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, e
 	return f(ctx, mv)
 }
 
-// The MJLogFileCompressedFunc type is an adapter to allow the use of ordinary
-// function as MJLogFileCompressed mutator.
-type MJLogFileCompressedFunc func(context.Context, *ent.MJLogFileCompressedMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f MJLogFileCompressedFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	mv, ok := m.(*ent.MJLogFileCompressedMutation)
-	if !ok {
-		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.MJLogFileCompressedMutation", m)
-	}
-	return f(ctx, mv)
-}
-
 // The PlayerFunc type is an adapter to allow the use of ordinary
 // function as Player mutator.
 type PlayerFunc func(context.Context, *ent.PlayerMutation) (ent.Value, error)

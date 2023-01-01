@@ -16,7 +16,6 @@ import (
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayer"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlog"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlogfile"
-	"github.com/kanade0404/tenhou-log/services/ent/mjlogfilecompressed"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 	"github.com/kanade0404/tenhou-log/services/ent/room"
 	"github.com/kanade0404/tenhou-log/services/ent/wind"
@@ -33,21 +32,20 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
-	TypeCompressedMJLog     = "CompressedMJLog"
-	TypeDan                 = "Dan"
-	TypeGame                = "Game"
-	TypeGamePlayer          = "GamePlayer"
-	TypeGamePlayerHandHai   = "GamePlayerHandHai"
-	TypeGamePlayerPoint     = "GamePlayerPoint"
-	TypeGoAround            = "GoAround"
-	TypeHand                = "Hand"
-	TypeMJLog               = "MJLog"
-	TypeMJLogFile           = "MJLogFile"
-	TypeMJLogFileCompressed = "MJLogFileCompressed"
-	TypePlayer              = "Player"
-	TypeRoom                = "Room"
-	TypeRound               = "Round"
-	TypeWind                = "Wind"
+	TypeCompressedMJLog   = "CompressedMJLog"
+	TypeDan               = "Dan"
+	TypeGame              = "Game"
+	TypeGamePlayer        = "GamePlayer"
+	TypeGamePlayerHandHai = "GamePlayerHandHai"
+	TypeGamePlayerPoint   = "GamePlayerPoint"
+	TypeGoAround          = "GoAround"
+	TypeHand              = "Hand"
+	TypeMJLog             = "MJLog"
+	TypeMJLogFile         = "MJLogFile"
+	TypePlayer            = "Player"
+	TypeRoom              = "Room"
+	TypeRound             = "Round"
+	TypeWind              = "Wind"
 )
 
 // CompressedMJLogMutation represents an operation that mutates the CompressedMJLog nodes in the graph.
@@ -263,17 +261,17 @@ func (m *CompressedMJLogMutation) ResetSize() {
 	m.addsize = nil
 }
 
-// SetMjlogFilesID sets the "mjlog_files" edge to the MJLogFileCompressed entity by id.
+// SetMjlogFilesID sets the "mjlog_files" edge to the MJLogFile entity by id.
 func (m *CompressedMJLogMutation) SetMjlogFilesID(id uuid.UUID) {
 	m.mjlog_files = &id
 }
 
-// ClearMjlogFiles clears the "mjlog_files" edge to the MJLogFileCompressed entity.
+// ClearMjlogFiles clears the "mjlog_files" edge to the MJLogFile entity.
 func (m *CompressedMJLogMutation) ClearMjlogFiles() {
 	m.clearedmjlog_files = true
 }
 
-// MjlogFilesCleared reports if the "mjlog_files" edge to the MJLogFileCompressed entity was cleared.
+// MjlogFilesCleared reports if the "mjlog_files" edge to the MJLogFile entity was cleared.
 func (m *CompressedMJLogMutation) MjlogFilesCleared() bool {
 	return m.clearedmjlog_files
 }
@@ -3037,14 +3035,16 @@ func (m *MJLogMutation) ResetEdge(name string) error {
 // MJLogFileMutation represents an operation that mutates the MJLogFile nodes in the graph.
 type MJLogFileMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *uuid.UUID
-	name          *string
-	clearedFields map[string]struct{}
-	done          bool
-	oldValue      func(context.Context) (*MJLogFile, error)
-	predicates    []predicate.MJLogFile
+	op                            Op
+	typ                           string
+	id                            *uuid.UUID
+	name                          *string
+	clearedFields                 map[string]struct{}
+	compressed_mjlog_files        *uuid.UUID
+	clearedcompressed_mjlog_files bool
+	done                          bool
+	oldValue                      func(context.Context) (*MJLogFile, error)
+	predicates                    []predicate.MJLogFile
 }
 
 var _ ent.Mutation = (*MJLogFileMutation)(nil)
@@ -3187,6 +3187,45 @@ func (m *MJLogFileMutation) ResetName() {
 	m.name = nil
 }
 
+// SetCompressedMjlogFilesID sets the "compressed_mjlog_files" edge to the CompressedMJLog entity by id.
+func (m *MJLogFileMutation) SetCompressedMjlogFilesID(id uuid.UUID) {
+	m.compressed_mjlog_files = &id
+}
+
+// ClearCompressedMjlogFiles clears the "compressed_mjlog_files" edge to the CompressedMJLog entity.
+func (m *MJLogFileMutation) ClearCompressedMjlogFiles() {
+	m.clearedcompressed_mjlog_files = true
+}
+
+// CompressedMjlogFilesCleared reports if the "compressed_mjlog_files" edge to the CompressedMJLog entity was cleared.
+func (m *MJLogFileMutation) CompressedMjlogFilesCleared() bool {
+	return m.clearedcompressed_mjlog_files
+}
+
+// CompressedMjlogFilesID returns the "compressed_mjlog_files" edge ID in the mutation.
+func (m *MJLogFileMutation) CompressedMjlogFilesID() (id uuid.UUID, exists bool) {
+	if m.compressed_mjlog_files != nil {
+		return *m.compressed_mjlog_files, true
+	}
+	return
+}
+
+// CompressedMjlogFilesIDs returns the "compressed_mjlog_files" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// CompressedMjlogFilesID instead. It exists only for internal usage by the builders.
+func (m *MJLogFileMutation) CompressedMjlogFilesIDs() (ids []uuid.UUID) {
+	if id := m.compressed_mjlog_files; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetCompressedMjlogFiles resets all changes to the "compressed_mjlog_files" edge.
+func (m *MJLogFileMutation) ResetCompressedMjlogFiles() {
+	m.compressed_mjlog_files = nil
+	m.clearedcompressed_mjlog_files = false
+}
+
 // Where appends a list predicates to the MJLogFileMutation builder.
 func (m *MJLogFileMutation) Where(ps ...predicate.MJLogFile) {
 	m.predicates = append(m.predicates, ps...)
@@ -3305,19 +3344,28 @@ func (m *MJLogFileMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *MJLogFileMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.compressed_mjlog_files != nil {
+		edges = append(edges, mjlogfile.EdgeCompressedMjlogFiles)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *MJLogFileMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case mjlogfile.EdgeCompressedMjlogFiles:
+		if id := m.compressed_mjlog_files; id != nil {
+			return []ent.Value{*id}
+		}
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *MJLogFileMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
 	return edges
 }
 
@@ -3329,323 +3377,18 @@ func (m *MJLogFileMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *MJLogFileMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.clearedcompressed_mjlog_files {
+		edges = append(edges, mjlogfile.EdgeCompressedMjlogFiles)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *MJLogFileMutation) EdgeCleared(name string) bool {
-	return false
-}
-
-// ClearEdge clears the value of the edge with the given name. It returns an error
-// if that edge is not defined in the schema.
-func (m *MJLogFileMutation) ClearEdge(name string) error {
-	return fmt.Errorf("unknown MJLogFile unique edge %s", name)
-}
-
-// ResetEdge resets all changes to the edge with the given name in this mutation.
-// It returns an error if the edge is not defined in the schema.
-func (m *MJLogFileMutation) ResetEdge(name string) error {
-	return fmt.Errorf("unknown MJLogFile edge %s", name)
-}
-
-// MJLogFileCompressedMutation represents an operation that mutates the MJLogFileCompressed nodes in the graph.
-type MJLogFileCompressedMutation struct {
-	config
-	op                            Op
-	typ                           string
-	id                            *uuid.UUID
-	clearedFields                 map[string]struct{}
-	compressed_mjlog_files        *uuid.UUID
-	clearedcompressed_mjlog_files bool
-	done                          bool
-	oldValue                      func(context.Context) (*MJLogFileCompressed, error)
-	predicates                    []predicate.MJLogFileCompressed
-}
-
-var _ ent.Mutation = (*MJLogFileCompressedMutation)(nil)
-
-// mjlogfilecompressedOption allows management of the mutation configuration using functional options.
-type mjlogfilecompressedOption func(*MJLogFileCompressedMutation)
-
-// newMJLogFileCompressedMutation creates new mutation for the MJLogFileCompressed entity.
-func newMJLogFileCompressedMutation(c config, op Op, opts ...mjlogfilecompressedOption) *MJLogFileCompressedMutation {
-	m := &MJLogFileCompressedMutation{
-		config:        c,
-		op:            op,
-		typ:           TypeMJLogFileCompressed,
-		clearedFields: make(map[string]struct{}),
-	}
-	for _, opt := range opts {
-		opt(m)
-	}
-	return m
-}
-
-// withMJLogFileCompressedID sets the ID field of the mutation.
-func withMJLogFileCompressedID(id uuid.UUID) mjlogfilecompressedOption {
-	return func(m *MJLogFileCompressedMutation) {
-		var (
-			err   error
-			once  sync.Once
-			value *MJLogFileCompressed
-		)
-		m.oldValue = func(ctx context.Context) (*MJLogFileCompressed, error) {
-			once.Do(func() {
-				if m.done {
-					err = errors.New("querying old values post mutation is not allowed")
-				} else {
-					value, err = m.Client().MJLogFileCompressed.Get(ctx, id)
-				}
-			})
-			return value, err
-		}
-		m.id = &id
-	}
-}
-
-// withMJLogFileCompressed sets the old MJLogFileCompressed of the mutation.
-func withMJLogFileCompressed(node *MJLogFileCompressed) mjlogfilecompressedOption {
-	return func(m *MJLogFileCompressedMutation) {
-		m.oldValue = func(context.Context) (*MJLogFileCompressed, error) {
-			return node, nil
-		}
-		m.id = &node.ID
-	}
-}
-
-// Client returns a new `ent.Client` from the mutation. If the mutation was
-// executed in a transaction (ent.Tx), a transactional client is returned.
-func (m MJLogFileCompressedMutation) Client() *Client {
-	client := &Client{config: m.config}
-	client.init()
-	return client
-}
-
-// Tx returns an `ent.Tx` for mutations that were executed in transactions;
-// it returns an error otherwise.
-func (m MJLogFileCompressedMutation) Tx() (*Tx, error) {
-	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, errors.New("ent: mutation is not running in a transaction")
-	}
-	tx := &Tx{config: m.config}
-	tx.init()
-	return tx, nil
-}
-
-// SetID sets the value of the id field. Note that this
-// operation is only accepted on creation of MJLogFileCompressed entities.
-func (m *MJLogFileCompressedMutation) SetID(id uuid.UUID) {
-	m.id = &id
-}
-
-// ID returns the ID value in the mutation. Note that the ID is only available
-// if it was provided to the builder or after it was returned from the database.
-func (m *MJLogFileCompressedMutation) ID() (id uuid.UUID, exists bool) {
-	if m.id == nil {
-		return
-	}
-	return *m.id, true
-}
-
-// IDs queries the database and returns the entity ids that match the mutation's predicate.
-// That means, if the mutation is applied within a transaction with an isolation level such
-// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
-// or updated by the mutation.
-func (m *MJLogFileCompressedMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	switch {
-	case m.op.Is(OpUpdateOne | OpDeleteOne):
-		id, exists := m.ID()
-		if exists {
-			return []uuid.UUID{id}, nil
-		}
-		fallthrough
-	case m.op.Is(OpUpdate | OpDelete):
-		return m.Client().MJLogFileCompressed.Query().Where(m.predicates...).IDs(ctx)
-	default:
-		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
-	}
-}
-
-// SetCompressedMjlogFilesID sets the "compressed_mjlog_files" edge to the CompressedMJLog entity by id.
-func (m *MJLogFileCompressedMutation) SetCompressedMjlogFilesID(id uuid.UUID) {
-	m.compressed_mjlog_files = &id
-}
-
-// ClearCompressedMjlogFiles clears the "compressed_mjlog_files" edge to the CompressedMJLog entity.
-func (m *MJLogFileCompressedMutation) ClearCompressedMjlogFiles() {
-	m.clearedcompressed_mjlog_files = true
-}
-
-// CompressedMjlogFilesCleared reports if the "compressed_mjlog_files" edge to the CompressedMJLog entity was cleared.
-func (m *MJLogFileCompressedMutation) CompressedMjlogFilesCleared() bool {
-	return m.clearedcompressed_mjlog_files
-}
-
-// CompressedMjlogFilesID returns the "compressed_mjlog_files" edge ID in the mutation.
-func (m *MJLogFileCompressedMutation) CompressedMjlogFilesID() (id uuid.UUID, exists bool) {
-	if m.compressed_mjlog_files != nil {
-		return *m.compressed_mjlog_files, true
-	}
-	return
-}
-
-// CompressedMjlogFilesIDs returns the "compressed_mjlog_files" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// CompressedMjlogFilesID instead. It exists only for internal usage by the builders.
-func (m *MJLogFileCompressedMutation) CompressedMjlogFilesIDs() (ids []uuid.UUID) {
-	if id := m.compressed_mjlog_files; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetCompressedMjlogFiles resets all changes to the "compressed_mjlog_files" edge.
-func (m *MJLogFileCompressedMutation) ResetCompressedMjlogFiles() {
-	m.compressed_mjlog_files = nil
-	m.clearedcompressed_mjlog_files = false
-}
-
-// Where appends a list predicates to the MJLogFileCompressedMutation builder.
-func (m *MJLogFileCompressedMutation) Where(ps ...predicate.MJLogFileCompressed) {
-	m.predicates = append(m.predicates, ps...)
-}
-
-// Op returns the operation name.
-func (m *MJLogFileCompressedMutation) Op() Op {
-	return m.op
-}
-
-// Type returns the node type of this mutation (MJLogFileCompressed).
-func (m *MJLogFileCompressedMutation) Type() string {
-	return m.typ
-}
-
-// Fields returns all fields that were changed during this mutation. Note that in
-// order to get all numeric fields that were incremented/decremented, call
-// AddedFields().
-func (m *MJLogFileCompressedMutation) Fields() []string {
-	fields := make([]string, 0, 0)
-	return fields
-}
-
-// Field returns the value of a field with the given name. The second boolean
-// return value indicates that this field was not set, or was not defined in the
-// schema.
-func (m *MJLogFileCompressedMutation) Field(name string) (ent.Value, bool) {
-	return nil, false
-}
-
-// OldField returns the old value of the field from the database. An error is
-// returned if the mutation operation is not UpdateOne, or the query to the
-// database failed.
-func (m *MJLogFileCompressedMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
-	return nil, fmt.Errorf("unknown MJLogFileCompressed field %s", name)
-}
-
-// SetField sets the value of a field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *MJLogFileCompressedMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	}
-	return fmt.Errorf("unknown MJLogFileCompressed field %s", name)
-}
-
-// AddedFields returns all numeric fields that were incremented/decremented during
-// this mutation.
-func (m *MJLogFileCompressedMutation) AddedFields() []string {
-	return nil
-}
-
-// AddedField returns the numeric value that was incremented/decremented on a field
-// with the given name. The second boolean return value indicates that this field
-// was not set, or was not defined in the schema.
-func (m *MJLogFileCompressedMutation) AddedField(name string) (ent.Value, bool) {
-	return nil, false
-}
-
-// AddField adds the value to the field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *MJLogFileCompressedMutation) AddField(name string, value ent.Value) error {
-	return fmt.Errorf("unknown MJLogFileCompressed numeric field %s", name)
-}
-
-// ClearedFields returns all nullable fields that were cleared during this
-// mutation.
-func (m *MJLogFileCompressedMutation) ClearedFields() []string {
-	return nil
-}
-
-// FieldCleared returns a boolean indicating if a field with the given name was
-// cleared in this mutation.
-func (m *MJLogFileCompressedMutation) FieldCleared(name string) bool {
-	_, ok := m.clearedFields[name]
-	return ok
-}
-
-// ClearField clears the value of the field with the given name. It returns an
-// error if the field is not defined in the schema.
-func (m *MJLogFileCompressedMutation) ClearField(name string) error {
-	return fmt.Errorf("unknown MJLogFileCompressed nullable field %s", name)
-}
-
-// ResetField resets all changes in the mutation for the field with the given name.
-// It returns an error if the field is not defined in the schema.
-func (m *MJLogFileCompressedMutation) ResetField(name string) error {
-	return fmt.Errorf("unknown MJLogFileCompressed field %s", name)
-}
-
-// AddedEdges returns all edge names that were set/added in this mutation.
-func (m *MJLogFileCompressedMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.compressed_mjlog_files != nil {
-		edges = append(edges, mjlogfilecompressed.EdgeCompressedMjlogFiles)
-	}
-	return edges
-}
-
-// AddedIDs returns all IDs (to other nodes) that were added for the given edge
-// name in this mutation.
-func (m *MJLogFileCompressedMutation) AddedIDs(name string) []ent.Value {
-	switch name {
-	case mjlogfilecompressed.EdgeCompressedMjlogFiles:
-		if id := m.compressed_mjlog_files; id != nil {
-			return []ent.Value{*id}
-		}
-	}
-	return nil
-}
-
-// RemovedEdges returns all edge names that were removed in this mutation.
-func (m *MJLogFileCompressedMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
-	return edges
-}
-
-// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
-// the given name in this mutation.
-func (m *MJLogFileCompressedMutation) RemovedIDs(name string) []ent.Value {
-	return nil
-}
-
-// ClearedEdges returns all edge names that were cleared in this mutation.
-func (m *MJLogFileCompressedMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.clearedcompressed_mjlog_files {
-		edges = append(edges, mjlogfilecompressed.EdgeCompressedMjlogFiles)
-	}
-	return edges
-}
-
-// EdgeCleared returns a boolean which indicates if the edge with the given name
-// was cleared in this mutation.
-func (m *MJLogFileCompressedMutation) EdgeCleared(name string) bool {
-	switch name {
-	case mjlogfilecompressed.EdgeCompressedMjlogFiles:
+	case mjlogfile.EdgeCompressedMjlogFiles:
 		return m.clearedcompressed_mjlog_files
 	}
 	return false
@@ -3653,24 +3396,24 @@ func (m *MJLogFileCompressedMutation) EdgeCleared(name string) bool {
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
-func (m *MJLogFileCompressedMutation) ClearEdge(name string) error {
+func (m *MJLogFileMutation) ClearEdge(name string) error {
 	switch name {
-	case mjlogfilecompressed.EdgeCompressedMjlogFiles:
+	case mjlogfile.EdgeCompressedMjlogFiles:
 		m.ClearCompressedMjlogFiles()
 		return nil
 	}
-	return fmt.Errorf("unknown MJLogFileCompressed unique edge %s", name)
+	return fmt.Errorf("unknown MJLogFile unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
-func (m *MJLogFileCompressedMutation) ResetEdge(name string) error {
+func (m *MJLogFileMutation) ResetEdge(name string) error {
 	switch name {
-	case mjlogfilecompressed.EdgeCompressedMjlogFiles:
+	case mjlogfile.EdgeCompressedMjlogFiles:
 		m.ResetCompressedMjlogFiles()
 		return nil
 	}
-	return fmt.Errorf("unknown MJLogFileCompressed edge %s", name)
+	return fmt.Errorf("unknown MJLogFile edge %s", name)
 }
 
 // PlayerMutation represents an operation that mutates the Player nodes in the graph.

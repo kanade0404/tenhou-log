@@ -2,6 +2,7 @@ package schema
 
 import (
 	"entgo.io/ent"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 )
@@ -22,7 +23,7 @@ func (MJLogFile) Fields() []ent.Field {
 // Edges of the MJLogFile.
 func (MJLogFile) Edges() []ent.Edge {
 	return []ent.Edge{
-		//edge.From("compressed_mjlog_files", MJLogFileCompressed.Type).Ref("mjlog_files"),
+		edge.From("compressed_mjlog_files", CompressedMJLog.Type).Ref("mjlog_files").Unique().Required(),
 		//edge.To("mjlogs", MJLog.Type).Unique(),
 	}
 }

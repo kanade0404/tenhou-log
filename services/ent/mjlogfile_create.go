@@ -10,6 +10,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/compressedmjlog"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlogfile"
 )
 
@@ -38,6 +39,17 @@ func (mlfc *MJLogFileCreate) SetNillableID(u *uuid.UUID) *MJLogFileCreate {
 		mlfc.SetID(*u)
 	}
 	return mlfc
+}
+
+// SetCompressedMjlogFilesID sets the "compressed_mjlog_files" edge to the CompressedMJLog entity by ID.
+func (mlfc *MJLogFileCreate) SetCompressedMjlogFilesID(id uuid.UUID) *MJLogFileCreate {
+	mlfc.mutation.SetCompressedMjlogFilesID(id)
+	return mlfc
+}
+
+// SetCompressedMjlogFiles sets the "compressed_mjlog_files" edge to the CompressedMJLog entity.
+func (mlfc *MJLogFileCreate) SetCompressedMjlogFiles(c *CompressedMJLog) *MJLogFileCreate {
+	return mlfc.SetCompressedMjlogFilesID(c.ID)
 }
 
 // Mutation returns the MJLogFileMutation object of the builder.
@@ -128,6 +140,9 @@ func (mlfc *MJLogFileCreate) check() error {
 	if _, ok := mlfc.mutation.Name(); !ok {
 		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "MJLogFile.name"`)}
 	}
+	if _, ok := mlfc.mutation.CompressedMjlogFilesID(); !ok {
+		return &ValidationError{Name: "compressed_mjlog_files", err: errors.New(`ent: missing required edge "MJLogFile.compressed_mjlog_files"`)}
+	}
 	return nil
 }
 
@@ -167,6 +182,26 @@ func (mlfc *MJLogFileCreate) createSpec() (*MJLogFile, *sqlgraph.CreateSpec) {
 	if value, ok := mlfc.mutation.Name(); ok {
 		_spec.SetField(mjlogfile.FieldName, field.TypeString, value)
 		_node.Name = value
+	}
+	if nodes := mlfc.mutation.CompressedMjlogFilesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   mjlogfile.CompressedMjlogFilesTable,
+			Columns: []string{mjlogfile.CompressedMjlogFilesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: compressedmjlog.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.compressed_mj_log_mjlog_files = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

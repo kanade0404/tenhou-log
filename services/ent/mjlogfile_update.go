@@ -10,6 +10,8 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/compressedmjlog"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlogfile"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 )
@@ -27,9 +29,26 @@ func (mlfu *MJLogFileUpdate) Where(ps ...predicate.MJLogFile) *MJLogFileUpdate {
 	return mlfu
 }
 
+// SetCompressedMjlogFilesID sets the "compressed_mjlog_files" edge to the CompressedMJLog entity by ID.
+func (mlfu *MJLogFileUpdate) SetCompressedMjlogFilesID(id uuid.UUID) *MJLogFileUpdate {
+	mlfu.mutation.SetCompressedMjlogFilesID(id)
+	return mlfu
+}
+
+// SetCompressedMjlogFiles sets the "compressed_mjlog_files" edge to the CompressedMJLog entity.
+func (mlfu *MJLogFileUpdate) SetCompressedMjlogFiles(c *CompressedMJLog) *MJLogFileUpdate {
+	return mlfu.SetCompressedMjlogFilesID(c.ID)
+}
+
 // Mutation returns the MJLogFileMutation object of the builder.
 func (mlfu *MJLogFileUpdate) Mutation() *MJLogFileMutation {
 	return mlfu.mutation
+}
+
+// ClearCompressedMjlogFiles clears the "compressed_mjlog_files" edge to the CompressedMJLog entity.
+func (mlfu *MJLogFileUpdate) ClearCompressedMjlogFiles() *MJLogFileUpdate {
+	mlfu.mutation.ClearCompressedMjlogFiles()
+	return mlfu
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -39,12 +58,18 @@ func (mlfu *MJLogFileUpdate) Save(ctx context.Context) (int, error) {
 		affected int
 	)
 	if len(mlfu.hooks) == 0 {
+		if err = mlfu.check(); err != nil {
+			return 0, err
+		}
 		affected, err = mlfu.sqlSave(ctx)
 	} else {
 		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 			mutation, ok := m.(*MJLogFileMutation)
 			if !ok {
 				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			if err = mlfu.check(); err != nil {
+				return 0, err
 			}
 			mlfu.mutation = mutation
 			affected, err = mlfu.sqlSave(ctx)
@@ -86,6 +111,14 @@ func (mlfu *MJLogFileUpdate) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (mlfu *MJLogFileUpdate) check() error {
+	if _, ok := mlfu.mutation.CompressedMjlogFilesID(); mlfu.mutation.CompressedMjlogFilesCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "MJLogFile.compressed_mjlog_files"`)
+	}
+	return nil
+}
+
 func (mlfu *MJLogFileUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	_spec := &sqlgraph.UpdateSpec{
 		Node: &sqlgraph.NodeSpec{
@@ -103,6 +136,41 @@ func (mlfu *MJLogFileUpdate) sqlSave(ctx context.Context) (n int, err error) {
 				ps[i](selector)
 			}
 		}
+	}
+	if mlfu.mutation.CompressedMjlogFilesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   mjlogfile.CompressedMjlogFilesTable,
+			Columns: []string{mjlogfile.CompressedMjlogFilesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: compressedmjlog.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := mlfu.mutation.CompressedMjlogFilesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   mjlogfile.CompressedMjlogFilesTable,
+			Columns: []string{mjlogfile.CompressedMjlogFilesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: compressedmjlog.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, mlfu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -123,9 +191,26 @@ type MJLogFileUpdateOne struct {
 	mutation *MJLogFileMutation
 }
 
+// SetCompressedMjlogFilesID sets the "compressed_mjlog_files" edge to the CompressedMJLog entity by ID.
+func (mlfuo *MJLogFileUpdateOne) SetCompressedMjlogFilesID(id uuid.UUID) *MJLogFileUpdateOne {
+	mlfuo.mutation.SetCompressedMjlogFilesID(id)
+	return mlfuo
+}
+
+// SetCompressedMjlogFiles sets the "compressed_mjlog_files" edge to the CompressedMJLog entity.
+func (mlfuo *MJLogFileUpdateOne) SetCompressedMjlogFiles(c *CompressedMJLog) *MJLogFileUpdateOne {
+	return mlfuo.SetCompressedMjlogFilesID(c.ID)
+}
+
 // Mutation returns the MJLogFileMutation object of the builder.
 func (mlfuo *MJLogFileUpdateOne) Mutation() *MJLogFileMutation {
 	return mlfuo.mutation
+}
+
+// ClearCompressedMjlogFiles clears the "compressed_mjlog_files" edge to the CompressedMJLog entity.
+func (mlfuo *MJLogFileUpdateOne) ClearCompressedMjlogFiles() *MJLogFileUpdateOne {
+	mlfuo.mutation.ClearCompressedMjlogFiles()
+	return mlfuo
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -142,12 +227,18 @@ func (mlfuo *MJLogFileUpdateOne) Save(ctx context.Context) (*MJLogFile, error) {
 		node *MJLogFile
 	)
 	if len(mlfuo.hooks) == 0 {
+		if err = mlfuo.check(); err != nil {
+			return nil, err
+		}
 		node, err = mlfuo.sqlSave(ctx)
 	} else {
 		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 			mutation, ok := m.(*MJLogFileMutation)
 			if !ok {
 				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			if err = mlfuo.check(); err != nil {
+				return nil, err
 			}
 			mlfuo.mutation = mutation
 			node, err = mlfuo.sqlSave(ctx)
@@ -195,6 +286,14 @@ func (mlfuo *MJLogFileUpdateOne) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (mlfuo *MJLogFileUpdateOne) check() error {
+	if _, ok := mlfuo.mutation.CompressedMjlogFilesID(); mlfuo.mutation.CompressedMjlogFilesCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "MJLogFile.compressed_mjlog_files"`)
+	}
+	return nil
+}
+
 func (mlfuo *MJLogFileUpdateOne) sqlSave(ctx context.Context) (_node *MJLogFile, err error) {
 	_spec := &sqlgraph.UpdateSpec{
 		Node: &sqlgraph.NodeSpec{
@@ -229,6 +328,41 @@ func (mlfuo *MJLogFileUpdateOne) sqlSave(ctx context.Context) (_node *MJLogFile,
 				ps[i](selector)
 			}
 		}
+	}
+	if mlfuo.mutation.CompressedMjlogFilesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   mjlogfile.CompressedMjlogFilesTable,
+			Columns: []string{mjlogfile.CompressedMjlogFilesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: compressedmjlog.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := mlfuo.mutation.CompressedMjlogFilesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   mjlogfile.CompressedMjlogFilesTable,
+			Columns: []string{mjlogfile.CompressedMjlogFilesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: compressedmjlog.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &MJLogFile{config: mlfuo.config}
 	_spec.Assign = _node.assignValues

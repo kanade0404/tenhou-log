@@ -32,8 +32,6 @@ type Tx struct {
 	MJLog *MJLogClient
 	// MJLogFile is the client for interacting with the MJLogFile builders.
 	MJLogFile *MJLogFileClient
-	// MJLogFileCompressed is the client for interacting with the MJLogFileCompressed builders.
-	MJLogFileCompressed *MJLogFileCompressedClient
 	// Player is the client for interacting with the Player builders.
 	Player *PlayerClient
 	// Room is the client for interacting with the Room builders.
@@ -183,7 +181,6 @@ func (tx *Tx) init() {
 	tx.Hand = NewHandClient(tx.config)
 	tx.MJLog = NewMJLogClient(tx.config)
 	tx.MJLogFile = NewMJLogFileClient(tx.config)
-	tx.MJLogFileCompressed = NewMJLogFileCompressedClient(tx.config)
 	tx.Player = NewPlayerClient(tx.config)
 	tx.Room = NewRoomClient(tx.config)
 	tx.Round = NewRoundClient(tx.config)
