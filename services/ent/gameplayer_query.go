@@ -12,6 +12,8 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/dan"
+	"github.com/kanade0404/tenhou-log/services/ent/game"
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayer"
 	"github.com/kanade0404/tenhou-log/services/ent/player"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
@@ -26,7 +28,10 @@ type GamePlayerQuery struct {
 	order       []OrderFunc
 	fields      []string
 	predicates  []predicate.GamePlayer
+	withGames   *GameQuery
 	withPlayers *PlayerQuery
+	withDans    *DanQuery
+	withFKs     bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -63,6 +68,28 @@ func (gpq *GamePlayerQuery) Order(o ...OrderFunc) *GamePlayerQuery {
 	return gpq
 }
 
+// QueryGames chains the current query on the "games" edge.
+func (gpq *GamePlayerQuery) QueryGames() *GameQuery {
+	query := &GameQuery{config: gpq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := gpq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := gpq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(gameplayer.Table, gameplayer.FieldID, selector),
+			sqlgraph.To(game.Table, game.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, gameplayer.GamesTable, gameplayer.GamesPrimaryKey...),
+		)
+		fromU = sqlgraph.SetNeighbors(gpq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
 // QueryPlayers chains the current query on the "players" edge.
 func (gpq *GamePlayerQuery) QueryPlayers() *PlayerQuery {
 	query := &PlayerQuery{config: gpq.config}
@@ -77,7 +104,29 @@ func (gpq *GamePlayerQuery) QueryPlayers() *PlayerQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(gameplayer.Table, gameplayer.FieldID, selector),
 			sqlgraph.To(player.Table, player.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, gameplayer.PlayersTable, gameplayer.PlayersPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2O, true, gameplayer.PlayersTable, gameplayer.PlayersColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(gpq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryDans chains the current query on the "dans" edge.
+func (gpq *GamePlayerQuery) QueryDans() *DanQuery {
+	query := &DanQuery{config: gpq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := gpq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := gpq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(gameplayer.Table, gameplayer.FieldID, selector),
+			sqlgraph.To(dan.Table, dan.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, gameplayer.DansTable, gameplayer.DansColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(gpq.driver.Dialect(), step)
 		return fromU, nil
@@ -266,12 +315,25 @@ func (gpq *GamePlayerQuery) Clone() *GamePlayerQuery {
 		offset:      gpq.offset,
 		order:       append([]OrderFunc{}, gpq.order...),
 		predicates:  append([]predicate.GamePlayer{}, gpq.predicates...),
+		withGames:   gpq.withGames.Clone(),
 		withPlayers: gpq.withPlayers.Clone(),
+		withDans:    gpq.withDans.Clone(),
 		// clone intermediate query.
 		sql:    gpq.sql.Clone(),
 		path:   gpq.path,
 		unique: gpq.unique,
 	}
+}
+
+// WithGames tells the query-builder to eager-load the nodes that are connected to
+// the "games" edge. The optional arguments are used to configure the query builder of the edge.
+func (gpq *GamePlayerQuery) WithGames(opts ...func(*GameQuery)) *GamePlayerQuery {
+	query := &GameQuery{config: gpq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	gpq.withGames = query
+	return gpq
 }
 
 // WithPlayers tells the query-builder to eager-load the nodes that are connected to
@@ -282,6 +344,17 @@ func (gpq *GamePlayerQuery) WithPlayers(opts ...func(*PlayerQuery)) *GamePlayerQ
 		opt(query)
 	}
 	gpq.withPlayers = query
+	return gpq
+}
+
+// WithDans tells the query-builder to eager-load the nodes that are connected to
+// the "dans" edge. The optional arguments are used to configure the query builder of the edge.
+func (gpq *GamePlayerQuery) WithDans(opts ...func(*DanQuery)) *GamePlayerQuery {
+	query := &DanQuery{config: gpq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	gpq.withDans = query
 	return gpq
 }
 
@@ -359,11 +432,20 @@ func (gpq *GamePlayerQuery) prepareQuery(ctx context.Context) error {
 func (gpq *GamePlayerQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*GamePlayer, error) {
 	var (
 		nodes       = []*GamePlayer{}
+		withFKs     = gpq.withFKs
 		_spec       = gpq.querySpec()
-		loadedTypes = [1]bool{
+		loadedTypes = [3]bool{
+			gpq.withGames != nil,
 			gpq.withPlayers != nil,
+			gpq.withDans != nil,
 		}
 	)
+	if gpq.withPlayers != nil || gpq.withDans != nil {
+		withFKs = true
+	}
+	if withFKs {
+		_spec.Node.Columns = append(_spec.Node.Columns, gameplayer.ForeignKeys...)
+	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*GamePlayer).scanValues(nil, columns)
 	}
@@ -382,17 +464,29 @@ func (gpq *GamePlayerQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := gpq.withGames; query != nil {
+		if err := gpq.loadGames(ctx, query, nodes,
+			func(n *GamePlayer) { n.Edges.Games = []*Game{} },
+			func(n *GamePlayer, e *Game) { n.Edges.Games = append(n.Edges.Games, e) }); err != nil {
+			return nil, err
+		}
+	}
 	if query := gpq.withPlayers; query != nil {
-		if err := gpq.loadPlayers(ctx, query, nodes,
-			func(n *GamePlayer) { n.Edges.Players = []*Player{} },
-			func(n *GamePlayer, e *Player) { n.Edges.Players = append(n.Edges.Players, e) }); err != nil {
+		if err := gpq.loadPlayers(ctx, query, nodes, nil,
+			func(n *GamePlayer, e *Player) { n.Edges.Players = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := gpq.withDans; query != nil {
+		if err := gpq.loadDans(ctx, query, nodes, nil,
+			func(n *GamePlayer, e *Dan) { n.Edges.Dans = e }); err != nil {
 			return nil, err
 		}
 	}
 	return nodes, nil
 }
 
-func (gpq *GamePlayerQuery) loadPlayers(ctx context.Context, query *PlayerQuery, nodes []*GamePlayer, init func(*GamePlayer), assign func(*GamePlayer, *Player)) error {
+func (gpq *GamePlayerQuery) loadGames(ctx context.Context, query *GameQuery, nodes []*GamePlayer, init func(*GamePlayer), assign func(*GamePlayer, *Game)) error {
 	edgeIDs := make([]driver.Value, len(nodes))
 	byID := make(map[uuid.UUID]*GamePlayer)
 	nids := make(map[uuid.UUID]map[*GamePlayer]struct{})
@@ -404,11 +498,11 @@ func (gpq *GamePlayerQuery) loadPlayers(ctx context.Context, query *PlayerQuery,
 		}
 	}
 	query.Where(func(s *sql.Selector) {
-		joinT := sql.Table(gameplayer.PlayersTable)
-		s.Join(joinT).On(s.C(player.FieldID), joinT.C(gameplayer.PlayersPrimaryKey[0]))
-		s.Where(sql.InValues(joinT.C(gameplayer.PlayersPrimaryKey[1]), edgeIDs...))
+		joinT := sql.Table(gameplayer.GamesTable)
+		s.Join(joinT).On(s.C(game.FieldID), joinT.C(gameplayer.GamesPrimaryKey[0]))
+		s.Where(sql.InValues(joinT.C(gameplayer.GamesPrimaryKey[1]), edgeIDs...))
 		columns := s.SelectedColumns()
-		s.Select(joinT.C(gameplayer.PlayersPrimaryKey[1]))
+		s.Select(joinT.C(gameplayer.GamesPrimaryKey[1]))
 		s.AppendSelect(columns...)
 		s.SetDistinct(false)
 	})
@@ -442,10 +536,68 @@ func (gpq *GamePlayerQuery) loadPlayers(ctx context.Context, query *PlayerQuery,
 	for _, n := range neighbors {
 		nodes, ok := nids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected "players" node returned %v`, n.ID)
+			return fmt.Errorf(`unexpected "games" node returned %v`, n.ID)
 		}
 		for kn := range nodes {
 			assign(kn, n)
+		}
+	}
+	return nil
+}
+func (gpq *GamePlayerQuery) loadPlayers(ctx context.Context, query *PlayerQuery, nodes []*GamePlayer, init func(*GamePlayer), assign func(*GamePlayer, *Player)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*GamePlayer)
+	for i := range nodes {
+		if nodes[i].player_game_players == nil {
+			continue
+		}
+		fk := *nodes[i].player_game_players
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	query.Where(player.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "player_game_players" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (gpq *GamePlayerQuery) loadDans(ctx context.Context, query *DanQuery, nodes []*GamePlayer, init func(*GamePlayer), assign func(*GamePlayer, *Dan)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*GamePlayer)
+	for i := range nodes {
+		if nodes[i].dan_game_players == nil {
+			continue
+		}
+		fk := *nodes[i].dan_game_players
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	query.Where(dan.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "dan_game_players" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
 		}
 	}
 	return nil

@@ -13,8 +13,17 @@ const (
 	FieldID = "oid"
 	// FieldName holds the string denoting the name field in the database.
 	FieldName = "name"
+	// EdgeGamePlayers holds the string denoting the game_players edge name in mutations.
+	EdgeGamePlayers = "game_players"
 	// Table holds the table name of the dan in the database.
 	Table = "dans"
+	// GamePlayersTable is the table that holds the game_players relation/edge.
+	GamePlayersTable = "game_players"
+	// GamePlayersInverseTable is the table name for the GamePlayer entity.
+	// It exists in this package in order to avoid circular dependency with the "gameplayer" package.
+	GamePlayersInverseTable = "game_players"
+	// GamePlayersColumn is the table column denoting the game_players relation/edge.
+	GamePlayersColumn = "dan_game_players"
 )
 
 // Columns holds all SQL columns for dan fields.

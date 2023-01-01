@@ -4,6 +4,7 @@ package dan
 
 import (
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 )
@@ -182,6 +183,34 @@ func NameEqualFold(v string) predicate.Dan {
 func NameContainsFold(v string) predicate.Dan {
 	return predicate.Dan(func(s *sql.Selector) {
 		s.Where(sql.ContainsFold(s.C(FieldName), v))
+	})
+}
+
+// HasGamePlayers applies the HasEdge predicate on the "game_players" edge.
+func HasGamePlayers() predicate.Dan {
+	return predicate.Dan(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(GamePlayersTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, GamePlayersTable, GamePlayersColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasGamePlayersWith applies the HasEdge predicate on the "game_players" edge with a given conditions (other predicates).
+func HasGamePlayersWith(preds ...predicate.GamePlayer) predicate.Dan {
+	return predicate.Dan(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(GamePlayersInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, GamePlayersTable, GamePlayersColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
 	})
 }
 

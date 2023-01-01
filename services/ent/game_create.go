@@ -6,11 +6,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/game"
+	"github.com/kanade0404/tenhou-log/services/ent/gameplayer"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlog"
 	"github.com/kanade0404/tenhou-log/services/ent/room"
 )
@@ -25,6 +27,12 @@ type GameCreate struct {
 // SetName sets the "name" field.
 func (gc *GameCreate) SetName(s string) *GameCreate {
 	gc.mutation.SetName(s)
+	return gc
+}
+
+// SetStartedAt sets the "started_at" field.
+func (gc *GameCreate) SetStartedAt(t time.Time) *GameCreate {
+	gc.mutation.SetStartedAt(t)
 	return gc
 }
 
@@ -61,19 +69,38 @@ func (gc *GameCreate) SetMjlogs(m *MJLog) *GameCreate {
 	return gc.SetMjlogsID(m.ID)
 }
 
-// AddRoomIDs adds the "rooms" edge to the Room entity by IDs.
-func (gc *GameCreate) AddRoomIDs(ids ...uuid.UUID) *GameCreate {
-	gc.mutation.AddRoomIDs(ids...)
+// AddGamePlayerIDs adds the "game_players" edge to the GamePlayer entity by IDs.
+func (gc *GameCreate) AddGamePlayerIDs(ids ...uuid.UUID) *GameCreate {
+	gc.mutation.AddGamePlayerIDs(ids...)
 	return gc
 }
 
-// AddRooms adds the "rooms" edges to the Room entity.
-func (gc *GameCreate) AddRooms(r ...*Room) *GameCreate {
-	ids := make([]uuid.UUID, len(r))
-	for i := range r {
-		ids[i] = r[i].ID
+// AddGamePlayers adds the "game_players" edges to the GamePlayer entity.
+func (gc *GameCreate) AddGamePlayers(g ...*GamePlayer) *GameCreate {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
 	}
-	return gc.AddRoomIDs(ids...)
+	return gc.AddGamePlayerIDs(ids...)
+}
+
+// SetRoomsID sets the "rooms" edge to the Room entity by ID.
+func (gc *GameCreate) SetRoomsID(id uuid.UUID) *GameCreate {
+	gc.mutation.SetRoomsID(id)
+	return gc
+}
+
+// SetNillableRoomsID sets the "rooms" edge to the Room entity by ID if the given value is not nil.
+func (gc *GameCreate) SetNillableRoomsID(id *uuid.UUID) *GameCreate {
+	if id != nil {
+		gc = gc.SetRoomsID(*id)
+	}
+	return gc
+}
+
+// SetRooms sets the "rooms" edge to the Room entity.
+func (gc *GameCreate) SetRooms(r *Room) *GameCreate {
+	return gc.SetRoomsID(r.ID)
 }
 
 // Mutation returns the GameMutation object of the builder.
@@ -164,6 +191,9 @@ func (gc *GameCreate) check() error {
 	if _, ok := gc.mutation.Name(); !ok {
 		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "Game.name"`)}
 	}
+	if _, ok := gc.mutation.StartedAt(); !ok {
+		return &ValidationError{Name: "started_at", err: errors.New(`ent: missing required field "Game.started_at"`)}
+	}
 	return nil
 }
 
@@ -204,6 +234,10 @@ func (gc *GameCreate) createSpec() (*Game, *sqlgraph.CreateSpec) {
 		_spec.SetField(game.FieldName, field.TypeString, value)
 		_node.Name = value
 	}
+	if value, ok := gc.mutation.StartedAt(); ok {
+		_spec.SetField(game.FieldStartedAt, field.TypeTime, value)
+		_node.StartedAt = value
+	}
 	if nodes := gc.mutation.MjlogsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2O,
@@ -223,12 +257,31 @@ func (gc *GameCreate) createSpec() (*Game, *sqlgraph.CreateSpec) {
 		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := gc.mutation.RoomsIDs(); len(nodes) > 0 {
+	if nodes := gc.mutation.GamePlayersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   game.GamePlayersTable,
+			Columns: game.GamePlayersPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: gameplayer.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := gc.mutation.RoomsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
 			Inverse: true,
 			Table:   game.RoomsTable,
-			Columns: game.RoomsPrimaryKey,
+			Columns: []string{game.RoomsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -240,6 +293,7 @@ func (gc *GameCreate) createSpec() (*Game, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
+		_node.room_games = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

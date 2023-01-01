@@ -5,7 +5,6 @@ package ent
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
@@ -21,8 +20,6 @@ type Player struct {
 	Name string `json:"name,omitempty"`
 	// Sex holds the value of the "sex" field.
 	Sex string `json:"sex,omitempty"`
-	// CreatedAt holds the value of the "created_at" field.
-	CreatedAt time.Time `json:"created_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the PlayerQuery when eager-loading is set.
 	Edges PlayerEdges `json:"edges"`
@@ -53,8 +50,6 @@ func (*Player) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case player.FieldName, player.FieldSex:
 			values[i] = new(sql.NullString)
-		case player.FieldCreatedAt:
-			values[i] = new(sql.NullTime)
 		case player.FieldID:
 			values[i] = new(uuid.UUID)
 		default:
@@ -89,12 +84,6 @@ func (pl *Player) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field sex", values[i])
 			} else if value.Valid {
 				pl.Sex = value.String
-			}
-		case player.FieldCreatedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field created_at", values[i])
-			} else if value.Valid {
-				pl.CreatedAt = value.Time
 			}
 		}
 	}
@@ -134,9 +123,6 @@ func (pl *Player) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("sex=")
 	builder.WriteString(pl.Sex)
-	builder.WriteString(", ")
-	builder.WriteString("created_at=")
-	builder.WriteString(pl.CreatedAt.Format(time.ANSIC))
 	builder.WriteByte(')')
 	return builder.String()
 }

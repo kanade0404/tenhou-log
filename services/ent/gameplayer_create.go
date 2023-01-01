@@ -10,6 +10,8 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/dan"
+	"github.com/kanade0404/tenhou-log/services/ent/game"
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayer"
 	"github.com/kanade0404/tenhou-log/services/ent/player"
 )
@@ -27,6 +29,12 @@ func (gpc *GamePlayerCreate) SetRate(f float64) *GamePlayerCreate {
 	return gpc
 }
 
+// SetStartPosition sets the "start_position" field.
+func (gpc *GamePlayerCreate) SetStartPosition(s string) *GamePlayerCreate {
+	gpc.mutation.SetStartPosition(s)
+	return gpc
+}
+
 // SetID sets the "id" field.
 func (gpc *GamePlayerCreate) SetID(u uuid.UUID) *GamePlayerCreate {
 	gpc.mutation.SetID(u)
@@ -41,19 +49,57 @@ func (gpc *GamePlayerCreate) SetNillableID(u *uuid.UUID) *GamePlayerCreate {
 	return gpc
 }
 
-// AddPlayerIDs adds the "players" edge to the Player entity by IDs.
-func (gpc *GamePlayerCreate) AddPlayerIDs(ids ...uuid.UUID) *GamePlayerCreate {
-	gpc.mutation.AddPlayerIDs(ids...)
+// AddGameIDs adds the "games" edge to the Game entity by IDs.
+func (gpc *GamePlayerCreate) AddGameIDs(ids ...uuid.UUID) *GamePlayerCreate {
+	gpc.mutation.AddGameIDs(ids...)
 	return gpc
 }
 
-// AddPlayers adds the "players" edges to the Player entity.
-func (gpc *GamePlayerCreate) AddPlayers(p ...*Player) *GamePlayerCreate {
-	ids := make([]uuid.UUID, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+// AddGames adds the "games" edges to the Game entity.
+func (gpc *GamePlayerCreate) AddGames(g ...*Game) *GamePlayerCreate {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
 	}
-	return gpc.AddPlayerIDs(ids...)
+	return gpc.AddGameIDs(ids...)
+}
+
+// SetPlayersID sets the "players" edge to the Player entity by ID.
+func (gpc *GamePlayerCreate) SetPlayersID(id uuid.UUID) *GamePlayerCreate {
+	gpc.mutation.SetPlayersID(id)
+	return gpc
+}
+
+// SetNillablePlayersID sets the "players" edge to the Player entity by ID if the given value is not nil.
+func (gpc *GamePlayerCreate) SetNillablePlayersID(id *uuid.UUID) *GamePlayerCreate {
+	if id != nil {
+		gpc = gpc.SetPlayersID(*id)
+	}
+	return gpc
+}
+
+// SetPlayers sets the "players" edge to the Player entity.
+func (gpc *GamePlayerCreate) SetPlayers(p *Player) *GamePlayerCreate {
+	return gpc.SetPlayersID(p.ID)
+}
+
+// SetDansID sets the "dans" edge to the Dan entity by ID.
+func (gpc *GamePlayerCreate) SetDansID(id uuid.UUID) *GamePlayerCreate {
+	gpc.mutation.SetDansID(id)
+	return gpc
+}
+
+// SetNillableDansID sets the "dans" edge to the Dan entity by ID if the given value is not nil.
+func (gpc *GamePlayerCreate) SetNillableDansID(id *uuid.UUID) *GamePlayerCreate {
+	if id != nil {
+		gpc = gpc.SetDansID(*id)
+	}
+	return gpc
+}
+
+// SetDans sets the "dans" edge to the Dan entity.
+func (gpc *GamePlayerCreate) SetDans(d *Dan) *GamePlayerCreate {
+	return gpc.SetDansID(d.ID)
 }
 
 // Mutation returns the GamePlayerMutation object of the builder.
@@ -144,6 +190,14 @@ func (gpc *GamePlayerCreate) check() error {
 	if _, ok := gpc.mutation.Rate(); !ok {
 		return &ValidationError{Name: "rate", err: errors.New(`ent: missing required field "GamePlayer.rate"`)}
 	}
+	if _, ok := gpc.mutation.StartPosition(); !ok {
+		return &ValidationError{Name: "start_position", err: errors.New(`ent: missing required field "GamePlayer.start_position"`)}
+	}
+	if v, ok := gpc.mutation.StartPosition(); ok {
+		if err := gameplayer.StartPositionValidator(v); err != nil {
+			return &ValidationError{Name: "start_position", err: fmt.Errorf(`ent: validator failed for field "GamePlayer.start_position": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -184,12 +238,35 @@ func (gpc *GamePlayerCreate) createSpec() (*GamePlayer, *sqlgraph.CreateSpec) {
 		_spec.SetField(gameplayer.FieldRate, field.TypeFloat64, value)
 		_node.Rate = value
 	}
-	if nodes := gpc.mutation.PlayersIDs(); len(nodes) > 0 {
+	if value, ok := gpc.mutation.StartPosition(); ok {
+		_spec.SetField(gameplayer.FieldStartPosition, field.TypeString, value)
+		_node.StartPosition = value
+	}
+	if nodes := gpc.mutation.GamesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
 			Inverse: true,
+			Table:   gameplayer.GamesTable,
+			Columns: gameplayer.GamesPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: game.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := gpc.mutation.PlayersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
 			Table:   gameplayer.PlayersTable,
-			Columns: gameplayer.PlayersPrimaryKey,
+			Columns: []string{gameplayer.PlayersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -201,6 +278,27 @@ func (gpc *GamePlayerCreate) createSpec() (*GamePlayer, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
+		_node.player_game_players = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := gpc.mutation.DansIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   gameplayer.DansTable,
+			Columns: []string{gameplayer.DansColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: dan.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.dan_game_players = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

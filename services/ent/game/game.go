@@ -13,8 +13,12 @@ const (
 	FieldID = "oid"
 	// FieldName holds the string denoting the name field in the database.
 	FieldName = "name"
+	// FieldStartedAt holds the string denoting the started_at field in the database.
+	FieldStartedAt = "started_at"
 	// EdgeMjlogs holds the string denoting the mjlogs edge name in mutations.
 	EdgeMjlogs = "mjlogs"
+	// EdgeGamePlayers holds the string denoting the game_players edge name in mutations.
+	EdgeGamePlayers = "game_players"
 	// EdgeRooms holds the string denoting the rooms edge name in mutations.
 	EdgeRooms = "rooms"
 	// Table holds the table name of the game in the database.
@@ -26,29 +30,48 @@ const (
 	MjlogsInverseTable = "mj_logs"
 	// MjlogsColumn is the table column denoting the mjlogs relation/edge.
 	MjlogsColumn = "game_mjlogs"
-	// RoomsTable is the table that holds the rooms relation/edge. The primary key declared below.
-	RoomsTable = "room_games"
+	// GamePlayersTable is the table that holds the game_players relation/edge. The primary key declared below.
+	GamePlayersTable = "game_game_players"
+	// GamePlayersInverseTable is the table name for the GamePlayer entity.
+	// It exists in this package in order to avoid circular dependency with the "gameplayer" package.
+	GamePlayersInverseTable = "game_players"
+	// RoomsTable is the table that holds the rooms relation/edge.
+	RoomsTable = "games"
 	// RoomsInverseTable is the table name for the Room entity.
 	// It exists in this package in order to avoid circular dependency with the "room" package.
 	RoomsInverseTable = "rooms"
+	// RoomsColumn is the table column denoting the rooms relation/edge.
+	RoomsColumn = "room_games"
 )
 
 // Columns holds all SQL columns for game fields.
 var Columns = []string{
 	FieldID,
 	FieldName,
+	FieldStartedAt,
+}
+
+// ForeignKeys holds the SQL foreign-keys that are owned by the "games"
+// table and are not defined as standalone fields in the schema.
+var ForeignKeys = []string{
+	"room_games",
 }
 
 var (
-	// RoomsPrimaryKey and RoomsColumn2 are the table columns denoting the
-	// primary key for the rooms relation (M2M).
-	RoomsPrimaryKey = []string{"room_id", "game_id"}
+	// GamePlayersPrimaryKey and GamePlayersColumn2 are the table columns denoting the
+	// primary key for the game_players relation (M2M).
+	GamePlayersPrimaryKey = []string{"game_id", "game_player_id"}
 )
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
+			return true
+		}
+	}
+	for i := range ForeignKeys {
+		if column == ForeignKeys[i] {
 			return true
 		}
 	}

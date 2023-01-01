@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -31,20 +30,6 @@ func (pc *PlayerCreate) SetName(s string) *PlayerCreate {
 // SetSex sets the "sex" field.
 func (pc *PlayerCreate) SetSex(s string) *PlayerCreate {
 	pc.mutation.SetSex(s)
-	return pc
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (pc *PlayerCreate) SetCreatedAt(t time.Time) *PlayerCreate {
-	pc.mutation.SetCreatedAt(t)
-	return pc
-}
-
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (pc *PlayerCreate) SetNillableCreatedAt(t *time.Time) *PlayerCreate {
-	if t != nil {
-		pc.SetCreatedAt(*t)
-	}
 	return pc
 }
 
@@ -154,10 +139,6 @@ func (pc *PlayerCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (pc *PlayerCreate) defaults() {
-	if _, ok := pc.mutation.CreatedAt(); !ok {
-		v := player.DefaultCreatedAt()
-		pc.mutation.SetCreatedAt(v)
-	}
 	if _, ok := pc.mutation.ID(); !ok {
 		v := player.DefaultID()
 		pc.mutation.SetID(v)
@@ -176,9 +157,6 @@ func (pc *PlayerCreate) check() error {
 		if err := player.SexValidator(v); err != nil {
 			return &ValidationError{Name: "sex", err: fmt.Errorf(`ent: validator failed for field "Player.sex": %w`, err)}
 		}
-	}
-	if _, ok := pc.mutation.CreatedAt(); !ok {
-		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Player.created_at"`)}
 	}
 	return nil
 }
@@ -224,16 +202,12 @@ func (pc *PlayerCreate) createSpec() (*Player, *sqlgraph.CreateSpec) {
 		_spec.SetField(player.FieldSex, field.TypeString, value)
 		_node.Sex = value
 	}
-	if value, ok := pc.mutation.CreatedAt(); ok {
-		_spec.SetField(player.FieldCreatedAt, field.TypeTime, value)
-		_node.CreatedAt = value
-	}
 	if nodes := pc.mutation.GamePlayersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2M,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
 			Table:   player.GamePlayersTable,
-			Columns: player.GamePlayersPrimaryKey,
+			Columns: []string{player.GamePlayersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

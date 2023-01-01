@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/game"
+	"github.com/kanade0404/tenhou-log/services/ent/gameplayer"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlog"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 	"github.com/kanade0404/tenhou-log/services/ent/room"
@@ -49,19 +50,38 @@ func (gu *GameUpdate) SetMjlogs(m *MJLog) *GameUpdate {
 	return gu.SetMjlogsID(m.ID)
 }
 
-// AddRoomIDs adds the "rooms" edge to the Room entity by IDs.
-func (gu *GameUpdate) AddRoomIDs(ids ...uuid.UUID) *GameUpdate {
-	gu.mutation.AddRoomIDs(ids...)
+// AddGamePlayerIDs adds the "game_players" edge to the GamePlayer entity by IDs.
+func (gu *GameUpdate) AddGamePlayerIDs(ids ...uuid.UUID) *GameUpdate {
+	gu.mutation.AddGamePlayerIDs(ids...)
 	return gu
 }
 
-// AddRooms adds the "rooms" edges to the Room entity.
-func (gu *GameUpdate) AddRooms(r ...*Room) *GameUpdate {
-	ids := make([]uuid.UUID, len(r))
-	for i := range r {
-		ids[i] = r[i].ID
+// AddGamePlayers adds the "game_players" edges to the GamePlayer entity.
+func (gu *GameUpdate) AddGamePlayers(g ...*GamePlayer) *GameUpdate {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
 	}
-	return gu.AddRoomIDs(ids...)
+	return gu.AddGamePlayerIDs(ids...)
+}
+
+// SetRoomsID sets the "rooms" edge to the Room entity by ID.
+func (gu *GameUpdate) SetRoomsID(id uuid.UUID) *GameUpdate {
+	gu.mutation.SetRoomsID(id)
+	return gu
+}
+
+// SetNillableRoomsID sets the "rooms" edge to the Room entity by ID if the given value is not nil.
+func (gu *GameUpdate) SetNillableRoomsID(id *uuid.UUID) *GameUpdate {
+	if id != nil {
+		gu = gu.SetRoomsID(*id)
+	}
+	return gu
+}
+
+// SetRooms sets the "rooms" edge to the Room entity.
+func (gu *GameUpdate) SetRooms(r *Room) *GameUpdate {
+	return gu.SetRoomsID(r.ID)
 }
 
 // Mutation returns the GameMutation object of the builder.
@@ -75,25 +95,31 @@ func (gu *GameUpdate) ClearMjlogs() *GameUpdate {
 	return gu
 }
 
-// ClearRooms clears all "rooms" edges to the Room entity.
+// ClearGamePlayers clears all "game_players" edges to the GamePlayer entity.
+func (gu *GameUpdate) ClearGamePlayers() *GameUpdate {
+	gu.mutation.ClearGamePlayers()
+	return gu
+}
+
+// RemoveGamePlayerIDs removes the "game_players" edge to GamePlayer entities by IDs.
+func (gu *GameUpdate) RemoveGamePlayerIDs(ids ...uuid.UUID) *GameUpdate {
+	gu.mutation.RemoveGamePlayerIDs(ids...)
+	return gu
+}
+
+// RemoveGamePlayers removes "game_players" edges to GamePlayer entities.
+func (gu *GameUpdate) RemoveGamePlayers(g ...*GamePlayer) *GameUpdate {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return gu.RemoveGamePlayerIDs(ids...)
+}
+
+// ClearRooms clears the "rooms" edge to the Room entity.
 func (gu *GameUpdate) ClearRooms() *GameUpdate {
 	gu.mutation.ClearRooms()
 	return gu
-}
-
-// RemoveRoomIDs removes the "rooms" edge to Room entities by IDs.
-func (gu *GameUpdate) RemoveRoomIDs(ids ...uuid.UUID) *GameUpdate {
-	gu.mutation.RemoveRoomIDs(ids...)
-	return gu
-}
-
-// RemoveRooms removes "rooms" edges to Room entities.
-func (gu *GameUpdate) RemoveRooms(r ...*Room) *GameUpdate {
-	ids := make([]uuid.UUID, len(r))
-	for i := range r {
-		ids[i] = r[i].ID
-	}
-	return gu.RemoveRoomIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -203,33 +229,33 @@ func (gu *GameUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if gu.mutation.RoomsCleared() {
+	if gu.mutation.GamePlayersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   game.RoomsTable,
-			Columns: game.RoomsPrimaryKey,
+			Inverse: false,
+			Table:   game.GamePlayersTable,
+			Columns: game.GamePlayersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
-					Column: room.FieldID,
+					Column: gameplayer.FieldID,
 				},
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := gu.mutation.RemovedRoomsIDs(); len(nodes) > 0 && !gu.mutation.RoomsCleared() {
+	if nodes := gu.mutation.RemovedGamePlayersIDs(); len(nodes) > 0 && !gu.mutation.GamePlayersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   game.RoomsTable,
-			Columns: game.RoomsPrimaryKey,
+			Inverse: false,
+			Table:   game.GamePlayersTable,
+			Columns: game.GamePlayersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
-					Column: room.FieldID,
+					Column: gameplayer.FieldID,
 				},
 			},
 		}
@@ -238,12 +264,47 @@ func (gu *GameUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := gu.mutation.RoomsIDs(); len(nodes) > 0 {
+	if nodes := gu.mutation.GamePlayersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   game.GamePlayersTable,
+			Columns: game.GamePlayersPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: gameplayer.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if gu.mutation.RoomsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
 			Inverse: true,
 			Table:   game.RoomsTable,
-			Columns: game.RoomsPrimaryKey,
+			Columns: []string{game.RoomsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: room.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := gu.mutation.RoomsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   game.RoomsTable,
+			Columns: []string{game.RoomsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -295,19 +356,38 @@ func (guo *GameUpdateOne) SetMjlogs(m *MJLog) *GameUpdateOne {
 	return guo.SetMjlogsID(m.ID)
 }
 
-// AddRoomIDs adds the "rooms" edge to the Room entity by IDs.
-func (guo *GameUpdateOne) AddRoomIDs(ids ...uuid.UUID) *GameUpdateOne {
-	guo.mutation.AddRoomIDs(ids...)
+// AddGamePlayerIDs adds the "game_players" edge to the GamePlayer entity by IDs.
+func (guo *GameUpdateOne) AddGamePlayerIDs(ids ...uuid.UUID) *GameUpdateOne {
+	guo.mutation.AddGamePlayerIDs(ids...)
 	return guo
 }
 
-// AddRooms adds the "rooms" edges to the Room entity.
-func (guo *GameUpdateOne) AddRooms(r ...*Room) *GameUpdateOne {
-	ids := make([]uuid.UUID, len(r))
-	for i := range r {
-		ids[i] = r[i].ID
+// AddGamePlayers adds the "game_players" edges to the GamePlayer entity.
+func (guo *GameUpdateOne) AddGamePlayers(g ...*GamePlayer) *GameUpdateOne {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
 	}
-	return guo.AddRoomIDs(ids...)
+	return guo.AddGamePlayerIDs(ids...)
+}
+
+// SetRoomsID sets the "rooms" edge to the Room entity by ID.
+func (guo *GameUpdateOne) SetRoomsID(id uuid.UUID) *GameUpdateOne {
+	guo.mutation.SetRoomsID(id)
+	return guo
+}
+
+// SetNillableRoomsID sets the "rooms" edge to the Room entity by ID if the given value is not nil.
+func (guo *GameUpdateOne) SetNillableRoomsID(id *uuid.UUID) *GameUpdateOne {
+	if id != nil {
+		guo = guo.SetRoomsID(*id)
+	}
+	return guo
+}
+
+// SetRooms sets the "rooms" edge to the Room entity.
+func (guo *GameUpdateOne) SetRooms(r *Room) *GameUpdateOne {
+	return guo.SetRoomsID(r.ID)
 }
 
 // Mutation returns the GameMutation object of the builder.
@@ -321,25 +401,31 @@ func (guo *GameUpdateOne) ClearMjlogs() *GameUpdateOne {
 	return guo
 }
 
-// ClearRooms clears all "rooms" edges to the Room entity.
+// ClearGamePlayers clears all "game_players" edges to the GamePlayer entity.
+func (guo *GameUpdateOne) ClearGamePlayers() *GameUpdateOne {
+	guo.mutation.ClearGamePlayers()
+	return guo
+}
+
+// RemoveGamePlayerIDs removes the "game_players" edge to GamePlayer entities by IDs.
+func (guo *GameUpdateOne) RemoveGamePlayerIDs(ids ...uuid.UUID) *GameUpdateOne {
+	guo.mutation.RemoveGamePlayerIDs(ids...)
+	return guo
+}
+
+// RemoveGamePlayers removes "game_players" edges to GamePlayer entities.
+func (guo *GameUpdateOne) RemoveGamePlayers(g ...*GamePlayer) *GameUpdateOne {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return guo.RemoveGamePlayerIDs(ids...)
+}
+
+// ClearRooms clears the "rooms" edge to the Room entity.
 func (guo *GameUpdateOne) ClearRooms() *GameUpdateOne {
 	guo.mutation.ClearRooms()
 	return guo
-}
-
-// RemoveRoomIDs removes the "rooms" edge to Room entities by IDs.
-func (guo *GameUpdateOne) RemoveRoomIDs(ids ...uuid.UUID) *GameUpdateOne {
-	guo.mutation.RemoveRoomIDs(ids...)
-	return guo
-}
-
-// RemoveRooms removes "rooms" edges to Room entities.
-func (guo *GameUpdateOne) RemoveRooms(r ...*Room) *GameUpdateOne {
-	ids := make([]uuid.UUID, len(r))
-	for i := range r {
-		ids[i] = r[i].ID
-	}
-	return guo.RemoveRoomIDs(ids...)
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -479,33 +565,33 @@ func (guo *GameUpdateOne) sqlSave(ctx context.Context) (_node *Game, err error) 
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if guo.mutation.RoomsCleared() {
+	if guo.mutation.GamePlayersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   game.RoomsTable,
-			Columns: game.RoomsPrimaryKey,
+			Inverse: false,
+			Table:   game.GamePlayersTable,
+			Columns: game.GamePlayersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
-					Column: room.FieldID,
+					Column: gameplayer.FieldID,
 				},
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := guo.mutation.RemovedRoomsIDs(); len(nodes) > 0 && !guo.mutation.RoomsCleared() {
+	if nodes := guo.mutation.RemovedGamePlayersIDs(); len(nodes) > 0 && !guo.mutation.GamePlayersCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
-			Inverse: true,
-			Table:   game.RoomsTable,
-			Columns: game.RoomsPrimaryKey,
+			Inverse: false,
+			Table:   game.GamePlayersTable,
+			Columns: game.GamePlayersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
-					Column: room.FieldID,
+					Column: gameplayer.FieldID,
 				},
 			},
 		}
@@ -514,12 +600,47 @@ func (guo *GameUpdateOne) sqlSave(ctx context.Context) (_node *Game, err error) 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := guo.mutation.RoomsIDs(); len(nodes) > 0 {
+	if nodes := guo.mutation.GamePlayersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   game.GamePlayersTable,
+			Columns: game.GamePlayersPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: gameplayer.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if guo.mutation.RoomsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
 			Inverse: true,
 			Table:   game.RoomsTable,
-			Columns: game.RoomsPrimaryKey,
+			Columns: []string{game.RoomsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: room.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := guo.mutation.RoomsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   game.RoomsTable,
+			Columns: []string{game.RoomsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

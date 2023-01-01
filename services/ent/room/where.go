@@ -192,7 +192,7 @@ func HasGames() predicate.Room {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
 			sqlgraph.To(GamesTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, GamesTable, GamesPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.O2M, false, GamesTable, GamesColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
@@ -204,7 +204,7 @@ func HasGamesWith(preds ...predicate.Game) predicate.Room {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
 			sqlgraph.To(GamesInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, GamesTable, GamesPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.O2M, false, GamesTable, GamesColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

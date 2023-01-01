@@ -5,11 +5,13 @@ package ent
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/game"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlog"
+	"github.com/kanade0404/tenhou-log/services/ent/room"
 )
 
 // Game is the model entity for the Game schema.
@@ -19,20 +21,25 @@ type Game struct {
 	ID uuid.UUID `json:"id,omitempty"`
 	// Name holds the value of the "name" field.
 	Name string `json:"name,omitempty"`
+	// StartedAt holds the value of the "started_at" field.
+	StartedAt time.Time `json:"started_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the GameQuery when eager-loading is set.
-	Edges GameEdges `json:"edges"`
+	Edges      GameEdges `json:"edges"`
+	room_games *uuid.UUID
 }
 
 // GameEdges holds the relations/edges for other nodes in the graph.
 type GameEdges struct {
 	// Mjlogs holds the value of the mjlogs edge.
 	Mjlogs *MJLog `json:"mjlogs,omitempty"`
+	// GamePlayers holds the value of the game_players edge.
+	GamePlayers []*GamePlayer `json:"game_players,omitempty"`
 	// Rooms holds the value of the rooms edge.
-	Rooms []*Room `json:"rooms,omitempty"`
+	Rooms *Room `json:"rooms,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [3]bool
 }
 
 // MjlogsOrErr returns the Mjlogs value or an error if the edge
@@ -48,10 +55,23 @@ func (e GameEdges) MjlogsOrErr() (*MJLog, error) {
 	return nil, &NotLoadedError{edge: "mjlogs"}
 }
 
-// RoomsOrErr returns the Rooms value or an error if the edge
+// GamePlayersOrErr returns the GamePlayers value or an error if the edge
 // was not loaded in eager-loading.
-func (e GameEdges) RoomsOrErr() ([]*Room, error) {
+func (e GameEdges) GamePlayersOrErr() ([]*GamePlayer, error) {
 	if e.loadedTypes[1] {
+		return e.GamePlayers, nil
+	}
+	return nil, &NotLoadedError{edge: "game_players"}
+}
+
+// RoomsOrErr returns the Rooms value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e GameEdges) RoomsOrErr() (*Room, error) {
+	if e.loadedTypes[2] {
+		if e.Rooms == nil {
+			// Edge was loaded but was not found.
+			return nil, &NotFoundError{label: room.Label}
+		}
 		return e.Rooms, nil
 	}
 	return nil, &NotLoadedError{edge: "rooms"}
@@ -64,8 +84,12 @@ func (*Game) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case game.FieldName:
 			values[i] = new(sql.NullString)
+		case game.FieldStartedAt:
+			values[i] = new(sql.NullTime)
 		case game.FieldID:
 			values[i] = new(uuid.UUID)
+		case game.ForeignKeys[0]: // room_games
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Game", columns[i])
 		}
@@ -93,6 +117,19 @@ func (ga *Game) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				ga.Name = value.String
 			}
+		case game.FieldStartedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field started_at", values[i])
+			} else if value.Valid {
+				ga.StartedAt = value.Time
+			}
+		case game.ForeignKeys[0]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field room_games", values[i])
+			} else if value.Valid {
+				ga.room_games = new(uuid.UUID)
+				*ga.room_games = *value.S.(*uuid.UUID)
+			}
 		}
 	}
 	return nil
@@ -101,6 +138,11 @@ func (ga *Game) assignValues(columns []string, values []any) error {
 // QueryMjlogs queries the "mjlogs" edge of the Game entity.
 func (ga *Game) QueryMjlogs() *MJLogQuery {
 	return (&GameClient{config: ga.config}).QueryMjlogs(ga)
+}
+
+// QueryGamePlayers queries the "game_players" edge of the Game entity.
+func (ga *Game) QueryGamePlayers() *GamePlayerQuery {
+	return (&GameClient{config: ga.config}).QueryGamePlayers(ga)
 }
 
 // QueryRooms queries the "rooms" edge of the Game entity.
@@ -133,6 +175,9 @@ func (ga *Game) String() string {
 	builder.WriteString(fmt.Sprintf("id=%v, ", ga.ID))
 	builder.WriteString("name=")
 	builder.WriteString(ga.Name)
+	builder.WriteString(", ")
+	builder.WriteString("started_at=")
+	builder.WriteString(ga.StartedAt.Format(time.ANSIC))
 	builder.WriteByte(')')
 	return builder.String()
 }

@@ -10,7 +10,9 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/dan"
+	"github.com/kanade0404/tenhou-log/services/ent/gameplayer"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 )
 
@@ -27,9 +29,45 @@ func (du *DanUpdate) Where(ps ...predicate.Dan) *DanUpdate {
 	return du
 }
 
+// AddGamePlayerIDs adds the "game_players" edge to the GamePlayer entity by IDs.
+func (du *DanUpdate) AddGamePlayerIDs(ids ...uuid.UUID) *DanUpdate {
+	du.mutation.AddGamePlayerIDs(ids...)
+	return du
+}
+
+// AddGamePlayers adds the "game_players" edges to the GamePlayer entity.
+func (du *DanUpdate) AddGamePlayers(g ...*GamePlayer) *DanUpdate {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return du.AddGamePlayerIDs(ids...)
+}
+
 // Mutation returns the DanMutation object of the builder.
 func (du *DanUpdate) Mutation() *DanMutation {
 	return du.mutation
+}
+
+// ClearGamePlayers clears all "game_players" edges to the GamePlayer entity.
+func (du *DanUpdate) ClearGamePlayers() *DanUpdate {
+	du.mutation.ClearGamePlayers()
+	return du
+}
+
+// RemoveGamePlayerIDs removes the "game_players" edge to GamePlayer entities by IDs.
+func (du *DanUpdate) RemoveGamePlayerIDs(ids ...uuid.UUID) *DanUpdate {
+	du.mutation.RemoveGamePlayerIDs(ids...)
+	return du
+}
+
+// RemoveGamePlayers removes "game_players" edges to GamePlayer entities.
+func (du *DanUpdate) RemoveGamePlayers(g ...*GamePlayer) *DanUpdate {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return du.RemoveGamePlayerIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -104,6 +142,60 @@ func (du *DanUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			}
 		}
 	}
+	if du.mutation.GamePlayersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   dan.GamePlayersTable,
+			Columns: []string{dan.GamePlayersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: gameplayer.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := du.mutation.RemovedGamePlayersIDs(); len(nodes) > 0 && !du.mutation.GamePlayersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   dan.GamePlayersTable,
+			Columns: []string{dan.GamePlayersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: gameplayer.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := du.mutation.GamePlayersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   dan.GamePlayersTable,
+			Columns: []string{dan.GamePlayersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: gameplayer.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, du.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{dan.Label}
@@ -123,9 +215,45 @@ type DanUpdateOne struct {
 	mutation *DanMutation
 }
 
+// AddGamePlayerIDs adds the "game_players" edge to the GamePlayer entity by IDs.
+func (duo *DanUpdateOne) AddGamePlayerIDs(ids ...uuid.UUID) *DanUpdateOne {
+	duo.mutation.AddGamePlayerIDs(ids...)
+	return duo
+}
+
+// AddGamePlayers adds the "game_players" edges to the GamePlayer entity.
+func (duo *DanUpdateOne) AddGamePlayers(g ...*GamePlayer) *DanUpdateOne {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return duo.AddGamePlayerIDs(ids...)
+}
+
 // Mutation returns the DanMutation object of the builder.
 func (duo *DanUpdateOne) Mutation() *DanMutation {
 	return duo.mutation
+}
+
+// ClearGamePlayers clears all "game_players" edges to the GamePlayer entity.
+func (duo *DanUpdateOne) ClearGamePlayers() *DanUpdateOne {
+	duo.mutation.ClearGamePlayers()
+	return duo
+}
+
+// RemoveGamePlayerIDs removes the "game_players" edge to GamePlayer entities by IDs.
+func (duo *DanUpdateOne) RemoveGamePlayerIDs(ids ...uuid.UUID) *DanUpdateOne {
+	duo.mutation.RemoveGamePlayerIDs(ids...)
+	return duo
+}
+
+// RemoveGamePlayers removes "game_players" edges to GamePlayer entities.
+func (duo *DanUpdateOne) RemoveGamePlayers(g ...*GamePlayer) *DanUpdateOne {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return duo.RemoveGamePlayerIDs(ids...)
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -229,6 +357,60 @@ func (duo *DanUpdateOne) sqlSave(ctx context.Context) (_node *Dan, err error) {
 				ps[i](selector)
 			}
 		}
+	}
+	if duo.mutation.GamePlayersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   dan.GamePlayersTable,
+			Columns: []string{dan.GamePlayersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: gameplayer.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := duo.mutation.RemovedGamePlayersIDs(); len(nodes) > 0 && !duo.mutation.GamePlayersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   dan.GamePlayersTable,
+			Columns: []string{dan.GamePlayersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: gameplayer.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := duo.mutation.GamePlayersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   dan.GamePlayersTable,
+			Columns: []string{dan.GamePlayersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: gameplayer.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &Dan{config: duo.config}
 	_spec.Assign = _node.assignValues

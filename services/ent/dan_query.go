@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -12,18 +13,20 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/dan"
+	"github.com/kanade0404/tenhou-log/services/ent/gameplayer"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 )
 
 // DanQuery is the builder for querying Dan entities.
 type DanQuery struct {
 	config
-	limit      *int
-	offset     *int
-	unique     *bool
-	order      []OrderFunc
-	fields     []string
-	predicates []predicate.Dan
+	limit           *int
+	offset          *int
+	unique          *bool
+	order           []OrderFunc
+	fields          []string
+	predicates      []predicate.Dan
+	withGamePlayers *GamePlayerQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -58,6 +61,28 @@ func (dq *DanQuery) Unique(unique bool) *DanQuery {
 func (dq *DanQuery) Order(o ...OrderFunc) *DanQuery {
 	dq.order = append(dq.order, o...)
 	return dq
+}
+
+// QueryGamePlayers chains the current query on the "game_players" edge.
+func (dq *DanQuery) QueryGamePlayers() *GamePlayerQuery {
+	query := &GamePlayerQuery{config: dq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := dq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := dq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(dan.Table, dan.FieldID, selector),
+			sqlgraph.To(gameplayer.Table, gameplayer.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, dan.GamePlayersTable, dan.GamePlayersColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(dq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first Dan entity from the query.
@@ -236,16 +261,28 @@ func (dq *DanQuery) Clone() *DanQuery {
 		return nil
 	}
 	return &DanQuery{
-		config:     dq.config,
-		limit:      dq.limit,
-		offset:     dq.offset,
-		order:      append([]OrderFunc{}, dq.order...),
-		predicates: append([]predicate.Dan{}, dq.predicates...),
+		config:          dq.config,
+		limit:           dq.limit,
+		offset:          dq.offset,
+		order:           append([]OrderFunc{}, dq.order...),
+		predicates:      append([]predicate.Dan{}, dq.predicates...),
+		withGamePlayers: dq.withGamePlayers.Clone(),
 		// clone intermediate query.
 		sql:    dq.sql.Clone(),
 		path:   dq.path,
 		unique: dq.unique,
 	}
+}
+
+// WithGamePlayers tells the query-builder to eager-load the nodes that are connected to
+// the "game_players" edge. The optional arguments are used to configure the query builder of the edge.
+func (dq *DanQuery) WithGamePlayers(opts ...func(*GamePlayerQuery)) *DanQuery {
+	query := &GamePlayerQuery{config: dq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	dq.withGamePlayers = query
+	return dq
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -321,8 +358,11 @@ func (dq *DanQuery) prepareQuery(ctx context.Context) error {
 
 func (dq *DanQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Dan, error) {
 	var (
-		nodes = []*Dan{}
-		_spec = dq.querySpec()
+		nodes       = []*Dan{}
+		_spec       = dq.querySpec()
+		loadedTypes = [1]bool{
+			dq.withGamePlayers != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Dan).scanValues(nil, columns)
@@ -330,6 +370,7 @@ func (dq *DanQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Dan, err
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &Dan{config: dq.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -341,7 +382,46 @@ func (dq *DanQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Dan, err
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := dq.withGamePlayers; query != nil {
+		if err := dq.loadGamePlayers(ctx, query, nodes,
+			func(n *Dan) { n.Edges.GamePlayers = []*GamePlayer{} },
+			func(n *Dan, e *GamePlayer) { n.Edges.GamePlayers = append(n.Edges.GamePlayers, e) }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (dq *DanQuery) loadGamePlayers(ctx context.Context, query *GamePlayerQuery, nodes []*Dan, init func(*Dan), assign func(*Dan, *GamePlayer)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Dan)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.GamePlayer(func(s *sql.Selector) {
+		s.Where(sql.InValues(dan.GamePlayersColumn, fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.dan_game_players
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "dan_game_players" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "dan_game_players" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
 }
 
 func (dq *DanQuery) sqlCount(ctx context.Context) (int, error) {

@@ -35,23 +35,50 @@ var (
 	GamesColumns = []*schema.Column{
 		{Name: "oid", Type: field.TypeUUID},
 		{Name: "name", Type: field.TypeString, Unique: true},
+		{Name: "started_at", Type: field.TypeTime},
+		{Name: "room_games", Type: field.TypeUUID, Nullable: true},
 	}
 	// GamesTable holds the schema information for the "games" table.
 	GamesTable = &schema.Table{
 		Name:       "games",
 		Columns:    GamesColumns,
 		PrimaryKey: []*schema.Column{GamesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "games_rooms_games",
+				Columns:    []*schema.Column{GamesColumns[3]},
+				RefColumns: []*schema.Column{RoomsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
 	}
 	// GamePlayersColumns holds the columns for the "game_players" table.
 	GamePlayersColumns = []*schema.Column{
 		{Name: "oid", Type: field.TypeUUID},
 		{Name: "rate", Type: field.TypeFloat64},
+		{Name: "start_position", Type: field.TypeString},
+		{Name: "dan_game_players", Type: field.TypeUUID, Nullable: true},
+		{Name: "player_game_players", Type: field.TypeUUID, Nullable: true},
 	}
 	// GamePlayersTable holds the schema information for the "game_players" table.
 	GamePlayersTable = &schema.Table{
 		Name:       "game_players",
 		Columns:    GamePlayersColumns,
 		PrimaryKey: []*schema.Column{GamePlayersColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "game_players_dans_game_players",
+				Columns:    []*schema.Column{GamePlayersColumns[3]},
+				RefColumns: []*schema.Column{DansColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "game_players_players_game_players",
+				Columns:    []*schema.Column{GamePlayersColumns[4]},
+				RefColumns: []*schema.Column{PlayersColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
 	}
 	// GamePlayerHandHaisColumns holds the columns for the "game_player_hand_hais" table.
 	GamePlayerHandHaisColumns = []*schema.Column{
@@ -148,7 +175,6 @@ var (
 		{Name: "oid", Type: field.TypeUUID},
 		{Name: "name", Type: field.TypeString, Unique: true},
 		{Name: "sex", Type: field.TypeString},
-		{Name: "created_at", Type: field.TypeTime},
 	}
 	// PlayersTable holds the schema information for the "players" table.
 	PlayersTable = &schema.Table{
@@ -188,52 +214,27 @@ var (
 		Columns:    WindsColumns,
 		PrimaryKey: []*schema.Column{WindsColumns[0]},
 	}
-	// PlayerGamePlayersColumns holds the columns for the "player_game_players" table.
-	PlayerGamePlayersColumns = []*schema.Column{
-		{Name: "player_id", Type: field.TypeUUID},
+	// GameGamePlayersColumns holds the columns for the "game_game_players" table.
+	GameGamePlayersColumns = []*schema.Column{
+		{Name: "game_id", Type: field.TypeUUID},
 		{Name: "game_player_id", Type: field.TypeUUID},
 	}
-	// PlayerGamePlayersTable holds the schema information for the "player_game_players" table.
-	PlayerGamePlayersTable = &schema.Table{
-		Name:       "player_game_players",
-		Columns:    PlayerGamePlayersColumns,
-		PrimaryKey: []*schema.Column{PlayerGamePlayersColumns[0], PlayerGamePlayersColumns[1]},
+	// GameGamePlayersTable holds the schema information for the "game_game_players" table.
+	GameGamePlayersTable = &schema.Table{
+		Name:       "game_game_players",
+		Columns:    GameGamePlayersColumns,
+		PrimaryKey: []*schema.Column{GameGamePlayersColumns[0], GameGamePlayersColumns[1]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "player_game_players_player_id",
-				Columns:    []*schema.Column{PlayerGamePlayersColumns[0]},
-				RefColumns: []*schema.Column{PlayersColumns[0]},
-				OnDelete:   schema.Cascade,
-			},
-			{
-				Symbol:     "player_game_players_game_player_id",
-				Columns:    []*schema.Column{PlayerGamePlayersColumns[1]},
-				RefColumns: []*schema.Column{GamePlayersColumns[0]},
-				OnDelete:   schema.Cascade,
-			},
-		},
-	}
-	// RoomGamesColumns holds the columns for the "room_games" table.
-	RoomGamesColumns = []*schema.Column{
-		{Name: "room_id", Type: field.TypeUUID},
-		{Name: "game_id", Type: field.TypeUUID},
-	}
-	// RoomGamesTable holds the schema information for the "room_games" table.
-	RoomGamesTable = &schema.Table{
-		Name:       "room_games",
-		Columns:    RoomGamesColumns,
-		PrimaryKey: []*schema.Column{RoomGamesColumns[0], RoomGamesColumns[1]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "room_games_room_id",
-				Columns:    []*schema.Column{RoomGamesColumns[0]},
-				RefColumns: []*schema.Column{RoomsColumns[0]},
-				OnDelete:   schema.Cascade,
-			},
-			{
-				Symbol:     "room_games_game_id",
-				Columns:    []*schema.Column{RoomGamesColumns[1]},
+				Symbol:     "game_game_players_game_id",
+				Columns:    []*schema.Column{GameGamePlayersColumns[0]},
 				RefColumns: []*schema.Column{GamesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "game_game_players_game_player_id",
+				Columns:    []*schema.Column{GameGamePlayersColumns[1]},
+				RefColumns: []*schema.Column{GamePlayersColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 		},
@@ -254,17 +255,17 @@ var (
 		RoomsTable,
 		RoundsTable,
 		WindsTable,
-		PlayerGamePlayersTable,
-		RoomGamesTable,
+		GameGamePlayersTable,
 	}
 )
 
 func init() {
+	GamesTable.ForeignKeys[0].RefTable = RoomsTable
+	GamePlayersTable.ForeignKeys[0].RefTable = DansTable
+	GamePlayersTable.ForeignKeys[1].RefTable = PlayersTable
 	MjLogsTable.ForeignKeys[0].RefTable = GamesTable
 	MjLogsTable.ForeignKeys[1].RefTable = MjLogFilesTable
 	MjLogFilesTable.ForeignKeys[0].RefTable = CompressedMjLogsTable
-	PlayerGamePlayersTable.ForeignKeys[0].RefTable = PlayersTable
-	PlayerGamePlayersTable.ForeignKeys[1].RefTable = GamePlayersTable
-	RoomGamesTable.ForeignKeys[0].RefTable = RoomsTable
-	RoomGamesTable.ForeignKeys[1].RefTable = GamesTable
+	GameGamePlayersTable.ForeignKeys[0].RefTable = GamesTable
+	GameGamePlayersTable.ForeignKeys[1].RefTable = GamePlayersTable
 }

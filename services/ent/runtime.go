@@ -45,6 +45,10 @@ func init() {
 	game.DefaultID = gameDescID.Default.(func() uuid.UUID)
 	gameplayerFields := schema.GamePlayer{}.Fields()
 	_ = gameplayerFields
+	// gameplayerDescStartPosition is the schema descriptor for start_position field.
+	gameplayerDescStartPosition := gameplayerFields[2].Descriptor()
+	// gameplayer.StartPositionValidator is a validator for the "start_position" field. It is called by the builders before save.
+	gameplayer.StartPositionValidator = gameplayerDescStartPosition.Validators[0].(func(string) error)
 	// gameplayerDescID is the schema descriptor for id field.
 	gameplayerDescID := gameplayerFields[0].Descriptor()
 	// gameplayer.DefaultID holds the default value on creation for the id field.
@@ -83,10 +87,6 @@ func init() {
 	playerDescSex := playerFields[2].Descriptor()
 	// player.SexValidator is a validator for the "sex" field. It is called by the builders before save.
 	player.SexValidator = playerDescSex.Validators[0].(func(string) error)
-	// playerDescCreatedAt is the schema descriptor for created_at field.
-	playerDescCreatedAt := playerFields[3].Descriptor()
-	// player.DefaultCreatedAt holds the default value on creation for the created_at field.
-	player.DefaultCreatedAt = playerDescCreatedAt.Default.(func() time.Time)
 	// playerDescID is the schema descriptor for id field.
 	playerDescID := playerFields[0].Descriptor()
 	// player.DefaultID holds the default value on creation for the id field.

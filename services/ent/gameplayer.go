@@ -8,7 +8,9 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/dan"
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayer"
+	"github.com/kanade0404/tenhou-log/services/ent/player"
 )
 
 // GamePlayer is the model entity for the GamePlayer schema.
@@ -18,27 +20,61 @@ type GamePlayer struct {
 	ID uuid.UUID `json:"id,omitempty"`
 	// Rate holds the value of the "rate" field.
 	Rate float64 `json:"rate,omitempty"`
+	// StartPosition holds the value of the "start_position" field.
+	StartPosition string `json:"start_position,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the GamePlayerQuery when eager-loading is set.
-	Edges GamePlayerEdges `json:"edges"`
+	Edges               GamePlayerEdges `json:"edges"`
+	dan_game_players    *uuid.UUID
+	player_game_players *uuid.UUID
 }
 
 // GamePlayerEdges holds the relations/edges for other nodes in the graph.
 type GamePlayerEdges struct {
+	// Games holds the value of the games edge.
+	Games []*Game `json:"games,omitempty"`
 	// Players holds the value of the players edge.
-	Players []*Player `json:"players,omitempty"`
+	Players *Player `json:"players,omitempty"`
+	// Dans holds the value of the dans edge.
+	Dans *Dan `json:"dans,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [3]bool
+}
+
+// GamesOrErr returns the Games value or an error if the edge
+// was not loaded in eager-loading.
+func (e GamePlayerEdges) GamesOrErr() ([]*Game, error) {
+	if e.loadedTypes[0] {
+		return e.Games, nil
+	}
+	return nil, &NotLoadedError{edge: "games"}
 }
 
 // PlayersOrErr returns the Players value or an error if the edge
-// was not loaded in eager-loading.
-func (e GamePlayerEdges) PlayersOrErr() ([]*Player, error) {
-	if e.loadedTypes[0] {
+// was not loaded in eager-loading, or loaded but was not found.
+func (e GamePlayerEdges) PlayersOrErr() (*Player, error) {
+	if e.loadedTypes[1] {
+		if e.Players == nil {
+			// Edge was loaded but was not found.
+			return nil, &NotFoundError{label: player.Label}
+		}
 		return e.Players, nil
 	}
 	return nil, &NotLoadedError{edge: "players"}
+}
+
+// DansOrErr returns the Dans value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e GamePlayerEdges) DansOrErr() (*Dan, error) {
+	if e.loadedTypes[2] {
+		if e.Dans == nil {
+			// Edge was loaded but was not found.
+			return nil, &NotFoundError{label: dan.Label}
+		}
+		return e.Dans, nil
+	}
+	return nil, &NotLoadedError{edge: "dans"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -48,8 +84,14 @@ func (*GamePlayer) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case gameplayer.FieldRate:
 			values[i] = new(sql.NullFloat64)
+		case gameplayer.FieldStartPosition:
+			values[i] = new(sql.NullString)
 		case gameplayer.FieldID:
 			values[i] = new(uuid.UUID)
+		case gameplayer.ForeignKeys[0]: // dan_game_players
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
+		case gameplayer.ForeignKeys[1]: // player_game_players
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type GamePlayer", columns[i])
 		}
@@ -77,14 +119,44 @@ func (gp *GamePlayer) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				gp.Rate = value.Float64
 			}
+		case gameplayer.FieldStartPosition:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field start_position", values[i])
+			} else if value.Valid {
+				gp.StartPosition = value.String
+			}
+		case gameplayer.ForeignKeys[0]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field dan_game_players", values[i])
+			} else if value.Valid {
+				gp.dan_game_players = new(uuid.UUID)
+				*gp.dan_game_players = *value.S.(*uuid.UUID)
+			}
+		case gameplayer.ForeignKeys[1]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field player_game_players", values[i])
+			} else if value.Valid {
+				gp.player_game_players = new(uuid.UUID)
+				*gp.player_game_players = *value.S.(*uuid.UUID)
+			}
 		}
 	}
 	return nil
 }
 
+// QueryGames queries the "games" edge of the GamePlayer entity.
+func (gp *GamePlayer) QueryGames() *GameQuery {
+	return (&GamePlayerClient{config: gp.config}).QueryGames(gp)
+}
+
 // QueryPlayers queries the "players" edge of the GamePlayer entity.
 func (gp *GamePlayer) QueryPlayers() *PlayerQuery {
 	return (&GamePlayerClient{config: gp.config}).QueryPlayers(gp)
+}
+
+// QueryDans queries the "dans" edge of the GamePlayer entity.
+func (gp *GamePlayer) QueryDans() *DanQuery {
+	return (&GamePlayerClient{config: gp.config}).QueryDans(gp)
 }
 
 // Update returns a builder for updating this GamePlayer.
@@ -112,6 +184,9 @@ func (gp *GamePlayer) String() string {
 	builder.WriteString(fmt.Sprintf("id=%v, ", gp.ID))
 	builder.WriteString("rate=")
 	builder.WriteString(fmt.Sprintf("%v", gp.Rate))
+	builder.WriteString(", ")
+	builder.WriteString("start_position=")
+	builder.WriteString(gp.StartPosition)
 	builder.WriteByte(')')
 	return builder.String()
 }

@@ -3,8 +3,6 @@
 package player
 
 import (
-	"time"
-
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
@@ -93,13 +91,6 @@ func Name(v string) predicate.Player {
 func Sex(v string) predicate.Player {
 	return predicate.Player(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldSex), v))
-	})
-}
-
-// CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
-func CreatedAt(v time.Time) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldCreatedAt), v))
 	})
 }
 
@@ -301,77 +292,13 @@ func SexContainsFold(v string) predicate.Player {
 	})
 }
 
-// CreatedAtEQ applies the EQ predicate on the "created_at" field.
-func CreatedAtEQ(v time.Time) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldCreatedAt), v))
-	})
-}
-
-// CreatedAtNEQ applies the NEQ predicate on the "created_at" field.
-func CreatedAtNEQ(v time.Time) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldCreatedAt), v))
-	})
-}
-
-// CreatedAtIn applies the In predicate on the "created_at" field.
-func CreatedAtIn(vs ...time.Time) predicate.Player {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldCreatedAt), v...))
-	})
-}
-
-// CreatedAtNotIn applies the NotIn predicate on the "created_at" field.
-func CreatedAtNotIn(vs ...time.Time) predicate.Player {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldCreatedAt), v...))
-	})
-}
-
-// CreatedAtGT applies the GT predicate on the "created_at" field.
-func CreatedAtGT(v time.Time) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldCreatedAt), v))
-	})
-}
-
-// CreatedAtGTE applies the GTE predicate on the "created_at" field.
-func CreatedAtGTE(v time.Time) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldCreatedAt), v))
-	})
-}
-
-// CreatedAtLT applies the LT predicate on the "created_at" field.
-func CreatedAtLT(v time.Time) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldCreatedAt), v))
-	})
-}
-
-// CreatedAtLTE applies the LTE predicate on the "created_at" field.
-func CreatedAtLTE(v time.Time) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldCreatedAt), v))
-	})
-}
-
 // HasGamePlayers applies the HasEdge predicate on the "game_players" edge.
 func HasGamePlayers() predicate.Player {
 	return predicate.Player(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
 			sqlgraph.To(GamePlayersTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, GamePlayersTable, GamePlayersPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.O2M, false, GamePlayersTable, GamePlayersColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
@@ -383,7 +310,7 @@ func HasGamePlayersWith(preds ...predicate.GamePlayer) predicate.Player {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
 			sqlgraph.To(GamePlayersInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, GamePlayersTable, GamePlayersPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.O2M, false, GamePlayersTable, GamePlayersColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

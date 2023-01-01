@@ -87,6 +87,13 @@ func Rate(v float64) predicate.GamePlayer {
 	})
 }
 
+// StartPosition applies equality check predicate on the "start_position" field. It's identical to StartPositionEQ.
+func StartPosition(v string) predicate.GamePlayer {
+	return predicate.GamePlayer(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldStartPosition), v))
+	})
+}
+
 // RateEQ applies the EQ predicate on the "rate" field.
 func RateEQ(v float64) predicate.GamePlayer {
 	return predicate.GamePlayer(func(s *sql.Selector) {
@@ -151,13 +158,140 @@ func RateLTE(v float64) predicate.GamePlayer {
 	})
 }
 
+// StartPositionEQ applies the EQ predicate on the "start_position" field.
+func StartPositionEQ(v string) predicate.GamePlayer {
+	return predicate.GamePlayer(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldStartPosition), v))
+	})
+}
+
+// StartPositionNEQ applies the NEQ predicate on the "start_position" field.
+func StartPositionNEQ(v string) predicate.GamePlayer {
+	return predicate.GamePlayer(func(s *sql.Selector) {
+		s.Where(sql.NEQ(s.C(FieldStartPosition), v))
+	})
+}
+
+// StartPositionIn applies the In predicate on the "start_position" field.
+func StartPositionIn(vs ...string) predicate.GamePlayer {
+	v := make([]any, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.GamePlayer(func(s *sql.Selector) {
+		s.Where(sql.In(s.C(FieldStartPosition), v...))
+	})
+}
+
+// StartPositionNotIn applies the NotIn predicate on the "start_position" field.
+func StartPositionNotIn(vs ...string) predicate.GamePlayer {
+	v := make([]any, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.GamePlayer(func(s *sql.Selector) {
+		s.Where(sql.NotIn(s.C(FieldStartPosition), v...))
+	})
+}
+
+// StartPositionGT applies the GT predicate on the "start_position" field.
+func StartPositionGT(v string) predicate.GamePlayer {
+	return predicate.GamePlayer(func(s *sql.Selector) {
+		s.Where(sql.GT(s.C(FieldStartPosition), v))
+	})
+}
+
+// StartPositionGTE applies the GTE predicate on the "start_position" field.
+func StartPositionGTE(v string) predicate.GamePlayer {
+	return predicate.GamePlayer(func(s *sql.Selector) {
+		s.Where(sql.GTE(s.C(FieldStartPosition), v))
+	})
+}
+
+// StartPositionLT applies the LT predicate on the "start_position" field.
+func StartPositionLT(v string) predicate.GamePlayer {
+	return predicate.GamePlayer(func(s *sql.Selector) {
+		s.Where(sql.LT(s.C(FieldStartPosition), v))
+	})
+}
+
+// StartPositionLTE applies the LTE predicate on the "start_position" field.
+func StartPositionLTE(v string) predicate.GamePlayer {
+	return predicate.GamePlayer(func(s *sql.Selector) {
+		s.Where(sql.LTE(s.C(FieldStartPosition), v))
+	})
+}
+
+// StartPositionContains applies the Contains predicate on the "start_position" field.
+func StartPositionContains(v string) predicate.GamePlayer {
+	return predicate.GamePlayer(func(s *sql.Selector) {
+		s.Where(sql.Contains(s.C(FieldStartPosition), v))
+	})
+}
+
+// StartPositionHasPrefix applies the HasPrefix predicate on the "start_position" field.
+func StartPositionHasPrefix(v string) predicate.GamePlayer {
+	return predicate.GamePlayer(func(s *sql.Selector) {
+		s.Where(sql.HasPrefix(s.C(FieldStartPosition), v))
+	})
+}
+
+// StartPositionHasSuffix applies the HasSuffix predicate on the "start_position" field.
+func StartPositionHasSuffix(v string) predicate.GamePlayer {
+	return predicate.GamePlayer(func(s *sql.Selector) {
+		s.Where(sql.HasSuffix(s.C(FieldStartPosition), v))
+	})
+}
+
+// StartPositionEqualFold applies the EqualFold predicate on the "start_position" field.
+func StartPositionEqualFold(v string) predicate.GamePlayer {
+	return predicate.GamePlayer(func(s *sql.Selector) {
+		s.Where(sql.EqualFold(s.C(FieldStartPosition), v))
+	})
+}
+
+// StartPositionContainsFold applies the ContainsFold predicate on the "start_position" field.
+func StartPositionContainsFold(v string) predicate.GamePlayer {
+	return predicate.GamePlayer(func(s *sql.Selector) {
+		s.Where(sql.ContainsFold(s.C(FieldStartPosition), v))
+	})
+}
+
+// HasGames applies the HasEdge predicate on the "games" edge.
+func HasGames() predicate.GamePlayer {
+	return predicate.GamePlayer(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(GamesTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, GamesTable, GamesPrimaryKey...),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasGamesWith applies the HasEdge predicate on the "games" edge with a given conditions (other predicates).
+func HasGamesWith(preds ...predicate.Game) predicate.GamePlayer {
+	return predicate.GamePlayer(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(GamesInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, GamesTable, GamesPrimaryKey...),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasPlayers applies the HasEdge predicate on the "players" edge.
 func HasPlayers() predicate.GamePlayer {
 	return predicate.GamePlayer(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
 			sqlgraph.To(PlayersTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, PlayersTable, PlayersPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2O, true, PlayersTable, PlayersColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
@@ -169,7 +303,35 @@ func HasPlayersWith(preds ...predicate.Player) predicate.GamePlayer {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
 			sqlgraph.To(PlayersInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, PlayersTable, PlayersPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2O, true, PlayersTable, PlayersColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasDans applies the HasEdge predicate on the "dans" edge.
+func HasDans() predicate.GamePlayer {
+	return predicate.GamePlayer(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(DansTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, DansTable, DansColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasDansWith applies the HasEdge predicate on the "dans" edge with a given conditions (other predicates).
+func HasDansWith(preds ...predicate.Dan) predicate.GamePlayer {
+	return predicate.GamePlayer(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(DansInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, DansTable, DansColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

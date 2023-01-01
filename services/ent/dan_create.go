@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/dan"
+	"github.com/kanade0404/tenhou-log/services/ent/gameplayer"
 )
 
 // DanCreate is the builder for creating a Dan entity.
@@ -38,6 +39,21 @@ func (dc *DanCreate) SetNillableID(u *uuid.UUID) *DanCreate {
 		dc.SetID(*u)
 	}
 	return dc
+}
+
+// AddGamePlayerIDs adds the "game_players" edge to the GamePlayer entity by IDs.
+func (dc *DanCreate) AddGamePlayerIDs(ids ...uuid.UUID) *DanCreate {
+	dc.mutation.AddGamePlayerIDs(ids...)
+	return dc
+}
+
+// AddGamePlayers adds the "game_players" edges to the GamePlayer entity.
+func (dc *DanCreate) AddGamePlayers(g ...*GamePlayer) *DanCreate {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return dc.AddGamePlayerIDs(ids...)
 }
 
 // Mutation returns the DanMutation object of the builder.
@@ -167,6 +183,25 @@ func (dc *DanCreate) createSpec() (*Dan, *sqlgraph.CreateSpec) {
 	if value, ok := dc.mutation.Name(); ok {
 		_spec.SetField(dan.FieldName, field.TypeString, value)
 		_node.Name = value
+	}
+	if nodes := dc.mutation.GamePlayersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   dan.GamePlayersTable,
+			Columns: []string{dan.GamePlayersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: gameplayer.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

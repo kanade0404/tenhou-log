@@ -407,6 +407,22 @@ func (c *DanClient) GetX(ctx context.Context, id uuid.UUID) *Dan {
 	return obj
 }
 
+// QueryGamePlayers queries the game_players edge of a Dan.
+func (c *DanClient) QueryGamePlayers(d *Dan) *GamePlayerQuery {
+	query := &GamePlayerQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := d.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(dan.Table, dan.FieldID, id),
+			sqlgraph.To(gameplayer.Table, gameplayer.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, dan.GamePlayersTable, dan.GamePlayersColumn),
+		)
+		fromV = sqlgraph.Neighbors(d.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *DanClient) Hooks() []Hook {
 	return c.hooks.Dan
@@ -513,6 +529,22 @@ func (c *GameClient) QueryMjlogs(ga *Game) *MJLogQuery {
 	return query
 }
 
+// QueryGamePlayers queries the game_players edge of a Game.
+func (c *GameClient) QueryGamePlayers(ga *Game) *GamePlayerQuery {
+	query := &GamePlayerQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := ga.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(game.Table, game.FieldID, id),
+			sqlgraph.To(gameplayer.Table, gameplayer.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, game.GamePlayersTable, game.GamePlayersPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(ga.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryRooms queries the rooms edge of a Game.
 func (c *GameClient) QueryRooms(ga *Game) *RoomQuery {
 	query := &RoomQuery{config: c.config}
@@ -521,7 +553,7 @@ func (c *GameClient) QueryRooms(ga *Game) *RoomQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(game.Table, game.FieldID, id),
 			sqlgraph.To(room.Table, room.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, game.RoomsTable, game.RoomsPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2O, true, game.RoomsTable, game.RoomsColumn),
 		)
 		fromV = sqlgraph.Neighbors(ga.driver.Dialect(), step)
 		return fromV, nil
@@ -619,6 +651,22 @@ func (c *GamePlayerClient) GetX(ctx context.Context, id uuid.UUID) *GamePlayer {
 	return obj
 }
 
+// QueryGames queries the games edge of a GamePlayer.
+func (c *GamePlayerClient) QueryGames(gp *GamePlayer) *GameQuery {
+	query := &GameQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := gp.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(gameplayer.Table, gameplayer.FieldID, id),
+			sqlgraph.To(game.Table, game.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, gameplayer.GamesTable, gameplayer.GamesPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(gp.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryPlayers queries the players edge of a GamePlayer.
 func (c *GamePlayerClient) QueryPlayers(gp *GamePlayer) *PlayerQuery {
 	query := &PlayerQuery{config: c.config}
@@ -627,7 +675,23 @@ func (c *GamePlayerClient) QueryPlayers(gp *GamePlayer) *PlayerQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(gameplayer.Table, gameplayer.FieldID, id),
 			sqlgraph.To(player.Table, player.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, gameplayer.PlayersTable, gameplayer.PlayersPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2O, true, gameplayer.PlayersTable, gameplayer.PlayersColumn),
+		)
+		fromV = sqlgraph.Neighbors(gp.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryDans queries the dans edge of a GamePlayer.
+func (c *GamePlayerClient) QueryDans(gp *GamePlayer) *DanQuery {
+	query := &DanQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := gp.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(gameplayer.Table, gameplayer.FieldID, id),
+			sqlgraph.To(dan.Table, dan.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, gameplayer.DansTable, gameplayer.DansColumn),
 		)
 		fromV = sqlgraph.Neighbors(gp.driver.Dialect(), step)
 		return fromV, nil
@@ -1337,7 +1401,7 @@ func (c *PlayerClient) QueryGamePlayers(pl *Player) *GamePlayerQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(player.Table, player.FieldID, id),
 			sqlgraph.To(gameplayer.Table, gameplayer.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, player.GamePlayersTable, player.GamePlayersPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.O2M, false, player.GamePlayersTable, player.GamePlayersColumn),
 		)
 		fromV = sqlgraph.Neighbors(pl.driver.Dialect(), step)
 		return fromV, nil
@@ -1443,7 +1507,7 @@ func (c *RoomClient) QueryGames(r *Room) *GameQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(room.Table, room.FieldID, id),
 			sqlgraph.To(game.Table, game.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, false, room.GamesTable, room.GamesPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.O2M, false, room.GamesTable, room.GamesColumn),
 		)
 		fromV = sqlgraph.Neighbors(r.driver.Dialect(), step)
 		return fromV, nil

@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/game"
+	"github.com/kanade0404/tenhou-log/services/ent/gameplayer"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlog"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 	"github.com/kanade0404/tenhou-log/services/ent/room"
@@ -21,14 +22,16 @@ import (
 // GameQuery is the builder for querying Game entities.
 type GameQuery struct {
 	config
-	limit      *int
-	offset     *int
-	unique     *bool
-	order      []OrderFunc
-	fields     []string
-	predicates []predicate.Game
-	withMjlogs *MJLogQuery
-	withRooms  *RoomQuery
+	limit           *int
+	offset          *int
+	unique          *bool
+	order           []OrderFunc
+	fields          []string
+	predicates      []predicate.Game
+	withMjlogs      *MJLogQuery
+	withGamePlayers *GamePlayerQuery
+	withRooms       *RoomQuery
+	withFKs         bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -87,6 +90,28 @@ func (gq *GameQuery) QueryMjlogs() *MJLogQuery {
 	return query
 }
 
+// QueryGamePlayers chains the current query on the "game_players" edge.
+func (gq *GameQuery) QueryGamePlayers() *GamePlayerQuery {
+	query := &GamePlayerQuery{config: gq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := gq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := gq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(game.Table, game.FieldID, selector),
+			sqlgraph.To(gameplayer.Table, gameplayer.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, game.GamePlayersTable, game.GamePlayersPrimaryKey...),
+		)
+		fromU = sqlgraph.SetNeighbors(gq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
 // QueryRooms chains the current query on the "rooms" edge.
 func (gq *GameQuery) QueryRooms() *RoomQuery {
 	query := &RoomQuery{config: gq.config}
@@ -101,7 +126,7 @@ func (gq *GameQuery) QueryRooms() *RoomQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(game.Table, game.FieldID, selector),
 			sqlgraph.To(room.Table, room.FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, game.RoomsTable, game.RoomsPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2O, true, game.RoomsTable, game.RoomsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(gq.driver.Dialect(), step)
 		return fromU, nil
@@ -285,13 +310,14 @@ func (gq *GameQuery) Clone() *GameQuery {
 		return nil
 	}
 	return &GameQuery{
-		config:     gq.config,
-		limit:      gq.limit,
-		offset:     gq.offset,
-		order:      append([]OrderFunc{}, gq.order...),
-		predicates: append([]predicate.Game{}, gq.predicates...),
-		withMjlogs: gq.withMjlogs.Clone(),
-		withRooms:  gq.withRooms.Clone(),
+		config:          gq.config,
+		limit:           gq.limit,
+		offset:          gq.offset,
+		order:           append([]OrderFunc{}, gq.order...),
+		predicates:      append([]predicate.Game{}, gq.predicates...),
+		withMjlogs:      gq.withMjlogs.Clone(),
+		withGamePlayers: gq.withGamePlayers.Clone(),
+		withRooms:       gq.withRooms.Clone(),
 		// clone intermediate query.
 		sql:    gq.sql.Clone(),
 		path:   gq.path,
@@ -307,6 +333,17 @@ func (gq *GameQuery) WithMjlogs(opts ...func(*MJLogQuery)) *GameQuery {
 		opt(query)
 	}
 	gq.withMjlogs = query
+	return gq
+}
+
+// WithGamePlayers tells the query-builder to eager-load the nodes that are connected to
+// the "game_players" edge. The optional arguments are used to configure the query builder of the edge.
+func (gq *GameQuery) WithGamePlayers(opts ...func(*GamePlayerQuery)) *GameQuery {
+	query := &GamePlayerQuery{config: gq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	gq.withGamePlayers = query
 	return gq
 }
 
@@ -395,12 +432,20 @@ func (gq *GameQuery) prepareQuery(ctx context.Context) error {
 func (gq *GameQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Game, error) {
 	var (
 		nodes       = []*Game{}
+		withFKs     = gq.withFKs
 		_spec       = gq.querySpec()
-		loadedTypes = [2]bool{
+		loadedTypes = [3]bool{
 			gq.withMjlogs != nil,
+			gq.withGamePlayers != nil,
 			gq.withRooms != nil,
 		}
 	)
+	if gq.withRooms != nil {
+		withFKs = true
+	}
+	if withFKs {
+		_spec.Node.Columns = append(_spec.Node.Columns, game.ForeignKeys...)
+	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Game).scanValues(nil, columns)
 	}
@@ -425,10 +470,16 @@ func (gq *GameQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Game, e
 			return nil, err
 		}
 	}
+	if query := gq.withGamePlayers; query != nil {
+		if err := gq.loadGamePlayers(ctx, query, nodes,
+			func(n *Game) { n.Edges.GamePlayers = []*GamePlayer{} },
+			func(n *Game, e *GamePlayer) { n.Edges.GamePlayers = append(n.Edges.GamePlayers, e) }); err != nil {
+			return nil, err
+		}
+	}
 	if query := gq.withRooms; query != nil {
-		if err := gq.loadRooms(ctx, query, nodes,
-			func(n *Game) { n.Edges.Rooms = []*Room{} },
-			func(n *Game, e *Room) { n.Edges.Rooms = append(n.Edges.Rooms, e) }); err != nil {
+		if err := gq.loadRooms(ctx, query, nodes, nil,
+			func(n *Game, e *Room) { n.Edges.Rooms = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -463,7 +514,7 @@ func (gq *GameQuery) loadMjlogs(ctx context.Context, query *MJLogQuery, nodes []
 	}
 	return nil
 }
-func (gq *GameQuery) loadRooms(ctx context.Context, query *RoomQuery, nodes []*Game, init func(*Game), assign func(*Game, *Room)) error {
+func (gq *GameQuery) loadGamePlayers(ctx context.Context, query *GamePlayerQuery, nodes []*Game, init func(*Game), assign func(*Game, *GamePlayer)) error {
 	edgeIDs := make([]driver.Value, len(nodes))
 	byID := make(map[uuid.UUID]*Game)
 	nids := make(map[uuid.UUID]map[*Game]struct{})
@@ -475,11 +526,11 @@ func (gq *GameQuery) loadRooms(ctx context.Context, query *RoomQuery, nodes []*G
 		}
 	}
 	query.Where(func(s *sql.Selector) {
-		joinT := sql.Table(game.RoomsTable)
-		s.Join(joinT).On(s.C(room.FieldID), joinT.C(game.RoomsPrimaryKey[0]))
-		s.Where(sql.InValues(joinT.C(game.RoomsPrimaryKey[1]), edgeIDs...))
+		joinT := sql.Table(game.GamePlayersTable)
+		s.Join(joinT).On(s.C(gameplayer.FieldID), joinT.C(game.GamePlayersPrimaryKey[1]))
+		s.Where(sql.InValues(joinT.C(game.GamePlayersPrimaryKey[0]), edgeIDs...))
 		columns := s.SelectedColumns()
-		s.Select(joinT.C(game.RoomsPrimaryKey[1]))
+		s.Select(joinT.C(game.GamePlayersPrimaryKey[0]))
 		s.AppendSelect(columns...)
 		s.SetDistinct(false)
 	})
@@ -513,10 +564,39 @@ func (gq *GameQuery) loadRooms(ctx context.Context, query *RoomQuery, nodes []*G
 	for _, n := range neighbors {
 		nodes, ok := nids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected "rooms" node returned %v`, n.ID)
+			return fmt.Errorf(`unexpected "game_players" node returned %v`, n.ID)
 		}
 		for kn := range nodes {
 			assign(kn, n)
+		}
+	}
+	return nil
+}
+func (gq *GameQuery) loadRooms(ctx context.Context, query *RoomQuery, nodes []*Game, init func(*Game), assign func(*Game, *Room)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Game)
+	for i := range nodes {
+		if nodes[i].room_games == nil {
+			continue
+		}
+		fk := *nodes[i].room_games
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	query.Where(room.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "room_games" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
 		}
 	}
 	return nil

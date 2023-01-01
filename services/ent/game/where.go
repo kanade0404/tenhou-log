@@ -3,6 +3,8 @@
 package game
 
 import (
+	"time"
+
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
@@ -84,6 +86,13 @@ func IDLTE(id uuid.UUID) predicate.Game {
 func Name(v string) predicate.Game {
 	return predicate.Game(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldName), v))
+	})
+}
+
+// StartedAt applies equality check predicate on the "started_at" field. It's identical to StartedAtEQ.
+func StartedAt(v time.Time) predicate.Game {
+	return predicate.Game(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldStartedAt), v))
 	})
 }
 
@@ -186,6 +195,70 @@ func NameContainsFold(v string) predicate.Game {
 	})
 }
 
+// StartedAtEQ applies the EQ predicate on the "started_at" field.
+func StartedAtEQ(v time.Time) predicate.Game {
+	return predicate.Game(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldStartedAt), v))
+	})
+}
+
+// StartedAtNEQ applies the NEQ predicate on the "started_at" field.
+func StartedAtNEQ(v time.Time) predicate.Game {
+	return predicate.Game(func(s *sql.Selector) {
+		s.Where(sql.NEQ(s.C(FieldStartedAt), v))
+	})
+}
+
+// StartedAtIn applies the In predicate on the "started_at" field.
+func StartedAtIn(vs ...time.Time) predicate.Game {
+	v := make([]any, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.Game(func(s *sql.Selector) {
+		s.Where(sql.In(s.C(FieldStartedAt), v...))
+	})
+}
+
+// StartedAtNotIn applies the NotIn predicate on the "started_at" field.
+func StartedAtNotIn(vs ...time.Time) predicate.Game {
+	v := make([]any, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.Game(func(s *sql.Selector) {
+		s.Where(sql.NotIn(s.C(FieldStartedAt), v...))
+	})
+}
+
+// StartedAtGT applies the GT predicate on the "started_at" field.
+func StartedAtGT(v time.Time) predicate.Game {
+	return predicate.Game(func(s *sql.Selector) {
+		s.Where(sql.GT(s.C(FieldStartedAt), v))
+	})
+}
+
+// StartedAtGTE applies the GTE predicate on the "started_at" field.
+func StartedAtGTE(v time.Time) predicate.Game {
+	return predicate.Game(func(s *sql.Selector) {
+		s.Where(sql.GTE(s.C(FieldStartedAt), v))
+	})
+}
+
+// StartedAtLT applies the LT predicate on the "started_at" field.
+func StartedAtLT(v time.Time) predicate.Game {
+	return predicate.Game(func(s *sql.Selector) {
+		s.Where(sql.LT(s.C(FieldStartedAt), v))
+	})
+}
+
+// StartedAtLTE applies the LTE predicate on the "started_at" field.
+func StartedAtLTE(v time.Time) predicate.Game {
+	return predicate.Game(func(s *sql.Selector) {
+		s.Where(sql.LTE(s.C(FieldStartedAt), v))
+	})
+}
+
 // HasMjlogs applies the HasEdge predicate on the "mjlogs" edge.
 func HasMjlogs() predicate.Game {
 	return predicate.Game(func(s *sql.Selector) {
@@ -214,13 +287,41 @@ func HasMjlogsWith(preds ...predicate.MJLog) predicate.Game {
 	})
 }
 
+// HasGamePlayers applies the HasEdge predicate on the "game_players" edge.
+func HasGamePlayers() predicate.Game {
+	return predicate.Game(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(GamePlayersTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, GamePlayersTable, GamePlayersPrimaryKey...),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasGamePlayersWith applies the HasEdge predicate on the "game_players" edge with a given conditions (other predicates).
+func HasGamePlayersWith(preds ...predicate.GamePlayer) predicate.Game {
+	return predicate.Game(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(GamePlayersInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, GamePlayersTable, GamePlayersPrimaryKey...),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasRooms applies the HasEdge predicate on the "rooms" edge.
 func HasRooms() predicate.Game {
 	return predicate.Game(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
 			sqlgraph.To(RoomsTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, RoomsTable, RoomsPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2O, true, RoomsTable, RoomsColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
@@ -232,7 +333,7 @@ func HasRoomsWith(preds ...predicate.Room) predicate.Game {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
 			sqlgraph.To(RoomsInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2M, true, RoomsTable, RoomsPrimaryKey...),
+			sqlgraph.Edge(sqlgraph.M2O, true, RoomsTable, RoomsColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
