@@ -100,12 +100,21 @@ var (
 		{Name: "seed", Type: field.TypeString},
 		{Name: "started_at", Type: field.TypeTime},
 		{Name: "inserted_at", Type: field.TypeTime},
+		{Name: "mj_log_file_mjlogs", Type: field.TypeUUID, Unique: true, Nullable: true},
 	}
 	// MjLogsTable holds the schema information for the "mj_logs" table.
 	MjLogsTable = &schema.Table{
 		Name:       "mj_logs",
 		Columns:    MjLogsColumns,
 		PrimaryKey: []*schema.Column{MjLogsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "mj_logs_mj_log_files_mjlogs",
+				Columns:    []*schema.Column{MjLogsColumns[5]},
+				RefColumns: []*schema.Column{MjLogFilesColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
 	}
 	// MjLogFilesColumns holds the columns for the "mj_log_files" table.
 	MjLogFilesColumns = []*schema.Column{
@@ -189,5 +198,6 @@ var (
 )
 
 func init() {
+	MjLogsTable.ForeignKeys[0].RefTable = MjLogFilesTable
 	MjLogFilesTable.ForeignKeys[0].RefTable = CompressedMjLogsTable
 }

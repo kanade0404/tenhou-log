@@ -10,6 +10,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlog"
+	"github.com/kanade0404/tenhou-log/services/ent/mjlogfile"
 )
 
 // MJLog is the model entity for the MJLog schema.
@@ -25,6 +26,32 @@ type MJLog struct {
 	StartedAt time.Time `json:"started_at,omitempty"`
 	// InsertedAt holds the value of the "inserted_at" field.
 	InsertedAt time.Time `json:"inserted_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the MJLogQuery when eager-loading is set.
+	Edges              MJLogEdges `json:"edges"`
+	mj_log_file_mjlogs *uuid.UUID
+}
+
+// MJLogEdges holds the relations/edges for other nodes in the graph.
+type MJLogEdges struct {
+	// MjlogFiles holds the value of the mjlog_files edge.
+	MjlogFiles *MJLogFile `json:"mjlog_files,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// MjlogFilesOrErr returns the MjlogFiles value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e MJLogEdges) MjlogFilesOrErr() (*MJLogFile, error) {
+	if e.loadedTypes[0] {
+		if e.MjlogFiles == nil {
+			// Edge was loaded but was not found.
+			return nil, &NotFoundError{label: mjlogfile.Label}
+		}
+		return e.MjlogFiles, nil
+	}
+	return nil, &NotLoadedError{edge: "mjlog_files"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -40,6 +67,8 @@ func (*MJLog) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullTime)
 		case mjlog.FieldID:
 			values[i] = new(uuid.UUID)
+		case mjlog.ForeignKeys[0]: // mj_log_file_mjlogs
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type MJLog", columns[i])
 		}
@@ -85,9 +114,21 @@ func (ml *MJLog) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				ml.InsertedAt = value.Time
 			}
+		case mjlog.ForeignKeys[0]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field mj_log_file_mjlogs", values[i])
+			} else if value.Valid {
+				ml.mj_log_file_mjlogs = new(uuid.UUID)
+				*ml.mj_log_file_mjlogs = *value.S.(*uuid.UUID)
+			}
 		}
 	}
 	return nil
+}
+
+// QueryMjlogFiles queries the "mjlog_files" edge of the MJLog entity.
+func (ml *MJLog) QueryMjlogFiles() *MJLogFileQuery {
+	return (&MJLogClient{config: ml.config}).QueryMjlogFiles(ml)
 }
 
 // Update returns a builder for updating this MJLog.

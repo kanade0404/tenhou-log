@@ -24,6 +24,6 @@ func (MJLogFile) Fields() []ent.Field {
 func (MJLogFile) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("compressed_mjlog_files", CompressedMJLog.Type).Ref("mjlog_files").Unique().Required(),
-		//edge.To("mjlogs", MJLog.Type).Unique(),
+		edge.To("mjlogs", MJLog.Type).Unique(),
 	}
 }

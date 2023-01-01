@@ -2,6 +2,7 @@ package schema
 
 import (
 	"entgo.io/ent"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"time"
@@ -26,7 +27,7 @@ func (MJLog) Fields() []ent.Field {
 // Edges of the MJLog.
 func (MJLog) Edges() []ent.Edge {
 	return []ent.Edge{
-		//edge.From("mjlog_files", MJLogFile.Type).Ref("mjlogs").Unique().Required(),
+		edge.From("mjlog_files", MJLogFile.Type).Ref("mjlogs").Unique(),
 		//edge.From("games", Game.Type).Ref("mjlogs").Unique().Required(),
 	}
 }

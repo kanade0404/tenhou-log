@@ -10,7 +10,9 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlog"
+	"github.com/kanade0404/tenhou-log/services/ent/mjlogfile"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 )
 
@@ -27,9 +29,34 @@ func (mlu *MJLogUpdate) Where(ps ...predicate.MJLog) *MJLogUpdate {
 	return mlu
 }
 
+// SetMjlogFilesID sets the "mjlog_files" edge to the MJLogFile entity by ID.
+func (mlu *MJLogUpdate) SetMjlogFilesID(id uuid.UUID) *MJLogUpdate {
+	mlu.mutation.SetMjlogFilesID(id)
+	return mlu
+}
+
+// SetNillableMjlogFilesID sets the "mjlog_files" edge to the MJLogFile entity by ID if the given value is not nil.
+func (mlu *MJLogUpdate) SetNillableMjlogFilesID(id *uuid.UUID) *MJLogUpdate {
+	if id != nil {
+		mlu = mlu.SetMjlogFilesID(*id)
+	}
+	return mlu
+}
+
+// SetMjlogFiles sets the "mjlog_files" edge to the MJLogFile entity.
+func (mlu *MJLogUpdate) SetMjlogFiles(m *MJLogFile) *MJLogUpdate {
+	return mlu.SetMjlogFilesID(m.ID)
+}
+
 // Mutation returns the MJLogMutation object of the builder.
 func (mlu *MJLogUpdate) Mutation() *MJLogMutation {
 	return mlu.mutation
+}
+
+// ClearMjlogFiles clears the "mjlog_files" edge to the MJLogFile entity.
+func (mlu *MJLogUpdate) ClearMjlogFiles() *MJLogUpdate {
+	mlu.mutation.ClearMjlogFiles()
+	return mlu
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -104,6 +131,41 @@ func (mlu *MJLogUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			}
 		}
 	}
+	if mlu.mutation.MjlogFilesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   mjlog.MjlogFilesTable,
+			Columns: []string{mjlog.MjlogFilesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: mjlogfile.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := mlu.mutation.MjlogFilesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   mjlog.MjlogFilesTable,
+			Columns: []string{mjlog.MjlogFilesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: mjlogfile.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, mlu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{mjlog.Label}
@@ -123,9 +185,34 @@ type MJLogUpdateOne struct {
 	mutation *MJLogMutation
 }
 
+// SetMjlogFilesID sets the "mjlog_files" edge to the MJLogFile entity by ID.
+func (mluo *MJLogUpdateOne) SetMjlogFilesID(id uuid.UUID) *MJLogUpdateOne {
+	mluo.mutation.SetMjlogFilesID(id)
+	return mluo
+}
+
+// SetNillableMjlogFilesID sets the "mjlog_files" edge to the MJLogFile entity by ID if the given value is not nil.
+func (mluo *MJLogUpdateOne) SetNillableMjlogFilesID(id *uuid.UUID) *MJLogUpdateOne {
+	if id != nil {
+		mluo = mluo.SetMjlogFilesID(*id)
+	}
+	return mluo
+}
+
+// SetMjlogFiles sets the "mjlog_files" edge to the MJLogFile entity.
+func (mluo *MJLogUpdateOne) SetMjlogFiles(m *MJLogFile) *MJLogUpdateOne {
+	return mluo.SetMjlogFilesID(m.ID)
+}
+
 // Mutation returns the MJLogMutation object of the builder.
 func (mluo *MJLogUpdateOne) Mutation() *MJLogMutation {
 	return mluo.mutation
+}
+
+// ClearMjlogFiles clears the "mjlog_files" edge to the MJLogFile entity.
+func (mluo *MJLogUpdateOne) ClearMjlogFiles() *MJLogUpdateOne {
+	mluo.mutation.ClearMjlogFiles()
+	return mluo
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -229,6 +316,41 @@ func (mluo *MJLogUpdateOne) sqlSave(ctx context.Context) (_node *MJLog, err erro
 				ps[i](selector)
 			}
 		}
+	}
+	if mluo.mutation.MjlogFilesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   mjlog.MjlogFilesTable,
+			Columns: []string{mjlog.MjlogFilesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: mjlogfile.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := mluo.mutation.MjlogFilesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   mjlog.MjlogFilesTable,
+			Columns: []string{mjlog.MjlogFilesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: mjlogfile.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &MJLog{config: mluo.config}
 	_spec.Assign = _node.assignValues

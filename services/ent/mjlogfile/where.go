@@ -214,6 +214,34 @@ func HasCompressedMjlogFilesWith(preds ...predicate.CompressedMJLog) predicate.M
 	})
 }
 
+// HasMjlogs applies the HasEdge predicate on the "mjlogs" edge.
+func HasMjlogs() predicate.MJLogFile {
+	return predicate.MJLogFile(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(MjlogsTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, MjlogsTable, MjlogsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasMjlogsWith applies the HasEdge predicate on the "mjlogs" edge with a given conditions (other predicates).
+func HasMjlogsWith(preds ...predicate.MJLog) predicate.MJLogFile {
+	return predicate.MJLogFile(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(MjlogsInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, MjlogsTable, MjlogsColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.MJLogFile) predicate.MJLogFile {
 	return predicate.MJLogFile(func(s *sql.Selector) {

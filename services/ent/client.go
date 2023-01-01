@@ -1037,6 +1037,22 @@ func (c *MJLogClient) GetX(ctx context.Context, id uuid.UUID) *MJLog {
 	return obj
 }
 
+// QueryMjlogFiles queries the mjlog_files edge of a MJLog.
+func (c *MJLogClient) QueryMjlogFiles(ml *MJLog) *MJLogFileQuery {
+	query := &MJLogFileQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := ml.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(mjlog.Table, mjlog.FieldID, id),
+			sqlgraph.To(mjlogfile.Table, mjlogfile.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, mjlog.MjlogFilesTable, mjlog.MjlogFilesColumn),
+		)
+		fromV = sqlgraph.Neighbors(ml.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *MJLogClient) Hooks() []Hook {
 	return c.hooks.MJLog
@@ -1136,6 +1152,22 @@ func (c *MJLogFileClient) QueryCompressedMjlogFiles(mlf *MJLogFile) *CompressedM
 			sqlgraph.From(mjlogfile.Table, mjlogfile.FieldID, id),
 			sqlgraph.To(compressedmjlog.Table, compressedmjlog.FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, true, mjlogfile.CompressedMjlogFilesTable, mjlogfile.CompressedMjlogFilesColumn),
+		)
+		fromV = sqlgraph.Neighbors(mlf.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryMjlogs queries the mjlogs edge of a MJLogFile.
+func (c *MJLogFileClient) QueryMjlogs(mlf *MJLogFile) *MJLogQuery {
+	query := &MJLogQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := mlf.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(mjlogfile.Table, mjlogfile.FieldID, id),
+			sqlgraph.To(mjlog.Table, mjlog.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, mjlogfile.MjlogsTable, mjlogfile.MjlogsColumn),
 		)
 		fromV = sqlgraph.Neighbors(mlf.driver.Dialect(), step)
 		return fromV, nil

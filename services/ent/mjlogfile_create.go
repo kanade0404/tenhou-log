@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/compressedmjlog"
+	"github.com/kanade0404/tenhou-log/services/ent/mjlog"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlogfile"
 )
 
@@ -50,6 +51,25 @@ func (mlfc *MJLogFileCreate) SetCompressedMjlogFilesID(id uuid.UUID) *MJLogFileC
 // SetCompressedMjlogFiles sets the "compressed_mjlog_files" edge to the CompressedMJLog entity.
 func (mlfc *MJLogFileCreate) SetCompressedMjlogFiles(c *CompressedMJLog) *MJLogFileCreate {
 	return mlfc.SetCompressedMjlogFilesID(c.ID)
+}
+
+// SetMjlogsID sets the "mjlogs" edge to the MJLog entity by ID.
+func (mlfc *MJLogFileCreate) SetMjlogsID(id uuid.UUID) *MJLogFileCreate {
+	mlfc.mutation.SetMjlogsID(id)
+	return mlfc
+}
+
+// SetNillableMjlogsID sets the "mjlogs" edge to the MJLog entity by ID if the given value is not nil.
+func (mlfc *MJLogFileCreate) SetNillableMjlogsID(id *uuid.UUID) *MJLogFileCreate {
+	if id != nil {
+		mlfc = mlfc.SetMjlogsID(*id)
+	}
+	return mlfc
+}
+
+// SetMjlogs sets the "mjlogs" edge to the MJLog entity.
+func (mlfc *MJLogFileCreate) SetMjlogs(m *MJLog) *MJLogFileCreate {
+	return mlfc.SetMjlogsID(m.ID)
 }
 
 // Mutation returns the MJLogFileMutation object of the builder.
@@ -201,6 +221,25 @@ func (mlfc *MJLogFileCreate) createSpec() (*MJLogFile, *sqlgraph.CreateSpec) {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.compressed_mj_log_mjlog_files = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := mlfc.mutation.MjlogsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   mjlogfile.MjlogsTable,
+			Columns: []string{mjlogfile.MjlogsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: mjlog.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

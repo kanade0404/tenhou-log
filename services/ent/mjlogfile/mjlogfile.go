@@ -15,6 +15,8 @@ const (
 	FieldName = "name"
 	// EdgeCompressedMjlogFiles holds the string denoting the compressed_mjlog_files edge name in mutations.
 	EdgeCompressedMjlogFiles = "compressed_mjlog_files"
+	// EdgeMjlogs holds the string denoting the mjlogs edge name in mutations.
+	EdgeMjlogs = "mjlogs"
 	// Table holds the table name of the mjlogfile in the database.
 	Table = "mj_log_files"
 	// CompressedMjlogFilesTable is the table that holds the compressed_mjlog_files relation/edge.
@@ -24,6 +26,13 @@ const (
 	CompressedMjlogFilesInverseTable = "compressed_mj_logs"
 	// CompressedMjlogFilesColumn is the table column denoting the compressed_mjlog_files relation/edge.
 	CompressedMjlogFilesColumn = "compressed_mj_log_mjlog_files"
+	// MjlogsTable is the table that holds the mjlogs relation/edge.
+	MjlogsTable = "mj_logs"
+	// MjlogsInverseTable is the table name for the MJLog entity.
+	// It exists in this package in order to avoid circular dependency with the "mjlog" package.
+	MjlogsInverseTable = "mj_logs"
+	// MjlogsColumn is the table column denoting the mjlogs relation/edge.
+	MjlogsColumn = "mj_log_file_mjlogs"
 )
 
 // Columns holds all SQL columns for mjlogfile fields.

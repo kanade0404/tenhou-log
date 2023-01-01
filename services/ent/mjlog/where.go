@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 )
@@ -397,6 +398,34 @@ func InsertedAtLT(v time.Time) predicate.MJLog {
 func InsertedAtLTE(v time.Time) predicate.MJLog {
 	return predicate.MJLog(func(s *sql.Selector) {
 		s.Where(sql.LTE(s.C(FieldInsertedAt), v))
+	})
+}
+
+// HasMjlogFiles applies the HasEdge predicate on the "mjlog_files" edge.
+func HasMjlogFiles() predicate.MJLog {
+	return predicate.MJLog(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(MjlogFilesTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, MjlogFilesTable, MjlogFilesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasMjlogFilesWith applies the HasEdge predicate on the "mjlog_files" edge with a given conditions (other predicates).
+func HasMjlogFilesWith(preds ...predicate.MJLogFile) predicate.MJLog {
+	return predicate.MJLog(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(MjlogFilesInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, MjlogFilesTable, MjlogFilesColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
 	})
 }
 

@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlog"
+	"github.com/kanade0404/tenhou-log/services/ent/mjlogfile"
 )
 
 // MJLogCreate is the builder for creating a MJLog entity.
@@ -65,6 +66,25 @@ func (mlc *MJLogCreate) SetNillableID(u *uuid.UUID) *MJLogCreate {
 		mlc.SetID(*u)
 	}
 	return mlc
+}
+
+// SetMjlogFilesID sets the "mjlog_files" edge to the MJLogFile entity by ID.
+func (mlc *MJLogCreate) SetMjlogFilesID(id uuid.UUID) *MJLogCreate {
+	mlc.mutation.SetMjlogFilesID(id)
+	return mlc
+}
+
+// SetNillableMjlogFilesID sets the "mjlog_files" edge to the MJLogFile entity by ID if the given value is not nil.
+func (mlc *MJLogCreate) SetNillableMjlogFilesID(id *uuid.UUID) *MJLogCreate {
+	if id != nil {
+		mlc = mlc.SetMjlogFilesID(*id)
+	}
+	return mlc
+}
+
+// SetMjlogFiles sets the "mjlog_files" edge to the MJLogFile entity.
+func (mlc *MJLogCreate) SetMjlogFiles(m *MJLogFile) *MJLogCreate {
+	return mlc.SetMjlogFilesID(m.ID)
 }
 
 // Mutation returns the MJLogMutation object of the builder.
@@ -219,6 +239,26 @@ func (mlc *MJLogCreate) createSpec() (*MJLog, *sqlgraph.CreateSpec) {
 	if value, ok := mlc.mutation.InsertedAt(); ok {
 		_spec.SetField(mjlog.FieldInsertedAt, field.TypeTime, value)
 		_node.InsertedAt = value
+	}
+	if nodes := mlc.mutation.MjlogFilesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   mjlog.MjlogFilesTable,
+			Columns: []string{mjlog.MjlogFilesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: mjlogfile.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.mj_log_file_mjlogs = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

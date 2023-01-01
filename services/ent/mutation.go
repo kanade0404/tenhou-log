@@ -2520,18 +2520,20 @@ func (m *HandMutation) ResetEdge(name string) error {
 // MJLogMutation represents an operation that mutates the MJLog nodes in the graph.
 type MJLogMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *uuid.UUID
-	version       *float64
-	addversion    *float64
-	seed          *string
-	started_at    *time.Time
-	inserted_at   *time.Time
-	clearedFields map[string]struct{}
-	done          bool
-	oldValue      func(context.Context) (*MJLog, error)
-	predicates    []predicate.MJLog
+	op                 Op
+	typ                string
+	id                 *uuid.UUID
+	version            *float64
+	addversion         *float64
+	seed               *string
+	started_at         *time.Time
+	inserted_at        *time.Time
+	clearedFields      map[string]struct{}
+	mjlog_files        *uuid.UUID
+	clearedmjlog_files bool
+	done               bool
+	oldValue           func(context.Context) (*MJLog, error)
+	predicates         []predicate.MJLog
 }
 
 var _ ent.Mutation = (*MJLogMutation)(nil)
@@ -2802,6 +2804,45 @@ func (m *MJLogMutation) ResetInsertedAt() {
 	m.inserted_at = nil
 }
 
+// SetMjlogFilesID sets the "mjlog_files" edge to the MJLogFile entity by id.
+func (m *MJLogMutation) SetMjlogFilesID(id uuid.UUID) {
+	m.mjlog_files = &id
+}
+
+// ClearMjlogFiles clears the "mjlog_files" edge to the MJLogFile entity.
+func (m *MJLogMutation) ClearMjlogFiles() {
+	m.clearedmjlog_files = true
+}
+
+// MjlogFilesCleared reports if the "mjlog_files" edge to the MJLogFile entity was cleared.
+func (m *MJLogMutation) MjlogFilesCleared() bool {
+	return m.clearedmjlog_files
+}
+
+// MjlogFilesID returns the "mjlog_files" edge ID in the mutation.
+func (m *MJLogMutation) MjlogFilesID() (id uuid.UUID, exists bool) {
+	if m.mjlog_files != nil {
+		return *m.mjlog_files, true
+	}
+	return
+}
+
+// MjlogFilesIDs returns the "mjlog_files" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// MjlogFilesID instead. It exists only for internal usage by the builders.
+func (m *MJLogMutation) MjlogFilesIDs() (ids []uuid.UUID) {
+	if id := m.mjlog_files; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetMjlogFiles resets all changes to the "mjlog_files" edge.
+func (m *MJLogMutation) ResetMjlogFiles() {
+	m.mjlog_files = nil
+	m.clearedmjlog_files = false
+}
+
 // Where appends a list predicates to the MJLogMutation builder.
 func (m *MJLogMutation) Where(ps ...predicate.MJLog) {
 	m.predicates = append(m.predicates, ps...)
@@ -2986,19 +3027,28 @@ func (m *MJLogMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *MJLogMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.mjlog_files != nil {
+		edges = append(edges, mjlog.EdgeMjlogFiles)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *MJLogMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case mjlog.EdgeMjlogFiles:
+		if id := m.mjlog_files; id != nil {
+			return []ent.Value{*id}
+		}
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *MJLogMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
 	return edges
 }
 
@@ -3010,25 +3060,42 @@ func (m *MJLogMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *MJLogMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.clearedmjlog_files {
+		edges = append(edges, mjlog.EdgeMjlogFiles)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *MJLogMutation) EdgeCleared(name string) bool {
+	switch name {
+	case mjlog.EdgeMjlogFiles:
+		return m.clearedmjlog_files
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *MJLogMutation) ClearEdge(name string) error {
+	switch name {
+	case mjlog.EdgeMjlogFiles:
+		m.ClearMjlogFiles()
+		return nil
+	}
 	return fmt.Errorf("unknown MJLog unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *MJLogMutation) ResetEdge(name string) error {
+	switch name {
+	case mjlog.EdgeMjlogFiles:
+		m.ResetMjlogFiles()
+		return nil
+	}
 	return fmt.Errorf("unknown MJLog edge %s", name)
 }
 
@@ -3042,6 +3109,8 @@ type MJLogFileMutation struct {
 	clearedFields                 map[string]struct{}
 	compressed_mjlog_files        *uuid.UUID
 	clearedcompressed_mjlog_files bool
+	mjlogs                        *uuid.UUID
+	clearedmjlogs                 bool
 	done                          bool
 	oldValue                      func(context.Context) (*MJLogFile, error)
 	predicates                    []predicate.MJLogFile
@@ -3226,6 +3295,45 @@ func (m *MJLogFileMutation) ResetCompressedMjlogFiles() {
 	m.clearedcompressed_mjlog_files = false
 }
 
+// SetMjlogsID sets the "mjlogs" edge to the MJLog entity by id.
+func (m *MJLogFileMutation) SetMjlogsID(id uuid.UUID) {
+	m.mjlogs = &id
+}
+
+// ClearMjlogs clears the "mjlogs" edge to the MJLog entity.
+func (m *MJLogFileMutation) ClearMjlogs() {
+	m.clearedmjlogs = true
+}
+
+// MjlogsCleared reports if the "mjlogs" edge to the MJLog entity was cleared.
+func (m *MJLogFileMutation) MjlogsCleared() bool {
+	return m.clearedmjlogs
+}
+
+// MjlogsID returns the "mjlogs" edge ID in the mutation.
+func (m *MJLogFileMutation) MjlogsID() (id uuid.UUID, exists bool) {
+	if m.mjlogs != nil {
+		return *m.mjlogs, true
+	}
+	return
+}
+
+// MjlogsIDs returns the "mjlogs" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// MjlogsID instead. It exists only for internal usage by the builders.
+func (m *MJLogFileMutation) MjlogsIDs() (ids []uuid.UUID) {
+	if id := m.mjlogs; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetMjlogs resets all changes to the "mjlogs" edge.
+func (m *MJLogFileMutation) ResetMjlogs() {
+	m.mjlogs = nil
+	m.clearedmjlogs = false
+}
+
 // Where appends a list predicates to the MJLogFileMutation builder.
 func (m *MJLogFileMutation) Where(ps ...predicate.MJLogFile) {
 	m.predicates = append(m.predicates, ps...)
@@ -3344,9 +3452,12 @@ func (m *MJLogFileMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *MJLogFileMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.compressed_mjlog_files != nil {
 		edges = append(edges, mjlogfile.EdgeCompressedMjlogFiles)
+	}
+	if m.mjlogs != nil {
+		edges = append(edges, mjlogfile.EdgeMjlogs)
 	}
 	return edges
 }
@@ -3359,13 +3470,17 @@ func (m *MJLogFileMutation) AddedIDs(name string) []ent.Value {
 		if id := m.compressed_mjlog_files; id != nil {
 			return []ent.Value{*id}
 		}
+	case mjlogfile.EdgeMjlogs:
+		if id := m.mjlogs; id != nil {
+			return []ent.Value{*id}
+		}
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *MJLogFileMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	return edges
 }
 
@@ -3377,9 +3492,12 @@ func (m *MJLogFileMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *MJLogFileMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.clearedcompressed_mjlog_files {
 		edges = append(edges, mjlogfile.EdgeCompressedMjlogFiles)
+	}
+	if m.clearedmjlogs {
+		edges = append(edges, mjlogfile.EdgeMjlogs)
 	}
 	return edges
 }
@@ -3390,6 +3508,8 @@ func (m *MJLogFileMutation) EdgeCleared(name string) bool {
 	switch name {
 	case mjlogfile.EdgeCompressedMjlogFiles:
 		return m.clearedcompressed_mjlog_files
+	case mjlogfile.EdgeMjlogs:
+		return m.clearedmjlogs
 	}
 	return false
 }
@@ -3401,6 +3521,9 @@ func (m *MJLogFileMutation) ClearEdge(name string) error {
 	case mjlogfile.EdgeCompressedMjlogFiles:
 		m.ClearCompressedMjlogFiles()
 		return nil
+	case mjlogfile.EdgeMjlogs:
+		m.ClearMjlogs()
+		return nil
 	}
 	return fmt.Errorf("unknown MJLogFile unique edge %s", name)
 }
@@ -3411,6 +3534,9 @@ func (m *MJLogFileMutation) ResetEdge(name string) error {
 	switch name {
 	case mjlogfile.EdgeCompressedMjlogFiles:
 		m.ResetCompressedMjlogFiles()
+		return nil
+	case mjlogfile.EdgeMjlogs:
+		m.ResetMjlogs()
 		return nil
 	}
 	return fmt.Errorf("unknown MJLogFile edge %s", name)

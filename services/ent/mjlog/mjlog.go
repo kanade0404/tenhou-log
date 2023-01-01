@@ -21,8 +21,17 @@ const (
 	FieldStartedAt = "started_at"
 	// FieldInsertedAt holds the string denoting the inserted_at field in the database.
 	FieldInsertedAt = "inserted_at"
+	// EdgeMjlogFiles holds the string denoting the mjlog_files edge name in mutations.
+	EdgeMjlogFiles = "mjlog_files"
 	// Table holds the table name of the mjlog in the database.
 	Table = "mj_logs"
+	// MjlogFilesTable is the table that holds the mjlog_files relation/edge.
+	MjlogFilesTable = "mj_logs"
+	// MjlogFilesInverseTable is the table name for the MJLogFile entity.
+	// It exists in this package in order to avoid circular dependency with the "mjlogfile" package.
+	MjlogFilesInverseTable = "mj_log_files"
+	// MjlogFilesColumn is the table column denoting the mjlog_files relation/edge.
+	MjlogFilesColumn = "mj_log_file_mjlogs"
 )
 
 // Columns holds all SQL columns for mjlog fields.
@@ -34,10 +43,21 @@ var Columns = []string{
 	FieldInsertedAt,
 }
 
+// ForeignKeys holds the SQL foreign-keys that are owned by the "mj_logs"
+// table and are not defined as standalone fields in the schema.
+var ForeignKeys = []string{
+	"mj_log_file_mjlogs",
+}
+
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
+			return true
+		}
+	}
+	for i := range ForeignKeys {
+		if column == ForeignKeys[i] {
 			return true
 		}
 	}

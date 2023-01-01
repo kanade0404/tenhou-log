@@ -9,6 +9,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/compressedmjlog"
+	"github.com/kanade0404/tenhou-log/services/ent/mjlog"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlogfile"
 )
 
@@ -29,9 +30,11 @@ type MJLogFile struct {
 type MJLogFileEdges struct {
 	// CompressedMjlogFiles holds the value of the compressed_mjlog_files edge.
 	CompressedMjlogFiles *CompressedMJLog `json:"compressed_mjlog_files,omitempty"`
+	// Mjlogs holds the value of the mjlogs edge.
+	Mjlogs *MJLog `json:"mjlogs,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [2]bool
 }
 
 // CompressedMjlogFilesOrErr returns the CompressedMjlogFiles value or an error if the edge
@@ -45,6 +48,19 @@ func (e MJLogFileEdges) CompressedMjlogFilesOrErr() (*CompressedMJLog, error) {
 		return e.CompressedMjlogFiles, nil
 	}
 	return nil, &NotLoadedError{edge: "compressed_mjlog_files"}
+}
+
+// MjlogsOrErr returns the Mjlogs value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e MJLogFileEdges) MjlogsOrErr() (*MJLog, error) {
+	if e.loadedTypes[1] {
+		if e.Mjlogs == nil {
+			// Edge was loaded but was not found.
+			return nil, &NotFoundError{label: mjlog.Label}
+		}
+		return e.Mjlogs, nil
+	}
+	return nil, &NotLoadedError{edge: "mjlogs"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -100,6 +116,11 @@ func (mlf *MJLogFile) assignValues(columns []string, values []any) error {
 // QueryCompressedMjlogFiles queries the "compressed_mjlog_files" edge of the MJLogFile entity.
 func (mlf *MJLogFile) QueryCompressedMjlogFiles() *CompressedMJLogQuery {
 	return (&MJLogFileClient{config: mlf.config}).QueryCompressedMjlogFiles(mlf)
+}
+
+// QueryMjlogs queries the "mjlogs" edge of the MJLogFile entity.
+func (mlf *MJLogFile) QueryMjlogs() *MJLogQuery {
+	return (&MJLogFileClient{config: mlf.config}).QueryMjlogs(mlf)
 }
 
 // Update returns a builder for updating this MJLogFile.
