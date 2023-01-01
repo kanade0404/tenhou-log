@@ -109,22 +109,24 @@ func TestNewPlayerIndex(t *testing.T) {
 	type args struct {
 		idx int
 	}
+	own := PlayerIndex(0)
+	north := PlayerIndex(3)
 	tests := []struct {
 		name    string
 		args    args
-		want    PlayerIndex
+		want    *PlayerIndex
 		wantErr bool
 	}{
 		{
 			name:    "正常値:0",
 			args:    args{idx: 0},
-			want:    0,
+			want:    &own,
 			wantErr: false,
 		},
 		{
 			name:    "正常値:3",
 			args:    args{idx: 3},
-			want:    3,
+			want:    &north,
 			wantErr: false,
 		},
 		{
@@ -145,7 +147,13 @@ func TestNewPlayerIndex(t *testing.T) {
 				t.Errorf("NewPlayerIndex() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if got != tt.want {
+			if got == tt.want {
+				return
+			}
+			if !((got == nil && tt.want == nil) || (got != nil && tt.want != nil)) {
+				t.Errorf("NewPlayerIndex() got = %v, want %v", got, tt.want)
+			}
+			if *got != *(tt.want) {
 				t.Errorf("NewPlayerIndex() got = %v, want %v", got, tt.want)
 			}
 		})
@@ -156,22 +164,30 @@ func TestNewPlayerIndexFromString(t *testing.T) {
 	type args struct {
 		pi string
 	}
+	own, err := NewPlayerIndex(0)
+	if err != nil {
+		t.Errorf("%v", err)
+	}
+	north, err := NewPlayerIndex(3)
+	if err != nil {
+		t.Errorf("%v", err)
+	}
 	tests := []struct {
 		name    string
 		args    args
-		want    PlayerIndex
+		want    *PlayerIndex
 		wantErr bool
 	}{
 		{
 			name:    "正常値:0",
 			args:    args{pi: "0"},
-			want:    0,
+			want:    own,
 			wantErr: false,
 		},
 		{
 			name:    "正常値:3",
 			args:    args{pi: "3"},
-			want:    3,
+			want:    north,
 			wantErr: false,
 		},
 		{
@@ -192,7 +208,13 @@ func TestNewPlayerIndexFromString(t *testing.T) {
 				t.Errorf("NewPlayerIndexFromString() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if got != tt.want {
+			if got == tt.want {
+				return
+			}
+			if !((got == nil && tt.want == nil) || (got != nil && tt.want != nil)) {
+				t.Errorf("NewPlayerIndexFromString() got = %v, want %v", got, tt.want)
+			}
+			if *got != *(tt.want) {
 				t.Errorf("NewPlayerIndexFromString() got = %v, want %v", got, tt.want)
 			}
 		})

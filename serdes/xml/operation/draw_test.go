@@ -100,7 +100,7 @@ func TestIsDrawType(t *testing.T) {
 func TestNewDraw(t *testing.T) {
 	type args struct {
 		drawType string
-		haiID    uint
+		haiID    int
 		gameInfo *xml.GameInfo
 	}
 	red5Character, _ := hai.NewHai(16, true)

@@ -9,7 +9,7 @@ type ParentPlayer struct {
 	Index uint
 }
 
-func (p ParentPlayer) Marshal() string {
+func (p *ParentPlayer) Marshal() string {
 	return strconv.Itoa(int(p.Index - 1))
 }
 

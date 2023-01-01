@@ -37,7 +37,7 @@ func NewReach(who string, step string) (*Reach, error) {
 		return nil, fmt.Errorf("step must be 1 or 2. actual: %s", step)
 	}
 	return &Reach{
-		playerIndex,
+		*playerIndex,
 		isComplete,
 	}, nil
 }

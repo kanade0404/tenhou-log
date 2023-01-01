@@ -7,174 +7,106 @@ import (
 )
 
 func TestHai_Name(t *testing.T) {
-	type fields struct {
-		ID   uint
-		Num  uint
-		Type HaiType
-	}
 	tests := []struct {
-		name   string
-		fields fields
-		isRed  bool
-		want   string
+		name  string
+		id    int
+		isRed bool
+		want  string
 	}{
 		{
 			name: "一萬赤なし",
-			fields: fields{
-				ID:   0,
-				Num:  1,
-				Type: CharactersType,
-			},
+			id:   0,
 			want: "一萬",
 		},
 		{
 			name: "一萬赤なし",
-			fields: fields{
-				ID:   3,
-				Num:  1,
-				Type: CharactersType,
-			},
+			id:   3,
 			want: "一萬",
 		},
 		{
 			name: "五萬赤なし",
-			fields: fields{
-				ID:   16,
-				Num:  5,
-				Type: CharactersType,
-			},
+			id:   16,
 			want: "五萬",
 		},
 		{
-			name: "五萬赤あり（赤五萬）",
-			fields: fields{
-				ID:   16,
-				Num:  5,
-				Type: CharactersType,
-			},
+			name:  "五萬赤あり（赤五萬）",
+			id:    16,
 			isRed: true,
 			want:  "赤五萬",
 		},
 		{
-			name: "五萬赤あり（黒五萬）",
-			fields: fields{
-				ID:   17,
-				Num:  5,
-				Type: CharactersType,
-			},
+			name:  "五萬赤あり（黒五萬）",
+			id:    17,
 			isRed: true,
 			want:  "五萬",
 		},
 		{
 			name: "九萬赤なし",
-			fields: fields{
-				ID:   35,
-				Num:  9,
-				Type: CharactersType,
-			},
+			id:   35,
 			want: "九萬",
 		},
 		{
 			name: "一筒赤なし",
-			fields: fields{
-				ID:   36,
-				Num:  1,
-				Type: CirclesType,
-			},
+			id:   36,
 			want: "一筒",
 		},
 		{
 			name: "五筒赤なし",
-			fields: fields{
-				ID:   52,
-				Num:  5,
-				Type: CirclesType,
-			},
+			id:   52,
 			want: "五筒",
 		},
 		{
-			name: "五筒赤あり（赤五筒）",
-			fields: fields{
-				ID:   52,
-				Num:  5,
-				Type: CirclesType,
-			},
+			name:  "五筒赤あり（赤五筒）",
+			id:    52,
 			isRed: true,
 			want:  "赤五筒",
 		},
 		{
-			name: "五筒赤あり（黒五筒）",
-			fields: fields{
-				ID:   53,
-				Num:  5,
-				Type: CirclesType,
-			},
+			name:  "五筒赤あり（黒五筒）",
+			id:    53,
 			isRed: true,
 			want:  "五筒",
 		},
 		{
 			name: "九筒赤なし",
-			fields: fields{
-				ID:   71,
-				Num:  9,
-				Type: CirclesType,
-			},
+			id:   71,
 			want: "九筒",
 		},
 		{
 			name: "一索赤なし",
-			fields: fields{
-				ID:   73,
-				Num:  1,
-				Type: BamboosType,
-			},
+			id:   73,
 			want: "一索",
 		},
 		{
 			name: "五索赤なし",
-			fields: fields{
-				ID:   88,
-				Num:  5,
-				Type: BamboosType,
-			},
+			id:   88,
 			want: "五索",
 		},
 		{
-			name: "五索赤あり（赤五索）",
-			fields: fields{
-				ID:   88,
-				Num:  5,
-				Type: BamboosType,
-			},
+			name:  "五索赤あり（赤五索）",
+			id:    88,
 			isRed: true,
 			want:  "赤五索",
 		},
 		{
-			name: "五索赤あり（黒五索）",
-			fields: fields{
-				ID:   89,
-				Num:  5,
-				Type: BamboosType,
-			},
+			name:  "五索赤あり（黒五索）",
+			id:    89,
 			isRed: true,
 			want:  "五索",
 		},
 		{
-			name: "九索赤なし",
-			fields: fields{
-				ID:   107,
-				Num:  9,
-				Type: BamboosType,
-			},
+			name:  "九索赤なし",
+			id:    107,
 			isRed: true,
 			want:  "九索",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			h, _ := NewHai(tt.fields.ID, tt.isRed)
-			if got := h.Name(); got != tt.want {
-				t.Errorf("File() = %v, want %v", got, tt.want)
+			h, _ := NewHai(tt.id, tt.isRed)
+			got := h.Name()
+			if diff := cmp.Diff(got, tt.want); diff != "" {
+				t.Errorf("(-got+want)\n%v", diff)
 			}
 		})
 	}
@@ -182,7 +114,7 @@ func TestHai_Name(t *testing.T) {
 
 func TestNewHai(t *testing.T) {
 	type args struct {
-		id    uint
+		id    int
 		isRed bool
 	}
 	tests := []struct {
@@ -607,7 +539,7 @@ func TestNewHai(t *testing.T) {
 func Test_IsRed(t *testing.T) {
 	tests := []struct {
 		name      string
-		id        uint
+		id        int
 		isRedRule bool
 		want      bool
 		wantErr   bool
