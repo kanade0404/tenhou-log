@@ -12,10 +12,18 @@ import (
 // Tx is a transactional client that is created by calling Client.Tx().
 type Tx struct {
 	config
+	// Chakan is the client for interacting with the Chakan builders.
+	Chakan *ChakanClient
+	// Chii is the client for interacting with the Chii builders.
+	Chii *ChiiClient
 	// CompressedMJLog is the client for interacting with the CompressedMJLog builders.
 	CompressedMJLog *CompressedMJLogClient
+	// ConcealedKan is the client for interacting with the ConcealedKan builders.
+	ConcealedKan *ConcealedKanClient
 	// Dan is the client for interacting with the Dan builders.
 	Dan *DanClient
+	// Drawn is the client for interacting with the Drawn builders.
+	Drawn *DrawnClient
 	// Game is the client for interacting with the Game builders.
 	Game *GameClient
 	// GamePlayer is the client for interacting with the GamePlayer builders.
@@ -24,20 +32,26 @@ type Tx struct {
 	GamePlayerHandHai *GamePlayerHandHaiClient
 	// GamePlayerPoint is the client for interacting with the GamePlayerPoint builders.
 	GamePlayerPoint *GamePlayerPointClient
-	// GoAround is the client for interacting with the GoAround builders.
-	GoAround *GoAroundClient
 	// Hand is the client for interacting with the Hand builders.
 	Hand *HandClient
 	// MJLog is the client for interacting with the MJLog builders.
 	MJLog *MJLogClient
 	// MJLogFile is the client for interacting with the MJLogFile builders.
 	MJLogFile *MJLogFileClient
+	// MeldedKan is the client for interacting with the MeldedKan builders.
+	MeldedKan *MeldedKanClient
 	// Player is the client for interacting with the Player builders.
 	Player *PlayerClient
+	// Pon is the client for interacting with the Pon builders.
+	Pon *PonClient
 	// Room is the client for interacting with the Room builders.
 	Room *RoomClient
 	// Round is the client for interacting with the Round builders.
 	Round *RoundClient
+	// Turn is the client for interacting with the Turn builders.
+	Turn *TurnClient
+	// Win is the client for interacting with the Win builders.
+	Win *WinClient
 	// Wind is the client for interacting with the Wind builders.
 	Wind *WindClient
 
@@ -171,19 +185,26 @@ func (tx *Tx) Client() *Client {
 }
 
 func (tx *Tx) init() {
+	tx.Chakan = NewChakanClient(tx.config)
+	tx.Chii = NewChiiClient(tx.config)
 	tx.CompressedMJLog = NewCompressedMJLogClient(tx.config)
+	tx.ConcealedKan = NewConcealedKanClient(tx.config)
 	tx.Dan = NewDanClient(tx.config)
+	tx.Drawn = NewDrawnClient(tx.config)
 	tx.Game = NewGameClient(tx.config)
 	tx.GamePlayer = NewGamePlayerClient(tx.config)
 	tx.GamePlayerHandHai = NewGamePlayerHandHaiClient(tx.config)
 	tx.GamePlayerPoint = NewGamePlayerPointClient(tx.config)
-	tx.GoAround = NewGoAroundClient(tx.config)
 	tx.Hand = NewHandClient(tx.config)
 	tx.MJLog = NewMJLogClient(tx.config)
 	tx.MJLogFile = NewMJLogFileClient(tx.config)
+	tx.MeldedKan = NewMeldedKanClient(tx.config)
 	tx.Player = NewPlayerClient(tx.config)
+	tx.Pon = NewPonClient(tx.config)
 	tx.Room = NewRoomClient(tx.config)
 	tx.Round = NewRoundClient(tx.config)
+	tx.Turn = NewTurnClient(tx.config)
+	tx.Win = NewWinClient(tx.config)
 	tx.Wind = NewWindClient(tx.config)
 }
 
@@ -194,7 +215,7 @@ func (tx *Tx) init() {
 // of them in order to commit or rollback the transaction.
 //
 // If a closed transaction is embedded in one of the generated entities, and the entity
-// applies a query, for example: CompressedMJLog.QueryXXX(), the query will be executed
+// applies a query, for example: Chakan.QueryXXX(), the query will be executed
 // through the driver which created this transaction.
 //
 // Note that txDriver is not goroutine safe.

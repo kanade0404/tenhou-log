@@ -4,32 +4,33 @@ package gameplayerpoint
 
 import (
 	"entgo.io/ent/dialect/sql"
+	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 )
 
 // ID filters vertices based on their ID field.
-func ID(id int) predicate.GamePlayerPoint {
+func ID(id uuid.UUID) predicate.GamePlayerPoint {
 	return predicate.GamePlayerPoint(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldID), id))
 	})
 }
 
 // IDEQ applies the EQ predicate on the ID field.
-func IDEQ(id int) predicate.GamePlayerPoint {
+func IDEQ(id uuid.UUID) predicate.GamePlayerPoint {
 	return predicate.GamePlayerPoint(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldID), id))
 	})
 }
 
 // IDNEQ applies the NEQ predicate on the ID field.
-func IDNEQ(id int) predicate.GamePlayerPoint {
+func IDNEQ(id uuid.UUID) predicate.GamePlayerPoint {
 	return predicate.GamePlayerPoint(func(s *sql.Selector) {
 		s.Where(sql.NEQ(s.C(FieldID), id))
 	})
 }
 
 // IDIn applies the In predicate on the ID field.
-func IDIn(ids ...int) predicate.GamePlayerPoint {
+func IDIn(ids ...uuid.UUID) predicate.GamePlayerPoint {
 	return predicate.GamePlayerPoint(func(s *sql.Selector) {
 		v := make([]any, len(ids))
 		for i := range v {
@@ -40,7 +41,7 @@ func IDIn(ids ...int) predicate.GamePlayerPoint {
 }
 
 // IDNotIn applies the NotIn predicate on the ID field.
-func IDNotIn(ids ...int) predicate.GamePlayerPoint {
+func IDNotIn(ids ...uuid.UUID) predicate.GamePlayerPoint {
 	return predicate.GamePlayerPoint(func(s *sql.Selector) {
 		v := make([]any, len(ids))
 		for i := range v {
@@ -51,30 +52,101 @@ func IDNotIn(ids ...int) predicate.GamePlayerPoint {
 }
 
 // IDGT applies the GT predicate on the ID field.
-func IDGT(id int) predicate.GamePlayerPoint {
+func IDGT(id uuid.UUID) predicate.GamePlayerPoint {
 	return predicate.GamePlayerPoint(func(s *sql.Selector) {
 		s.Where(sql.GT(s.C(FieldID), id))
 	})
 }
 
 // IDGTE applies the GTE predicate on the ID field.
-func IDGTE(id int) predicate.GamePlayerPoint {
+func IDGTE(id uuid.UUID) predicate.GamePlayerPoint {
 	return predicate.GamePlayerPoint(func(s *sql.Selector) {
 		s.Where(sql.GTE(s.C(FieldID), id))
 	})
 }
 
 // IDLT applies the LT predicate on the ID field.
-func IDLT(id int) predicate.GamePlayerPoint {
+func IDLT(id uuid.UUID) predicate.GamePlayerPoint {
 	return predicate.GamePlayerPoint(func(s *sql.Selector) {
 		s.Where(sql.LT(s.C(FieldID), id))
 	})
 }
 
 // IDLTE applies the LTE predicate on the ID field.
-func IDLTE(id int) predicate.GamePlayerPoint {
+func IDLTE(id uuid.UUID) predicate.GamePlayerPoint {
 	return predicate.GamePlayerPoint(func(s *sql.Selector) {
 		s.Where(sql.LTE(s.C(FieldID), id))
+	})
+}
+
+// Point applies equality check predicate on the "point" field. It's identical to PointEQ.
+func Point(v uint) predicate.GamePlayerPoint {
+	return predicate.GamePlayerPoint(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldPoint), v))
+	})
+}
+
+// PointEQ applies the EQ predicate on the "point" field.
+func PointEQ(v uint) predicate.GamePlayerPoint {
+	return predicate.GamePlayerPoint(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldPoint), v))
+	})
+}
+
+// PointNEQ applies the NEQ predicate on the "point" field.
+func PointNEQ(v uint) predicate.GamePlayerPoint {
+	return predicate.GamePlayerPoint(func(s *sql.Selector) {
+		s.Where(sql.NEQ(s.C(FieldPoint), v))
+	})
+}
+
+// PointIn applies the In predicate on the "point" field.
+func PointIn(vs ...uint) predicate.GamePlayerPoint {
+	v := make([]any, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.GamePlayerPoint(func(s *sql.Selector) {
+		s.Where(sql.In(s.C(FieldPoint), v...))
+	})
+}
+
+// PointNotIn applies the NotIn predicate on the "point" field.
+func PointNotIn(vs ...uint) predicate.GamePlayerPoint {
+	v := make([]any, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.GamePlayerPoint(func(s *sql.Selector) {
+		s.Where(sql.NotIn(s.C(FieldPoint), v...))
+	})
+}
+
+// PointGT applies the GT predicate on the "point" field.
+func PointGT(v uint) predicate.GamePlayerPoint {
+	return predicate.GamePlayerPoint(func(s *sql.Selector) {
+		s.Where(sql.GT(s.C(FieldPoint), v))
+	})
+}
+
+// PointGTE applies the GTE predicate on the "point" field.
+func PointGTE(v uint) predicate.GamePlayerPoint {
+	return predicate.GamePlayerPoint(func(s *sql.Selector) {
+		s.Where(sql.GTE(s.C(FieldPoint), v))
+	})
+}
+
+// PointLT applies the LT predicate on the "point" field.
+func PointLT(v uint) predicate.GamePlayerPoint {
+	return predicate.GamePlayerPoint(func(s *sql.Selector) {
+		s.Where(sql.LT(s.C(FieldPoint), v))
+	})
+}
+
+// PointLTE applies the LTE predicate on the "point" field.
+func PointLTE(v uint) predicate.GamePlayerPoint {
+	return predicate.GamePlayerPoint(func(s *sql.Selector) {
+		s.Where(sql.LTE(s.C(FieldPoint), v))
 	})
 }
 

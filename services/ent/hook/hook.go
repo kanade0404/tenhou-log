@@ -9,6 +9,32 @@ import (
 	"github.com/kanade0404/tenhou-log/services/ent"
 )
 
+// The ChakanFunc type is an adapter to allow the use of ordinary
+// function as Chakan mutator.
+type ChakanFunc func(context.Context, *ent.ChakanMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ChakanFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	mv, ok := m.(*ent.ChakanMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ChakanMutation", m)
+	}
+	return f(ctx, mv)
+}
+
+// The ChiiFunc type is an adapter to allow the use of ordinary
+// function as Chii mutator.
+type ChiiFunc func(context.Context, *ent.ChiiMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ChiiFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	mv, ok := m.(*ent.ChiiMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ChiiMutation", m)
+	}
+	return f(ctx, mv)
+}
+
 // The CompressedMJLogFunc type is an adapter to allow the use of ordinary
 // function as CompressedMJLog mutator.
 type CompressedMJLogFunc func(context.Context, *ent.CompressedMJLogMutation) (ent.Value, error)
@@ -22,6 +48,19 @@ func (f CompressedMJLogFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Va
 	return f(ctx, mv)
 }
 
+// The ConcealedKanFunc type is an adapter to allow the use of ordinary
+// function as ConcealedKan mutator.
+type ConcealedKanFunc func(context.Context, *ent.ConcealedKanMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ConcealedKanFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	mv, ok := m.(*ent.ConcealedKanMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ConcealedKanMutation", m)
+	}
+	return f(ctx, mv)
+}
+
 // The DanFunc type is an adapter to allow the use of ordinary
 // function as Dan mutator.
 type DanFunc func(context.Context, *ent.DanMutation) (ent.Value, error)
@@ -31,6 +70,19 @@ func (f DanFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) 
 	mv, ok := m.(*ent.DanMutation)
 	if !ok {
 		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.DanMutation", m)
+	}
+	return f(ctx, mv)
+}
+
+// The DrawnFunc type is an adapter to allow the use of ordinary
+// function as Drawn mutator.
+type DrawnFunc func(context.Context, *ent.DrawnMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f DrawnFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	mv, ok := m.(*ent.DrawnMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.DrawnMutation", m)
 	}
 	return f(ctx, mv)
 }
@@ -87,19 +139,6 @@ func (f GamePlayerPointFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Va
 	return f(ctx, mv)
 }
 
-// The GoAroundFunc type is an adapter to allow the use of ordinary
-// function as GoAround mutator.
-type GoAroundFunc func(context.Context, *ent.GoAroundMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f GoAroundFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	mv, ok := m.(*ent.GoAroundMutation)
-	if !ok {
-		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.GoAroundMutation", m)
-	}
-	return f(ctx, mv)
-}
-
 // The HandFunc type is an adapter to allow the use of ordinary
 // function as Hand mutator.
 type HandFunc func(context.Context, *ent.HandMutation) (ent.Value, error)
@@ -139,6 +178,19 @@ func (f MJLogFileFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, e
 	return f(ctx, mv)
 }
 
+// The MeldedKanFunc type is an adapter to allow the use of ordinary
+// function as MeldedKan mutator.
+type MeldedKanFunc func(context.Context, *ent.MeldedKanMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f MeldedKanFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	mv, ok := m.(*ent.MeldedKanMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.MeldedKanMutation", m)
+	}
+	return f(ctx, mv)
+}
+
 // The PlayerFunc type is an adapter to allow the use of ordinary
 // function as Player mutator.
 type PlayerFunc func(context.Context, *ent.PlayerMutation) (ent.Value, error)
@@ -148,6 +200,19 @@ func (f PlayerFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, erro
 	mv, ok := m.(*ent.PlayerMutation)
 	if !ok {
 		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PlayerMutation", m)
+	}
+	return f(ctx, mv)
+}
+
+// The PonFunc type is an adapter to allow the use of ordinary
+// function as Pon mutator.
+type PonFunc func(context.Context, *ent.PonMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f PonFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	mv, ok := m.(*ent.PonMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PonMutation", m)
 	}
 	return f(ctx, mv)
 }
@@ -174,6 +239,32 @@ func (f RoundFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error
 	mv, ok := m.(*ent.RoundMutation)
 	if !ok {
 		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.RoundMutation", m)
+	}
+	return f(ctx, mv)
+}
+
+// The TurnFunc type is an adapter to allow the use of ordinary
+// function as Turn mutator.
+type TurnFunc func(context.Context, *ent.TurnMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f TurnFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	mv, ok := m.(*ent.TurnMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TurnMutation", m)
+	}
+	return f(ctx, mv)
+}
+
+// The WinFunc type is an adapter to allow the use of ordinary
+// function as Win mutator.
+type WinFunc func(context.Context, *ent.WinMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f WinFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	mv, ok := m.(*ent.WinMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.WinMutation", m)
 	}
 	return f(ctx, mv)
 }

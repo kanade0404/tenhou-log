@@ -92,7 +92,7 @@ func (gppu *GamePlayerPointUpdate) sqlSave(ctx context.Context) (n int, err erro
 			Table:   gameplayerpoint.Table,
 			Columns: gameplayerpoint.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: gameplayerpoint.FieldID,
 			},
 		},
@@ -201,7 +201,7 @@ func (gppuo *GamePlayerPointUpdateOne) sqlSave(ctx context.Context) (_node *Game
 			Table:   gameplayerpoint.Table,
 			Columns: gameplayerpoint.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: gameplayerpoint.FieldID,
 			},
 		},

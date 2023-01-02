@@ -14,6 +14,7 @@ import (
 	"github.com/kanade0404/tenhou-log/services/ent/hand"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 	"github.com/kanade0404/tenhou-log/services/ent/round"
+	"github.com/kanade0404/tenhou-log/services/ent/turn"
 )
 
 // HandUpdate is the builder for updating Hand entities.
@@ -48,6 +49,21 @@ func (hu *HandUpdate) SetRounds(r *Round) *HandUpdate {
 	return hu.SetRoundsID(r.ID)
 }
 
+// AddTurnIDs adds the "turns" edge to the Turn entity by IDs.
+func (hu *HandUpdate) AddTurnIDs(ids ...uuid.UUID) *HandUpdate {
+	hu.mutation.AddTurnIDs(ids...)
+	return hu
+}
+
+// AddTurns adds the "turns" edges to the Turn entity.
+func (hu *HandUpdate) AddTurns(t ...*Turn) *HandUpdate {
+	ids := make([]uuid.UUID, len(t))
+	for i := range t {
+		ids[i] = t[i].ID
+	}
+	return hu.AddTurnIDs(ids...)
+}
+
 // Mutation returns the HandMutation object of the builder.
 func (hu *HandUpdate) Mutation() *HandMutation {
 	return hu.mutation
@@ -57,6 +73,27 @@ func (hu *HandUpdate) Mutation() *HandMutation {
 func (hu *HandUpdate) ClearRounds() *HandUpdate {
 	hu.mutation.ClearRounds()
 	return hu
+}
+
+// ClearTurns clears all "turns" edges to the Turn entity.
+func (hu *HandUpdate) ClearTurns() *HandUpdate {
+	hu.mutation.ClearTurns()
+	return hu
+}
+
+// RemoveTurnIDs removes the "turns" edge to Turn entities by IDs.
+func (hu *HandUpdate) RemoveTurnIDs(ids ...uuid.UUID) *HandUpdate {
+	hu.mutation.RemoveTurnIDs(ids...)
+	return hu
+}
+
+// RemoveTurns removes "turns" edges to Turn entities.
+func (hu *HandUpdate) RemoveTurns(t ...*Turn) *HandUpdate {
+	ids := make([]uuid.UUID, len(t))
+	for i := range t {
+		ids[i] = t[i].ID
+	}
+	return hu.RemoveTurnIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -166,6 +203,60 @@ func (hu *HandUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if hu.mutation.TurnsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   hand.TurnsTable,
+			Columns: hand.TurnsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: turn.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := hu.mutation.RemovedTurnsIDs(); len(nodes) > 0 && !hu.mutation.TurnsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   hand.TurnsTable,
+			Columns: hand.TurnsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: turn.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := hu.mutation.TurnsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   hand.TurnsTable,
+			Columns: hand.TurnsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: turn.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, hu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{hand.Label}
@@ -204,6 +295,21 @@ func (huo *HandUpdateOne) SetRounds(r *Round) *HandUpdateOne {
 	return huo.SetRoundsID(r.ID)
 }
 
+// AddTurnIDs adds the "turns" edge to the Turn entity by IDs.
+func (huo *HandUpdateOne) AddTurnIDs(ids ...uuid.UUID) *HandUpdateOne {
+	huo.mutation.AddTurnIDs(ids...)
+	return huo
+}
+
+// AddTurns adds the "turns" edges to the Turn entity.
+func (huo *HandUpdateOne) AddTurns(t ...*Turn) *HandUpdateOne {
+	ids := make([]uuid.UUID, len(t))
+	for i := range t {
+		ids[i] = t[i].ID
+	}
+	return huo.AddTurnIDs(ids...)
+}
+
 // Mutation returns the HandMutation object of the builder.
 func (huo *HandUpdateOne) Mutation() *HandMutation {
 	return huo.mutation
@@ -213,6 +319,27 @@ func (huo *HandUpdateOne) Mutation() *HandMutation {
 func (huo *HandUpdateOne) ClearRounds() *HandUpdateOne {
 	huo.mutation.ClearRounds()
 	return huo
+}
+
+// ClearTurns clears all "turns" edges to the Turn entity.
+func (huo *HandUpdateOne) ClearTurns() *HandUpdateOne {
+	huo.mutation.ClearTurns()
+	return huo
+}
+
+// RemoveTurnIDs removes the "turns" edge to Turn entities by IDs.
+func (huo *HandUpdateOne) RemoveTurnIDs(ids ...uuid.UUID) *HandUpdateOne {
+	huo.mutation.RemoveTurnIDs(ids...)
+	return huo
+}
+
+// RemoveTurns removes "turns" edges to Turn entities.
+func (huo *HandUpdateOne) RemoveTurns(t ...*Turn) *HandUpdateOne {
+	ids := make([]uuid.UUID, len(t))
+	for i := range t {
+		ids[i] = t[i].ID
+	}
+	return huo.RemoveTurnIDs(ids...)
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -344,6 +471,60 @@ func (huo *HandUpdateOne) sqlSave(ctx context.Context) (_node *Hand, err error) 
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: round.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if huo.mutation.TurnsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   hand.TurnsTable,
+			Columns: hand.TurnsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: turn.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := huo.mutation.RemovedTurnsIDs(); len(nodes) > 0 && !huo.mutation.TurnsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   hand.TurnsTable,
+			Columns: hand.TurnsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: turn.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := huo.mutation.TurnsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   hand.TurnsTable,
+			Columns: hand.TurnsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: turn.FieldID,
 				},
 			},
 		}

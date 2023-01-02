@@ -37,6 +37,6 @@ func (Hand) Fields() []ent.Field {
 func (Hand) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("rounds", Round.Type).Ref("hands").Unique(),
-		//edge.To("go_arounds", GoAround.Type),
+		edge.To("turns", Turn.Type),
 	}
 }

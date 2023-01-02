@@ -24,19 +24,26 @@ type config struct {
 
 // hooks per client, for fast access.
 type hooks struct {
+	Chakan            []ent.Hook
+	Chii              []ent.Hook
 	CompressedMJLog   []ent.Hook
+	ConcealedKan      []ent.Hook
 	Dan               []ent.Hook
+	Drawn             []ent.Hook
 	Game              []ent.Hook
 	GamePlayer        []ent.Hook
 	GamePlayerHandHai []ent.Hook
 	GamePlayerPoint   []ent.Hook
-	GoAround          []ent.Hook
 	Hand              []ent.Hook
 	MJLog             []ent.Hook
 	MJLogFile         []ent.Hook
+	MeldedKan         []ent.Hook
 	Player            []ent.Hook
+	Pon               []ent.Hook
 	Room              []ent.Hook
 	Round             []ent.Hook
+	Turn              []ent.Hook
+	Win               []ent.Hook
 	Wind              []ent.Hook
 }
 

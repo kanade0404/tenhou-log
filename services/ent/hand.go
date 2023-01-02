@@ -33,9 +33,11 @@ type Hand struct {
 type HandEdges struct {
 	// Rounds holds the value of the rounds edge.
 	Rounds *Round `json:"rounds,omitempty"`
+	// Turns holds the value of the turns edge.
+	Turns []*Turn `json:"turns,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [2]bool
 }
 
 // RoundsOrErr returns the Rounds value or an error if the edge
@@ -49,6 +51,15 @@ func (e HandEdges) RoundsOrErr() (*Round, error) {
 		return e.Rounds, nil
 	}
 	return nil, &NotLoadedError{edge: "rounds"}
+}
+
+// TurnsOrErr returns the Turns value or an error if the edge
+// was not loaded in eager-loading.
+func (e HandEdges) TurnsOrErr() ([]*Turn, error) {
+	if e.loadedTypes[1] {
+		return e.Turns, nil
+	}
+	return nil, &NotLoadedError{edge: "turns"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -116,6 +127,11 @@ func (h *Hand) assignValues(columns []string, values []any) error {
 // QueryRounds queries the "rounds" edge of the Hand entity.
 func (h *Hand) QueryRounds() *RoundQuery {
 	return (&HandClient{config: h.config}).QueryRounds(h)
+}
+
+// QueryTurns queries the "turns" edge of the Hand entity.
+func (h *Hand) QueryTurns() *TurnQuery {
+	return (&HandClient{config: h.config}).QueryTurns(h)
 }
 
 // Update returns a builder for updating this Hand.

@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/kanade0404/tenhou-log/services/ent/hand"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 	"github.com/kanade0404/tenhou-log/services/ent/round"
+	"github.com/kanade0404/tenhou-log/services/ent/turn"
 )
 
 // HandQuery is the builder for querying Hand entities.
@@ -26,6 +28,7 @@ type HandQuery struct {
 	fields     []string
 	predicates []predicate.Hand
 	withRounds *RoundQuery
+	withTurns  *TurnQuery
 	withFKs    bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -78,6 +81,28 @@ func (hq *HandQuery) QueryRounds() *RoundQuery {
 			sqlgraph.From(hand.Table, hand.FieldID, selector),
 			sqlgraph.To(round.Table, round.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, hand.RoundsTable, hand.RoundsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(hq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryTurns chains the current query on the "turns" edge.
+func (hq *HandQuery) QueryTurns() *TurnQuery {
+	query := &TurnQuery{config: hq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := hq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := hq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(hand.Table, hand.FieldID, selector),
+			sqlgraph.To(turn.Table, turn.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, hand.TurnsTable, hand.TurnsPrimaryKey...),
 		)
 		fromU = sqlgraph.SetNeighbors(hq.driver.Dialect(), step)
 		return fromU, nil
@@ -267,6 +292,7 @@ func (hq *HandQuery) Clone() *HandQuery {
 		order:      append([]OrderFunc{}, hq.order...),
 		predicates: append([]predicate.Hand{}, hq.predicates...),
 		withRounds: hq.withRounds.Clone(),
+		withTurns:  hq.withTurns.Clone(),
 		// clone intermediate query.
 		sql:    hq.sql.Clone(),
 		path:   hq.path,
@@ -282,6 +308,17 @@ func (hq *HandQuery) WithRounds(opts ...func(*RoundQuery)) *HandQuery {
 		opt(query)
 	}
 	hq.withRounds = query
+	return hq
+}
+
+// WithTurns tells the query-builder to eager-load the nodes that are connected to
+// the "turns" edge. The optional arguments are used to configure the query builder of the edge.
+func (hq *HandQuery) WithTurns(opts ...func(*TurnQuery)) *HandQuery {
+	query := &TurnQuery{config: hq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	hq.withTurns = query
 	return hq
 }
 
@@ -361,8 +398,9 @@ func (hq *HandQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Hand, e
 		nodes       = []*Hand{}
 		withFKs     = hq.withFKs
 		_spec       = hq.querySpec()
-		loadedTypes = [1]bool{
+		loadedTypes = [2]bool{
 			hq.withRounds != nil,
+			hq.withTurns != nil,
 		}
 	)
 	if hq.withRounds != nil {
@@ -395,6 +433,13 @@ func (hq *HandQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Hand, e
 			return nil, err
 		}
 	}
+	if query := hq.withTurns; query != nil {
+		if err := hq.loadTurns(ctx, query, nodes,
+			func(n *Hand) { n.Edges.Turns = []*Turn{} },
+			func(n *Hand, e *Turn) { n.Edges.Turns = append(n.Edges.Turns, e) }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
 }
 
@@ -423,6 +468,64 @@ func (hq *HandQuery) loadRounds(ctx context.Context, query *RoundQuery, nodes []
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (hq *HandQuery) loadTurns(ctx context.Context, query *TurnQuery, nodes []*Hand, init func(*Hand), assign func(*Hand, *Turn)) error {
+	edgeIDs := make([]driver.Value, len(nodes))
+	byID := make(map[uuid.UUID]*Hand)
+	nids := make(map[uuid.UUID]map[*Hand]struct{})
+	for i, node := range nodes {
+		edgeIDs[i] = node.ID
+		byID[node.ID] = node
+		if init != nil {
+			init(node)
+		}
+	}
+	query.Where(func(s *sql.Selector) {
+		joinT := sql.Table(hand.TurnsTable)
+		s.Join(joinT).On(s.C(turn.FieldID), joinT.C(hand.TurnsPrimaryKey[1]))
+		s.Where(sql.InValues(joinT.C(hand.TurnsPrimaryKey[0]), edgeIDs...))
+		columns := s.SelectedColumns()
+		s.Select(joinT.C(hand.TurnsPrimaryKey[0]))
+		s.AppendSelect(columns...)
+		s.SetDistinct(false)
+	})
+	if err := query.prepareQuery(ctx); err != nil {
+		return err
+	}
+	neighbors, err := query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
+		assign := spec.Assign
+		values := spec.ScanValues
+		spec.ScanValues = func(columns []string) ([]any, error) {
+			values, err := values(columns[1:])
+			if err != nil {
+				return nil, err
+			}
+			return append([]any{new(uuid.UUID)}, values...), nil
+		}
+		spec.Assign = func(columns []string, values []any) error {
+			outValue := *values[0].(*uuid.UUID)
+			inValue := *values[1].(*uuid.UUID)
+			if nids[inValue] == nil {
+				nids[inValue] = map[*Hand]struct{}{byID[outValue]: {}}
+				return assign(columns[1:], values[1:])
+			}
+			nids[inValue][byID[outValue]] = struct{}{}
+			return nil
+		}
+	})
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected "turns" node returned %v`, n.ID)
+		}
+		for kn := range nodes {
+			assign(kn, n)
 		}
 	}
 	return nil

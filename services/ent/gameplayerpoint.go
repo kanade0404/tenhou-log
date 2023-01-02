@@ -7,14 +7,17 @@ import (
 	"strings"
 
 	"entgo.io/ent/dialect/sql"
+	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayerpoint"
 )
 
 // GamePlayerPoint is the model entity for the GamePlayerPoint schema.
 type GamePlayerPoint struct {
-	config
+	config `json:"-"`
 	// ID of the ent.
-	ID int `json:"id,omitempty"`
+	ID uuid.UUID `json:"id,omitempty"`
+	// Point holds the value of the "point" field.
+	Point uint `json:"point,omitempty"`
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -22,8 +25,10 @@ func (*GamePlayerPoint) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case gameplayerpoint.FieldID:
+		case gameplayerpoint.FieldPoint:
 			values[i] = new(sql.NullInt64)
+		case gameplayerpoint.FieldID:
+			values[i] = new(uuid.UUID)
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type GamePlayerPoint", columns[i])
 		}
@@ -40,11 +45,17 @@ func (gpp *GamePlayerPoint) assignValues(columns []string, values []any) error {
 	for i := range columns {
 		switch columns[i] {
 		case gameplayerpoint.FieldID:
-			value, ok := values[i].(*sql.NullInt64)
-			if !ok {
-				return fmt.Errorf("unexpected type %T for field id", value)
+			if value, ok := values[i].(*uuid.UUID); !ok {
+				return fmt.Errorf("unexpected type %T for field id", values[i])
+			} else if value != nil {
+				gpp.ID = *value
 			}
-			gpp.ID = int(value.Int64)
+		case gameplayerpoint.FieldPoint:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field point", values[i])
+			} else if value.Valid {
+				gpp.Point = uint(value.Int64)
+			}
 		}
 	}
 	return nil
@@ -72,7 +83,9 @@ func (gpp *GamePlayerPoint) Unwrap() *GamePlayerPoint {
 func (gpp *GamePlayerPoint) String() string {
 	var builder strings.Builder
 	builder.WriteString("GamePlayerPoint(")
-	builder.WriteString(fmt.Sprintf("id=%v", gpp.ID))
+	builder.WriteString(fmt.Sprintf("id=%v, ", gpp.ID))
+	builder.WriteString("point=")
+	builder.WriteString(fmt.Sprintf("%v", gpp.Point))
 	builder.WriteByte(')')
 	return builder.String()
 }

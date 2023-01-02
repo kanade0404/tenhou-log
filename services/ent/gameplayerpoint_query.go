@@ -10,6 +10,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayerpoint"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 )
@@ -83,8 +84,8 @@ func (gppq *GamePlayerPointQuery) FirstX(ctx context.Context) *GamePlayerPoint {
 
 // FirstID returns the first GamePlayerPoint ID from the query.
 // Returns a *NotFoundError when no GamePlayerPoint ID was found.
-func (gppq *GamePlayerPointQuery) FirstID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (gppq *GamePlayerPointQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = gppq.Limit(1).IDs(ctx); err != nil {
 		return
 	}
@@ -96,7 +97,7 @@ func (gppq *GamePlayerPointQuery) FirstID(ctx context.Context) (id int, err erro
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (gppq *GamePlayerPointQuery) FirstIDX(ctx context.Context) int {
+func (gppq *GamePlayerPointQuery) FirstIDX(ctx context.Context) uuid.UUID {
 	id, err := gppq.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -134,8 +135,8 @@ func (gppq *GamePlayerPointQuery) OnlyX(ctx context.Context) *GamePlayerPoint {
 // OnlyID is like Only, but returns the only GamePlayerPoint ID in the query.
 // Returns a *NotSingularError when more than one GamePlayerPoint ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (gppq *GamePlayerPointQuery) OnlyID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (gppq *GamePlayerPointQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = gppq.Limit(2).IDs(ctx); err != nil {
 		return
 	}
@@ -151,7 +152,7 @@ func (gppq *GamePlayerPointQuery) OnlyID(ctx context.Context) (id int, err error
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (gppq *GamePlayerPointQuery) OnlyIDX(ctx context.Context) int {
+func (gppq *GamePlayerPointQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 	id, err := gppq.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -177,8 +178,8 @@ func (gppq *GamePlayerPointQuery) AllX(ctx context.Context) []*GamePlayerPoint {
 }
 
 // IDs executes the query and returns a list of GamePlayerPoint IDs.
-func (gppq *GamePlayerPointQuery) IDs(ctx context.Context) ([]int, error) {
-	var ids []int
+func (gppq *GamePlayerPointQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	var ids []uuid.UUID
 	if err := gppq.Select(gameplayerpoint.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
@@ -186,7 +187,7 @@ func (gppq *GamePlayerPointQuery) IDs(ctx context.Context) ([]int, error) {
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (gppq *GamePlayerPointQuery) IDsX(ctx context.Context) []int {
+func (gppq *GamePlayerPointQuery) IDsX(ctx context.Context) []uuid.UUID {
 	ids, err := gppq.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -249,6 +250,19 @@ func (gppq *GamePlayerPointQuery) Clone() *GamePlayerPointQuery {
 
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
+//
+// Example:
+//
+//	var v []struct {
+//		Point uint `json:"point,omitempty"`
+//		Count int `json:"count,omitempty"`
+//	}
+//
+//	client.GamePlayerPoint.Query().
+//		GroupBy(gameplayerpoint.FieldPoint).
+//		Aggregate(ent.Count()).
+//		Scan(ctx, &v)
+//
 func (gppq *GamePlayerPointQuery) GroupBy(field string, fields ...string) *GamePlayerPointGroupBy {
 	grbuild := &GamePlayerPointGroupBy{config: gppq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -265,6 +279,17 @@ func (gppq *GamePlayerPointQuery) GroupBy(field string, fields ...string) *GameP
 
 // Select allows the selection one or more fields/columns for the given query,
 // instead of selecting all fields in the entity.
+//
+// Example:
+//
+//	var v []struct {
+//		Point uint `json:"point,omitempty"`
+//	}
+//
+//	client.GamePlayerPoint.Query().
+//		Select(gameplayerpoint.FieldPoint).
+//		Scan(ctx, &v)
+//
 func (gppq *GamePlayerPointQuery) Select(fields ...string) *GamePlayerPointSelect {
 	gppq.fields = append(gppq.fields, fields...)
 	selbuild := &GamePlayerPointSelect{GamePlayerPointQuery: gppq}
@@ -345,7 +370,7 @@ func (gppq *GamePlayerPointQuery) querySpec() *sqlgraph.QuerySpec {
 			Table:   gameplayerpoint.Table,
 			Columns: gameplayerpoint.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: gameplayerpoint.FieldID,
 			},
 		},

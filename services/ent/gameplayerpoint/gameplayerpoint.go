@@ -2,11 +2,17 @@
 
 package gameplayerpoint
 
+import (
+	"github.com/google/uuid"
+)
+
 const (
 	// Label holds the string label denoting the gameplayerpoint type in the database.
 	Label = "game_player_point"
 	// FieldID holds the string denoting the id field in the database.
-	FieldID = "id"
+	FieldID = "oid"
+	// FieldPoint holds the string denoting the point field in the database.
+	FieldPoint = "point"
 	// Table holds the table name of the gameplayerpoint in the database.
 	Table = "game_player_points"
 )
@@ -14,6 +20,7 @@ const (
 // Columns holds all SQL columns for gameplayerpoint fields.
 var Columns = []string{
 	FieldID,
+	FieldPoint,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -25,3 +32,10 @@ func ValidColumn(column string) bool {
 	}
 	return false
 }
+
+var (
+	// PointValidator is a validator for the "point" field. It is called by the builders before save.
+	PointValidator func(uint) error
+	// DefaultID holds the default value on creation for the "id" field.
+	DefaultID func() uuid.UUID
+)

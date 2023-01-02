@@ -4,10 +4,12 @@ package ent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayerpoint"
 )
 
@@ -16,6 +18,26 @@ type GamePlayerPointCreate struct {
 	config
 	mutation *GamePlayerPointMutation
 	hooks    []Hook
+}
+
+// SetPoint sets the "point" field.
+func (gppc *GamePlayerPointCreate) SetPoint(u uint) *GamePlayerPointCreate {
+	gppc.mutation.SetPoint(u)
+	return gppc
+}
+
+// SetID sets the "id" field.
+func (gppc *GamePlayerPointCreate) SetID(u uuid.UUID) *GamePlayerPointCreate {
+	gppc.mutation.SetID(u)
+	return gppc
+}
+
+// SetNillableID sets the "id" field if the given value is not nil.
+func (gppc *GamePlayerPointCreate) SetNillableID(u *uuid.UUID) *GamePlayerPointCreate {
+	if u != nil {
+		gppc.SetID(*u)
+	}
+	return gppc
 }
 
 // Mutation returns the GamePlayerPointMutation object of the builder.
@@ -29,6 +51,7 @@ func (gppc *GamePlayerPointCreate) Save(ctx context.Context) (*GamePlayerPoint, 
 		err  error
 		node *GamePlayerPoint
 	)
+	gppc.defaults()
 	if len(gppc.hooks) == 0 {
 		if err = gppc.check(); err != nil {
 			return nil, err
@@ -92,8 +115,24 @@ func (gppc *GamePlayerPointCreate) ExecX(ctx context.Context) {
 	}
 }
 
+// defaults sets the default values of the builder before save.
+func (gppc *GamePlayerPointCreate) defaults() {
+	if _, ok := gppc.mutation.ID(); !ok {
+		v := gameplayerpoint.DefaultID()
+		gppc.mutation.SetID(v)
+	}
+}
+
 // check runs all checks and user-defined validators on the builder.
 func (gppc *GamePlayerPointCreate) check() error {
+	if _, ok := gppc.mutation.Point(); !ok {
+		return &ValidationError{Name: "point", err: errors.New(`ent: missing required field "GamePlayerPoint.point"`)}
+	}
+	if v, ok := gppc.mutation.Point(); ok {
+		if err := gameplayerpoint.PointValidator(v); err != nil {
+			return &ValidationError{Name: "point", err: fmt.Errorf(`ent: validator failed for field "GamePlayerPoint.point": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -105,8 +144,13 @@ func (gppc *GamePlayerPointCreate) sqlSave(ctx context.Context) (*GamePlayerPoin
 		}
 		return nil, err
 	}
-	id := _spec.ID.Value.(int64)
-	_node.ID = int(id)
+	if _spec.ID.Value != nil {
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
+	}
 	return _node, nil
 }
 
@@ -116,11 +160,19 @@ func (gppc *GamePlayerPointCreate) createSpec() (*GamePlayerPoint, *sqlgraph.Cre
 		_spec = &sqlgraph.CreateSpec{
 			Table: gameplayerpoint.Table,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: gameplayerpoint.FieldID,
 			},
 		}
 	)
+	if id, ok := gppc.mutation.ID(); ok {
+		_node.ID = id
+		_spec.ID.Value = &id
+	}
+	if value, ok := gppc.mutation.Point(); ok {
+		_spec.SetField(gameplayerpoint.FieldPoint, field.TypeUint, value)
+		_node.Point = value
+	}
 	return _node, _spec
 }
 
@@ -138,6 +190,7 @@ func (gppcb *GamePlayerPointCreateBulk) Save(ctx context.Context) ([]*GamePlayer
 	for i := range gppcb.builders {
 		func(i int, root context.Context) {
 			builder := gppcb.builders[i]
+			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*GamePlayerPointMutation)
 				if !ok {
@@ -164,10 +217,6 @@ func (gppcb *GamePlayerPointCreateBulk) Save(ctx context.Context) ([]*GamePlayer
 					return nil, err
 				}
 				mutation.id = &nodes[i].ID
-				if specs[i].ID.Value != nil {
-					id := specs[i].ID.Value.(int64)
-					nodes[i].ID = int(id)
-				}
 				mutation.done = true
 				return nodes[i], nil
 			})

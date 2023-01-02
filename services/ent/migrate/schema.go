@@ -8,6 +8,26 @@ import (
 )
 
 var (
+	// ChakansColumns holds the columns for the "chakans" table.
+	ChakansColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+	}
+	// ChakansTable holds the schema information for the "chakans" table.
+	ChakansTable = &schema.Table{
+		Name:       "chakans",
+		Columns:    ChakansColumns,
+		PrimaryKey: []*schema.Column{ChakansColumns[0]},
+	}
+	// ChiisColumns holds the columns for the "chiis" table.
+	ChiisColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+	}
+	// ChiisTable holds the schema information for the "chiis" table.
+	ChiisTable = &schema.Table{
+		Name:       "chiis",
+		Columns:    ChiisColumns,
+		PrimaryKey: []*schema.Column{ChiisColumns[0]},
+	}
 	// CompressedMjLogsColumns holds the columns for the "compressed_mj_logs" table.
 	CompressedMjLogsColumns = []*schema.Column{
 		{Name: "oid", Type: field.TypeUUID},
@@ -20,6 +40,16 @@ var (
 		Columns:    CompressedMjLogsColumns,
 		PrimaryKey: []*schema.Column{CompressedMjLogsColumns[0]},
 	}
+	// ConcealedKansColumns holds the columns for the "concealed_kans" table.
+	ConcealedKansColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+	}
+	// ConcealedKansTable holds the schema information for the "concealed_kans" table.
+	ConcealedKansTable = &schema.Table{
+		Name:       "concealed_kans",
+		Columns:    ConcealedKansColumns,
+		PrimaryKey: []*schema.Column{ConcealedKansColumns[0]},
+	}
 	// DansColumns holds the columns for the "dans" table.
 	DansColumns = []*schema.Column{
 		{Name: "oid", Type: field.TypeUUID},
@@ -30,6 +60,16 @@ var (
 		Name:       "dans",
 		Columns:    DansColumns,
 		PrimaryKey: []*schema.Column{DansColumns[0]},
+	}
+	// DrawnsColumns holds the columns for the "drawns" table.
+	DrawnsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+	}
+	// DrawnsTable holds the schema information for the "drawns" table.
+	DrawnsTable = &schema.Table{
+		Name:       "drawns",
+		Columns:    DrawnsColumns,
+		PrimaryKey: []*schema.Column{DrawnsColumns[0]},
 	}
 	// GamesColumns holds the columns for the "games" table.
 	GamesColumns = []*schema.Column{
@@ -92,23 +132,14 @@ var (
 	}
 	// GamePlayerPointsColumns holds the columns for the "game_player_points" table.
 	GamePlayerPointsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "oid", Type: field.TypeUUID},
+		{Name: "point", Type: field.TypeUint},
 	}
 	// GamePlayerPointsTable holds the schema information for the "game_player_points" table.
 	GamePlayerPointsTable = &schema.Table{
 		Name:       "game_player_points",
 		Columns:    GamePlayerPointsColumns,
 		PrimaryKey: []*schema.Column{GamePlayerPointsColumns[0]},
-	}
-	// GoAroundsColumns holds the columns for the "go_arounds" table.
-	GoAroundsColumns = []*schema.Column{
-		{Name: "oid", Type: field.TypeUUID},
-	}
-	// GoAroundsTable holds the schema information for the "go_arounds" table.
-	GoAroundsTable = &schema.Table{
-		Name:       "go_arounds",
-		Columns:    GoAroundsColumns,
-		PrimaryKey: []*schema.Column{GoAroundsColumns[0]},
 	}
 	// HandsColumns holds the columns for the "hands" table.
 	HandsColumns = []*schema.Column{
@@ -182,6 +213,16 @@ var (
 			},
 		},
 	}
+	// MeldedKansColumns holds the columns for the "melded_kans" table.
+	MeldedKansColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+	}
+	// MeldedKansTable holds the schema information for the "melded_kans" table.
+	MeldedKansTable = &schema.Table{
+		Name:       "melded_kans",
+		Columns:    MeldedKansColumns,
+		PrimaryKey: []*schema.Column{MeldedKansColumns[0]},
+	}
 	// PlayersColumns holds the columns for the "players" table.
 	PlayersColumns = []*schema.Column{
 		{Name: "oid", Type: field.TypeUUID},
@@ -193,6 +234,16 @@ var (
 		Name:       "players",
 		Columns:    PlayersColumns,
 		PrimaryKey: []*schema.Column{PlayersColumns[0]},
+	}
+	// PonsColumns holds the columns for the "pons" table.
+	PonsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+	}
+	// PonsTable holds the schema information for the "pons" table.
+	PonsTable = &schema.Table{
+		Name:       "pons",
+		Columns:    PonsColumns,
+		PrimaryKey: []*schema.Column{PonsColumns[0]},
 	}
 	// RoomsColumns holds the columns for the "rooms" table.
 	RoomsColumns = []*schema.Column{
@@ -231,6 +282,27 @@ var (
 			},
 		},
 	}
+	// TurnsColumns holds the columns for the "turns" table.
+	TurnsColumns = []*schema.Column{
+		{Name: "oid", Type: field.TypeUUID},
+		{Name: "num", Type: field.TypeUint},
+	}
+	// TurnsTable holds the schema information for the "turns" table.
+	TurnsTable = &schema.Table{
+		Name:       "turns",
+		Columns:    TurnsColumns,
+		PrimaryKey: []*schema.Column{TurnsColumns[0]},
+	}
+	// WinsColumns holds the columns for the "wins" table.
+	WinsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+	}
+	// WinsTable holds the schema information for the "wins" table.
+	WinsTable = &schema.Table{
+		Name:       "wins",
+		Columns:    WinsColumns,
+		PrimaryKey: []*schema.Column{WinsColumns[0]},
+	}
 	// WindsColumns holds the columns for the "winds" table.
 	WindsColumns = []*schema.Column{
 		{Name: "oid", Type: field.TypeUUID},
@@ -267,23 +339,56 @@ var (
 			},
 		},
 	}
+	// HandTurnsColumns holds the columns for the "hand_turns" table.
+	HandTurnsColumns = []*schema.Column{
+		{Name: "hand_id", Type: field.TypeUUID},
+		{Name: "turn_id", Type: field.TypeUUID},
+	}
+	// HandTurnsTable holds the schema information for the "hand_turns" table.
+	HandTurnsTable = &schema.Table{
+		Name:       "hand_turns",
+		Columns:    HandTurnsColumns,
+		PrimaryKey: []*schema.Column{HandTurnsColumns[0], HandTurnsColumns[1]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "hand_turns_hand_id",
+				Columns:    []*schema.Column{HandTurnsColumns[0]},
+				RefColumns: []*schema.Column{HandsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "hand_turns_turn_id",
+				Columns:    []*schema.Column{HandTurnsColumns[1]},
+				RefColumns: []*schema.Column{TurnsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		ChakansTable,
+		ChiisTable,
 		CompressedMjLogsTable,
+		ConcealedKansTable,
 		DansTable,
+		DrawnsTable,
 		GamesTable,
 		GamePlayersTable,
 		GamePlayerHandHaisTable,
 		GamePlayerPointsTable,
-		GoAroundsTable,
 		HandsTable,
 		MjLogsTable,
 		MjLogFilesTable,
+		MeldedKansTable,
 		PlayersTable,
+		PonsTable,
 		RoomsTable,
 		RoundsTable,
+		TurnsTable,
+		WinsTable,
 		WindsTable,
 		GameGamePlayersTable,
+		HandTurnsTable,
 	}
 )
 
@@ -299,4 +404,6 @@ func init() {
 	RoundsTable.ForeignKeys[1].RefTable = WindsTable
 	GameGamePlayersTable.ForeignKeys[0].RefTable = GamesTable
 	GameGamePlayersTable.ForeignKeys[1].RefTable = GamePlayersTable
+	HandTurnsTable.ForeignKeys[0].RefTable = HandsTable
+	HandTurnsTable.ForeignKeys[1].RefTable = TurnsTable
 }

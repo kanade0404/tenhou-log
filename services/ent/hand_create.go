@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/hand"
 	"github.com/kanade0404/tenhou-log/services/ent/round"
+	"github.com/kanade0404/tenhou-log/services/ent/turn"
 )
 
 // HandCreate is the builder for creating a Hand entity.
@@ -70,6 +71,21 @@ func (hc *HandCreate) SetNillableRoundsID(id *uuid.UUID) *HandCreate {
 // SetRounds sets the "rounds" edge to the Round entity.
 func (hc *HandCreate) SetRounds(r *Round) *HandCreate {
 	return hc.SetRoundsID(r.ID)
+}
+
+// AddTurnIDs adds the "turns" edge to the Turn entity by IDs.
+func (hc *HandCreate) AddTurnIDs(ids ...uuid.UUID) *HandCreate {
+	hc.mutation.AddTurnIDs(ids...)
+	return hc
+}
+
+// AddTurns adds the "turns" edges to the Turn entity.
+func (hc *HandCreate) AddTurns(t ...*Turn) *HandCreate {
+	ids := make([]uuid.UUID, len(t))
+	for i := range t {
+		ids[i] = t[i].ID
+	}
+	return hc.AddTurnIDs(ids...)
 }
 
 // Mutation returns the HandMutation object of the builder.
@@ -242,6 +258,25 @@ func (hc *HandCreate) createSpec() (*Hand, *sqlgraph.CreateSpec) {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.round_hands = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := hc.mutation.TurnsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   hand.TurnsTable,
+			Columns: hand.TurnsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: turn.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

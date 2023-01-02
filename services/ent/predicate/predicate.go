@@ -6,11 +6,23 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
+// Chakan is the predicate function for chakan builders.
+type Chakan func(*sql.Selector)
+
+// Chii is the predicate function for chii builders.
+type Chii func(*sql.Selector)
+
 // CompressedMJLog is the predicate function for compressedmjlog builders.
 type CompressedMJLog func(*sql.Selector)
 
+// ConcealedKan is the predicate function for concealedkan builders.
+type ConcealedKan func(*sql.Selector)
+
 // Dan is the predicate function for dan builders.
 type Dan func(*sql.Selector)
+
+// Drawn is the predicate function for drawn builders.
+type Drawn func(*sql.Selector)
 
 // Game is the predicate function for game builders.
 type Game func(*sql.Selector)
@@ -24,9 +36,6 @@ type GamePlayerHandHai func(*sql.Selector)
 // GamePlayerPoint is the predicate function for gameplayerpoint builders.
 type GamePlayerPoint func(*sql.Selector)
 
-// GoAround is the predicate function for goaround builders.
-type GoAround func(*sql.Selector)
-
 // Hand is the predicate function for hand builders.
 type Hand func(*sql.Selector)
 
@@ -36,14 +45,26 @@ type MJLog func(*sql.Selector)
 // MJLogFile is the predicate function for mjlogfile builders.
 type MJLogFile func(*sql.Selector)
 
+// MeldedKan is the predicate function for meldedkan builders.
+type MeldedKan func(*sql.Selector)
+
 // Player is the predicate function for player builders.
 type Player func(*sql.Selector)
+
+// Pon is the predicate function for pon builders.
+type Pon func(*sql.Selector)
 
 // Room is the predicate function for room builders.
 type Room func(*sql.Selector)
 
 // Round is the predicate function for round builders.
 type Round func(*sql.Selector)
+
+// Turn is the predicate function for turn builders.
+type Turn func(*sql.Selector)
+
+// Win is the predicate function for win builders.
+type Win func(*sql.Selector)
 
 // Wind is the predicate function for wind builders.
 type Wind func(*sql.Selector)

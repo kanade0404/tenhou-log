@@ -10,7 +10,7 @@ import (
 	"github.com/kanade0404/tenhou-log/services/ent/dan"
 	"github.com/kanade0404/tenhou-log/services/ent/game"
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayer"
-	"github.com/kanade0404/tenhou-log/services/ent/goaround"
+	"github.com/kanade0404/tenhou-log/services/ent/gameplayerpoint"
 	"github.com/kanade0404/tenhou-log/services/ent/hand"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlog"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlogfile"
@@ -18,6 +18,7 @@ import (
 	"github.com/kanade0404/tenhou-log/services/ent/room"
 	"github.com/kanade0404/tenhou-log/services/ent/round"
 	"github.com/kanade0404/tenhou-log/services/ent/schema"
+	"github.com/kanade0404/tenhou-log/services/ent/turn"
 	"github.com/kanade0404/tenhou-log/services/ent/wind"
 )
 
@@ -53,12 +54,16 @@ func init() {
 	gameplayerDescID := gameplayerFields[0].Descriptor()
 	// gameplayer.DefaultID holds the default value on creation for the id field.
 	gameplayer.DefaultID = gameplayerDescID.Default.(func() uuid.UUID)
-	goaroundFields := schema.GoAround{}.Fields()
-	_ = goaroundFields
-	// goaroundDescID is the schema descriptor for id field.
-	goaroundDescID := goaroundFields[0].Descriptor()
-	// goaround.DefaultID holds the default value on creation for the id field.
-	goaround.DefaultID = goaroundDescID.Default.(func() uuid.UUID)
+	gameplayerpointFields := schema.GamePlayerPoint{}.Fields()
+	_ = gameplayerpointFields
+	// gameplayerpointDescPoint is the schema descriptor for point field.
+	gameplayerpointDescPoint := gameplayerpointFields[1].Descriptor()
+	// gameplayerpoint.PointValidator is a validator for the "point" field. It is called by the builders before save.
+	gameplayerpoint.PointValidator = gameplayerpointDescPoint.Validators[0].(func(uint) error)
+	// gameplayerpointDescID is the schema descriptor for id field.
+	gameplayerpointDescID := gameplayerpointFields[0].Descriptor()
+	// gameplayerpoint.DefaultID holds the default value on creation for the id field.
+	gameplayerpoint.DefaultID = gameplayerpointDescID.Default.(func() uuid.UUID)
 	handFields := schema.Hand{}.Fields()
 	_ = handFields
 	// handDescContinuePoint is the schema descriptor for continue_point field.
@@ -111,6 +116,12 @@ func init() {
 	roundDescID := roundFields[0].Descriptor()
 	// round.DefaultID holds the default value on creation for the id field.
 	round.DefaultID = roundDescID.Default.(func() uuid.UUID)
+	turnFields := schema.Turn{}.Fields()
+	_ = turnFields
+	// turnDescID is the schema descriptor for id field.
+	turnDescID := turnFields[0].Descriptor()
+	// turn.DefaultID holds the default value on creation for the id field.
+	turn.DefaultID = turnDescID.Default.(func() uuid.UUID)
 	windFields := schema.Wind{}.Fields()
 	_ = windFields
 	// windDescName is the schema descriptor for name field.

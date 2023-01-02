@@ -11,19 +11,26 @@ import (
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/migrate"
 
+	"github.com/kanade0404/tenhou-log/services/ent/chakan"
+	"github.com/kanade0404/tenhou-log/services/ent/chii"
 	"github.com/kanade0404/tenhou-log/services/ent/compressedmjlog"
+	"github.com/kanade0404/tenhou-log/services/ent/concealedkan"
 	"github.com/kanade0404/tenhou-log/services/ent/dan"
+	"github.com/kanade0404/tenhou-log/services/ent/drawn"
 	"github.com/kanade0404/tenhou-log/services/ent/game"
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayer"
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayerhandhai"
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayerpoint"
-	"github.com/kanade0404/tenhou-log/services/ent/goaround"
 	"github.com/kanade0404/tenhou-log/services/ent/hand"
+	"github.com/kanade0404/tenhou-log/services/ent/meldedkan"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlog"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlogfile"
 	"github.com/kanade0404/tenhou-log/services/ent/player"
+	"github.com/kanade0404/tenhou-log/services/ent/pon"
 	"github.com/kanade0404/tenhou-log/services/ent/room"
 	"github.com/kanade0404/tenhou-log/services/ent/round"
+	"github.com/kanade0404/tenhou-log/services/ent/turn"
+	"github.com/kanade0404/tenhou-log/services/ent/win"
 	"github.com/kanade0404/tenhou-log/services/ent/wind"
 
 	"entgo.io/ent/dialect"
@@ -36,10 +43,18 @@ type Client struct {
 	config
 	// Schema is the client for creating, migrating and dropping schema.
 	Schema *migrate.Schema
+	// Chakan is the client for interacting with the Chakan builders.
+	Chakan *ChakanClient
+	// Chii is the client for interacting with the Chii builders.
+	Chii *ChiiClient
 	// CompressedMJLog is the client for interacting with the CompressedMJLog builders.
 	CompressedMJLog *CompressedMJLogClient
+	// ConcealedKan is the client for interacting with the ConcealedKan builders.
+	ConcealedKan *ConcealedKanClient
 	// Dan is the client for interacting with the Dan builders.
 	Dan *DanClient
+	// Drawn is the client for interacting with the Drawn builders.
+	Drawn *DrawnClient
 	// Game is the client for interacting with the Game builders.
 	Game *GameClient
 	// GamePlayer is the client for interacting with the GamePlayer builders.
@@ -48,20 +63,26 @@ type Client struct {
 	GamePlayerHandHai *GamePlayerHandHaiClient
 	// GamePlayerPoint is the client for interacting with the GamePlayerPoint builders.
 	GamePlayerPoint *GamePlayerPointClient
-	// GoAround is the client for interacting with the GoAround builders.
-	GoAround *GoAroundClient
 	// Hand is the client for interacting with the Hand builders.
 	Hand *HandClient
 	// MJLog is the client for interacting with the MJLog builders.
 	MJLog *MJLogClient
 	// MJLogFile is the client for interacting with the MJLogFile builders.
 	MJLogFile *MJLogFileClient
+	// MeldedKan is the client for interacting with the MeldedKan builders.
+	MeldedKan *MeldedKanClient
 	// Player is the client for interacting with the Player builders.
 	Player *PlayerClient
+	// Pon is the client for interacting with the Pon builders.
+	Pon *PonClient
 	// Room is the client for interacting with the Room builders.
 	Room *RoomClient
 	// Round is the client for interacting with the Round builders.
 	Round *RoundClient
+	// Turn is the client for interacting with the Turn builders.
+	Turn *TurnClient
+	// Win is the client for interacting with the Win builders.
+	Win *WinClient
 	// Wind is the client for interacting with the Wind builders.
 	Wind *WindClient
 }
@@ -77,19 +98,26 @@ func NewClient(opts ...Option) *Client {
 
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
+	c.Chakan = NewChakanClient(c.config)
+	c.Chii = NewChiiClient(c.config)
 	c.CompressedMJLog = NewCompressedMJLogClient(c.config)
+	c.ConcealedKan = NewConcealedKanClient(c.config)
 	c.Dan = NewDanClient(c.config)
+	c.Drawn = NewDrawnClient(c.config)
 	c.Game = NewGameClient(c.config)
 	c.GamePlayer = NewGamePlayerClient(c.config)
 	c.GamePlayerHandHai = NewGamePlayerHandHaiClient(c.config)
 	c.GamePlayerPoint = NewGamePlayerPointClient(c.config)
-	c.GoAround = NewGoAroundClient(c.config)
 	c.Hand = NewHandClient(c.config)
 	c.MJLog = NewMJLogClient(c.config)
 	c.MJLogFile = NewMJLogFileClient(c.config)
+	c.MeldedKan = NewMeldedKanClient(c.config)
 	c.Player = NewPlayerClient(c.config)
+	c.Pon = NewPonClient(c.config)
 	c.Room = NewRoomClient(c.config)
 	c.Round = NewRoundClient(c.config)
+	c.Turn = NewTurnClient(c.config)
+	c.Win = NewWinClient(c.config)
 	c.Wind = NewWindClient(c.config)
 }
 
@@ -124,19 +152,26 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	return &Tx{
 		ctx:               ctx,
 		config:            cfg,
+		Chakan:            NewChakanClient(cfg),
+		Chii:              NewChiiClient(cfg),
 		CompressedMJLog:   NewCompressedMJLogClient(cfg),
+		ConcealedKan:      NewConcealedKanClient(cfg),
 		Dan:               NewDanClient(cfg),
+		Drawn:             NewDrawnClient(cfg),
 		Game:              NewGameClient(cfg),
 		GamePlayer:        NewGamePlayerClient(cfg),
 		GamePlayerHandHai: NewGamePlayerHandHaiClient(cfg),
 		GamePlayerPoint:   NewGamePlayerPointClient(cfg),
-		GoAround:          NewGoAroundClient(cfg),
 		Hand:              NewHandClient(cfg),
 		MJLog:             NewMJLogClient(cfg),
 		MJLogFile:         NewMJLogFileClient(cfg),
+		MeldedKan:         NewMeldedKanClient(cfg),
 		Player:            NewPlayerClient(cfg),
+		Pon:               NewPonClient(cfg),
 		Room:              NewRoomClient(cfg),
 		Round:             NewRoundClient(cfg),
+		Turn:              NewTurnClient(cfg),
+		Win:               NewWinClient(cfg),
 		Wind:              NewWindClient(cfg),
 	}, nil
 }
@@ -157,19 +192,26 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	return &Tx{
 		ctx:               ctx,
 		config:            cfg,
+		Chakan:            NewChakanClient(cfg),
+		Chii:              NewChiiClient(cfg),
 		CompressedMJLog:   NewCompressedMJLogClient(cfg),
+		ConcealedKan:      NewConcealedKanClient(cfg),
 		Dan:               NewDanClient(cfg),
+		Drawn:             NewDrawnClient(cfg),
 		Game:              NewGameClient(cfg),
 		GamePlayer:        NewGamePlayerClient(cfg),
 		GamePlayerHandHai: NewGamePlayerHandHaiClient(cfg),
 		GamePlayerPoint:   NewGamePlayerPointClient(cfg),
-		GoAround:          NewGoAroundClient(cfg),
 		Hand:              NewHandClient(cfg),
 		MJLog:             NewMJLogClient(cfg),
 		MJLogFile:         NewMJLogFileClient(cfg),
+		MeldedKan:         NewMeldedKanClient(cfg),
 		Player:            NewPlayerClient(cfg),
+		Pon:               NewPonClient(cfg),
 		Room:              NewRoomClient(cfg),
 		Round:             NewRoundClient(cfg),
+		Turn:              NewTurnClient(cfg),
+		Win:               NewWinClient(cfg),
 		Wind:              NewWindClient(cfg),
 	}, nil
 }
@@ -177,7 +219,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		CompressedMJLog.
+//		Chakan.
 //		Query().
 //		Count(ctx)
 //
@@ -200,20 +242,207 @@ func (c *Client) Close() error {
 // Use adds the mutation hooks to all the entity clients.
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
+	c.Chakan.Use(hooks...)
+	c.Chii.Use(hooks...)
 	c.CompressedMJLog.Use(hooks...)
+	c.ConcealedKan.Use(hooks...)
 	c.Dan.Use(hooks...)
+	c.Drawn.Use(hooks...)
 	c.Game.Use(hooks...)
 	c.GamePlayer.Use(hooks...)
 	c.GamePlayerHandHai.Use(hooks...)
 	c.GamePlayerPoint.Use(hooks...)
-	c.GoAround.Use(hooks...)
 	c.Hand.Use(hooks...)
 	c.MJLog.Use(hooks...)
 	c.MJLogFile.Use(hooks...)
+	c.MeldedKan.Use(hooks...)
 	c.Player.Use(hooks...)
+	c.Pon.Use(hooks...)
 	c.Room.Use(hooks...)
 	c.Round.Use(hooks...)
+	c.Turn.Use(hooks...)
+	c.Win.Use(hooks...)
 	c.Wind.Use(hooks...)
+}
+
+// ChakanClient is a client for the Chakan schema.
+type ChakanClient struct {
+	config
+}
+
+// NewChakanClient returns a client for the Chakan from the given config.
+func NewChakanClient(c config) *ChakanClient {
+	return &ChakanClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `chakan.Hooks(f(g(h())))`.
+func (c *ChakanClient) Use(hooks ...Hook) {
+	c.hooks.Chakan = append(c.hooks.Chakan, hooks...)
+}
+
+// Create returns a builder for creating a Chakan entity.
+func (c *ChakanClient) Create() *ChakanCreate {
+	mutation := newChakanMutation(c.config, OpCreate)
+	return &ChakanCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Chakan entities.
+func (c *ChakanClient) CreateBulk(builders ...*ChakanCreate) *ChakanCreateBulk {
+	return &ChakanCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Chakan.
+func (c *ChakanClient) Update() *ChakanUpdate {
+	mutation := newChakanMutation(c.config, OpUpdate)
+	return &ChakanUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ChakanClient) UpdateOne(ch *Chakan) *ChakanUpdateOne {
+	mutation := newChakanMutation(c.config, OpUpdateOne, withChakan(ch))
+	return &ChakanUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ChakanClient) UpdateOneID(id int) *ChakanUpdateOne {
+	mutation := newChakanMutation(c.config, OpUpdateOne, withChakanID(id))
+	return &ChakanUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Chakan.
+func (c *ChakanClient) Delete() *ChakanDelete {
+	mutation := newChakanMutation(c.config, OpDelete)
+	return &ChakanDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ChakanClient) DeleteOne(ch *Chakan) *ChakanDeleteOne {
+	return c.DeleteOneID(ch.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ChakanClient) DeleteOneID(id int) *ChakanDeleteOne {
+	builder := c.Delete().Where(chakan.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ChakanDeleteOne{builder}
+}
+
+// Query returns a query builder for Chakan.
+func (c *ChakanClient) Query() *ChakanQuery {
+	return &ChakanQuery{
+		config: c.config,
+	}
+}
+
+// Get returns a Chakan entity by its id.
+func (c *ChakanClient) Get(ctx context.Context, id int) (*Chakan, error) {
+	return c.Query().Where(chakan.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ChakanClient) GetX(ctx context.Context, id int) *Chakan {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *ChakanClient) Hooks() []Hook {
+	return c.hooks.Chakan
+}
+
+// ChiiClient is a client for the Chii schema.
+type ChiiClient struct {
+	config
+}
+
+// NewChiiClient returns a client for the Chii from the given config.
+func NewChiiClient(c config) *ChiiClient {
+	return &ChiiClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `chii.Hooks(f(g(h())))`.
+func (c *ChiiClient) Use(hooks ...Hook) {
+	c.hooks.Chii = append(c.hooks.Chii, hooks...)
+}
+
+// Create returns a builder for creating a Chii entity.
+func (c *ChiiClient) Create() *ChiiCreate {
+	mutation := newChiiMutation(c.config, OpCreate)
+	return &ChiiCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Chii entities.
+func (c *ChiiClient) CreateBulk(builders ...*ChiiCreate) *ChiiCreateBulk {
+	return &ChiiCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Chii.
+func (c *ChiiClient) Update() *ChiiUpdate {
+	mutation := newChiiMutation(c.config, OpUpdate)
+	return &ChiiUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ChiiClient) UpdateOne(ch *Chii) *ChiiUpdateOne {
+	mutation := newChiiMutation(c.config, OpUpdateOne, withChii(ch))
+	return &ChiiUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ChiiClient) UpdateOneID(id int) *ChiiUpdateOne {
+	mutation := newChiiMutation(c.config, OpUpdateOne, withChiiID(id))
+	return &ChiiUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Chii.
+func (c *ChiiClient) Delete() *ChiiDelete {
+	mutation := newChiiMutation(c.config, OpDelete)
+	return &ChiiDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ChiiClient) DeleteOne(ch *Chii) *ChiiDeleteOne {
+	return c.DeleteOneID(ch.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ChiiClient) DeleteOneID(id int) *ChiiDeleteOne {
+	builder := c.Delete().Where(chii.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ChiiDeleteOne{builder}
+}
+
+// Query returns a query builder for Chii.
+func (c *ChiiClient) Query() *ChiiQuery {
+	return &ChiiQuery{
+		config: c.config,
+	}
+}
+
+// Get returns a Chii entity by its id.
+func (c *ChiiClient) Get(ctx context.Context, id int) (*Chii, error) {
+	return c.Query().Where(chii.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ChiiClient) GetX(ctx context.Context, id int) *Chii {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *ChiiClient) Hooks() []Hook {
+	return c.hooks.Chii
 }
 
 // CompressedMJLogClient is a client for the CompressedMJLog schema.
@@ -322,6 +551,96 @@ func (c *CompressedMJLogClient) Hooks() []Hook {
 	return c.hooks.CompressedMJLog
 }
 
+// ConcealedKanClient is a client for the ConcealedKan schema.
+type ConcealedKanClient struct {
+	config
+}
+
+// NewConcealedKanClient returns a client for the ConcealedKan from the given config.
+func NewConcealedKanClient(c config) *ConcealedKanClient {
+	return &ConcealedKanClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `concealedkan.Hooks(f(g(h())))`.
+func (c *ConcealedKanClient) Use(hooks ...Hook) {
+	c.hooks.ConcealedKan = append(c.hooks.ConcealedKan, hooks...)
+}
+
+// Create returns a builder for creating a ConcealedKan entity.
+func (c *ConcealedKanClient) Create() *ConcealedKanCreate {
+	mutation := newConcealedKanMutation(c.config, OpCreate)
+	return &ConcealedKanCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ConcealedKan entities.
+func (c *ConcealedKanClient) CreateBulk(builders ...*ConcealedKanCreate) *ConcealedKanCreateBulk {
+	return &ConcealedKanCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ConcealedKan.
+func (c *ConcealedKanClient) Update() *ConcealedKanUpdate {
+	mutation := newConcealedKanMutation(c.config, OpUpdate)
+	return &ConcealedKanUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ConcealedKanClient) UpdateOne(ck *ConcealedKan) *ConcealedKanUpdateOne {
+	mutation := newConcealedKanMutation(c.config, OpUpdateOne, withConcealedKan(ck))
+	return &ConcealedKanUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ConcealedKanClient) UpdateOneID(id int) *ConcealedKanUpdateOne {
+	mutation := newConcealedKanMutation(c.config, OpUpdateOne, withConcealedKanID(id))
+	return &ConcealedKanUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ConcealedKan.
+func (c *ConcealedKanClient) Delete() *ConcealedKanDelete {
+	mutation := newConcealedKanMutation(c.config, OpDelete)
+	return &ConcealedKanDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ConcealedKanClient) DeleteOne(ck *ConcealedKan) *ConcealedKanDeleteOne {
+	return c.DeleteOneID(ck.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ConcealedKanClient) DeleteOneID(id int) *ConcealedKanDeleteOne {
+	builder := c.Delete().Where(concealedkan.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ConcealedKanDeleteOne{builder}
+}
+
+// Query returns a query builder for ConcealedKan.
+func (c *ConcealedKanClient) Query() *ConcealedKanQuery {
+	return &ConcealedKanQuery{
+		config: c.config,
+	}
+}
+
+// Get returns a ConcealedKan entity by its id.
+func (c *ConcealedKanClient) Get(ctx context.Context, id int) (*ConcealedKan, error) {
+	return c.Query().Where(concealedkan.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ConcealedKanClient) GetX(ctx context.Context, id int) *ConcealedKan {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *ConcealedKanClient) Hooks() []Hook {
+	return c.hooks.ConcealedKan
+}
+
 // DanClient is a client for the Dan schema.
 type DanClient struct {
 	config
@@ -426,6 +745,96 @@ func (c *DanClient) QueryGamePlayers(d *Dan) *GamePlayerQuery {
 // Hooks returns the client hooks.
 func (c *DanClient) Hooks() []Hook {
 	return c.hooks.Dan
+}
+
+// DrawnClient is a client for the Drawn schema.
+type DrawnClient struct {
+	config
+}
+
+// NewDrawnClient returns a client for the Drawn from the given config.
+func NewDrawnClient(c config) *DrawnClient {
+	return &DrawnClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `drawn.Hooks(f(g(h())))`.
+func (c *DrawnClient) Use(hooks ...Hook) {
+	c.hooks.Drawn = append(c.hooks.Drawn, hooks...)
+}
+
+// Create returns a builder for creating a Drawn entity.
+func (c *DrawnClient) Create() *DrawnCreate {
+	mutation := newDrawnMutation(c.config, OpCreate)
+	return &DrawnCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Drawn entities.
+func (c *DrawnClient) CreateBulk(builders ...*DrawnCreate) *DrawnCreateBulk {
+	return &DrawnCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Drawn.
+func (c *DrawnClient) Update() *DrawnUpdate {
+	mutation := newDrawnMutation(c.config, OpUpdate)
+	return &DrawnUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *DrawnClient) UpdateOne(d *Drawn) *DrawnUpdateOne {
+	mutation := newDrawnMutation(c.config, OpUpdateOne, withDrawn(d))
+	return &DrawnUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *DrawnClient) UpdateOneID(id int) *DrawnUpdateOne {
+	mutation := newDrawnMutation(c.config, OpUpdateOne, withDrawnID(id))
+	return &DrawnUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Drawn.
+func (c *DrawnClient) Delete() *DrawnDelete {
+	mutation := newDrawnMutation(c.config, OpDelete)
+	return &DrawnDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *DrawnClient) DeleteOne(d *Drawn) *DrawnDeleteOne {
+	return c.DeleteOneID(d.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *DrawnClient) DeleteOneID(id int) *DrawnDeleteOne {
+	builder := c.Delete().Where(drawn.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &DrawnDeleteOne{builder}
+}
+
+// Query returns a query builder for Drawn.
+func (c *DrawnClient) Query() *DrawnQuery {
+	return &DrawnQuery{
+		config: c.config,
+	}
+}
+
+// Get returns a Drawn entity by its id.
+func (c *DrawnClient) Get(ctx context.Context, id int) (*Drawn, error) {
+	return c.Query().Where(drawn.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *DrawnClient) GetX(ctx context.Context, id int) *Drawn {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *DrawnClient) Hooks() []Hook {
+	return c.hooks.Drawn
 }
 
 // GameClient is a client for the Game schema.
@@ -850,7 +1259,7 @@ func (c *GamePlayerPointClient) UpdateOne(gpp *GamePlayerPoint) *GamePlayerPoint
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *GamePlayerPointClient) UpdateOneID(id int) *GamePlayerPointUpdateOne {
+func (c *GamePlayerPointClient) UpdateOneID(id uuid.UUID) *GamePlayerPointUpdateOne {
 	mutation := newGamePlayerPointMutation(c.config, OpUpdateOne, withGamePlayerPointID(id))
 	return &GamePlayerPointUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
@@ -867,7 +1276,7 @@ func (c *GamePlayerPointClient) DeleteOne(gpp *GamePlayerPoint) *GamePlayerPoint
 }
 
 // DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *GamePlayerPointClient) DeleteOneID(id int) *GamePlayerPointDeleteOne {
+func (c *GamePlayerPointClient) DeleteOneID(id uuid.UUID) *GamePlayerPointDeleteOne {
 	builder := c.Delete().Where(gameplayerpoint.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
@@ -882,12 +1291,12 @@ func (c *GamePlayerPointClient) Query() *GamePlayerPointQuery {
 }
 
 // Get returns a GamePlayerPoint entity by its id.
-func (c *GamePlayerPointClient) Get(ctx context.Context, id int) (*GamePlayerPoint, error) {
+func (c *GamePlayerPointClient) Get(ctx context.Context, id uuid.UUID) (*GamePlayerPoint, error) {
 	return c.Query().Where(gameplayerpoint.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *GamePlayerPointClient) GetX(ctx context.Context, id int) *GamePlayerPoint {
+func (c *GamePlayerPointClient) GetX(ctx context.Context, id uuid.UUID) *GamePlayerPoint {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)
@@ -898,96 +1307,6 @@ func (c *GamePlayerPointClient) GetX(ctx context.Context, id int) *GamePlayerPoi
 // Hooks returns the client hooks.
 func (c *GamePlayerPointClient) Hooks() []Hook {
 	return c.hooks.GamePlayerPoint
-}
-
-// GoAroundClient is a client for the GoAround schema.
-type GoAroundClient struct {
-	config
-}
-
-// NewGoAroundClient returns a client for the GoAround from the given config.
-func NewGoAroundClient(c config) *GoAroundClient {
-	return &GoAroundClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `goaround.Hooks(f(g(h())))`.
-func (c *GoAroundClient) Use(hooks ...Hook) {
-	c.hooks.GoAround = append(c.hooks.GoAround, hooks...)
-}
-
-// Create returns a builder for creating a GoAround entity.
-func (c *GoAroundClient) Create() *GoAroundCreate {
-	mutation := newGoAroundMutation(c.config, OpCreate)
-	return &GoAroundCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of GoAround entities.
-func (c *GoAroundClient) CreateBulk(builders ...*GoAroundCreate) *GoAroundCreateBulk {
-	return &GoAroundCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for GoAround.
-func (c *GoAroundClient) Update() *GoAroundUpdate {
-	mutation := newGoAroundMutation(c.config, OpUpdate)
-	return &GoAroundUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *GoAroundClient) UpdateOne(ga *GoAround) *GoAroundUpdateOne {
-	mutation := newGoAroundMutation(c.config, OpUpdateOne, withGoAround(ga))
-	return &GoAroundUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *GoAroundClient) UpdateOneID(id uuid.UUID) *GoAroundUpdateOne {
-	mutation := newGoAroundMutation(c.config, OpUpdateOne, withGoAroundID(id))
-	return &GoAroundUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for GoAround.
-func (c *GoAroundClient) Delete() *GoAroundDelete {
-	mutation := newGoAroundMutation(c.config, OpDelete)
-	return &GoAroundDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *GoAroundClient) DeleteOne(ga *GoAround) *GoAroundDeleteOne {
-	return c.DeleteOneID(ga.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *GoAroundClient) DeleteOneID(id uuid.UUID) *GoAroundDeleteOne {
-	builder := c.Delete().Where(goaround.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &GoAroundDeleteOne{builder}
-}
-
-// Query returns a query builder for GoAround.
-func (c *GoAroundClient) Query() *GoAroundQuery {
-	return &GoAroundQuery{
-		config: c.config,
-	}
-}
-
-// Get returns a GoAround entity by its id.
-func (c *GoAroundClient) Get(ctx context.Context, id uuid.UUID) (*GoAround, error) {
-	return c.Query().Where(goaround.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *GoAroundClient) GetX(ctx context.Context, id uuid.UUID) *GoAround {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// Hooks returns the client hooks.
-func (c *GoAroundClient) Hooks() []Hook {
-	return c.hooks.GoAround
 }
 
 // HandClient is a client for the Hand schema.
@@ -1084,6 +1403,22 @@ func (c *HandClient) QueryRounds(h *Hand) *RoundQuery {
 			sqlgraph.From(hand.Table, hand.FieldID, id),
 			sqlgraph.To(round.Table, round.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, hand.RoundsTable, hand.RoundsColumn),
+		)
+		fromV = sqlgraph.Neighbors(h.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryTurns queries the turns edge of a Hand.
+func (c *HandClient) QueryTurns(h *Hand) *TurnQuery {
+	query := &TurnQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := h.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(hand.Table, hand.FieldID, id),
+			sqlgraph.To(turn.Table, turn.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, hand.TurnsTable, hand.TurnsPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(h.driver.Dialect(), step)
 		return fromV, nil
@@ -1340,6 +1675,96 @@ func (c *MJLogFileClient) Hooks() []Hook {
 	return c.hooks.MJLogFile
 }
 
+// MeldedKanClient is a client for the MeldedKan schema.
+type MeldedKanClient struct {
+	config
+}
+
+// NewMeldedKanClient returns a client for the MeldedKan from the given config.
+func NewMeldedKanClient(c config) *MeldedKanClient {
+	return &MeldedKanClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `meldedkan.Hooks(f(g(h())))`.
+func (c *MeldedKanClient) Use(hooks ...Hook) {
+	c.hooks.MeldedKan = append(c.hooks.MeldedKan, hooks...)
+}
+
+// Create returns a builder for creating a MeldedKan entity.
+func (c *MeldedKanClient) Create() *MeldedKanCreate {
+	mutation := newMeldedKanMutation(c.config, OpCreate)
+	return &MeldedKanCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of MeldedKan entities.
+func (c *MeldedKanClient) CreateBulk(builders ...*MeldedKanCreate) *MeldedKanCreateBulk {
+	return &MeldedKanCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for MeldedKan.
+func (c *MeldedKanClient) Update() *MeldedKanUpdate {
+	mutation := newMeldedKanMutation(c.config, OpUpdate)
+	return &MeldedKanUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *MeldedKanClient) UpdateOne(mk *MeldedKan) *MeldedKanUpdateOne {
+	mutation := newMeldedKanMutation(c.config, OpUpdateOne, withMeldedKan(mk))
+	return &MeldedKanUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *MeldedKanClient) UpdateOneID(id int) *MeldedKanUpdateOne {
+	mutation := newMeldedKanMutation(c.config, OpUpdateOne, withMeldedKanID(id))
+	return &MeldedKanUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for MeldedKan.
+func (c *MeldedKanClient) Delete() *MeldedKanDelete {
+	mutation := newMeldedKanMutation(c.config, OpDelete)
+	return &MeldedKanDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *MeldedKanClient) DeleteOne(mk *MeldedKan) *MeldedKanDeleteOne {
+	return c.DeleteOneID(mk.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *MeldedKanClient) DeleteOneID(id int) *MeldedKanDeleteOne {
+	builder := c.Delete().Where(meldedkan.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &MeldedKanDeleteOne{builder}
+}
+
+// Query returns a query builder for MeldedKan.
+func (c *MeldedKanClient) Query() *MeldedKanQuery {
+	return &MeldedKanQuery{
+		config: c.config,
+	}
+}
+
+// Get returns a MeldedKan entity by its id.
+func (c *MeldedKanClient) Get(ctx context.Context, id int) (*MeldedKan, error) {
+	return c.Query().Where(meldedkan.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *MeldedKanClient) GetX(ctx context.Context, id int) *MeldedKan {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *MeldedKanClient) Hooks() []Hook {
+	return c.hooks.MeldedKan
+}
+
 // PlayerClient is a client for the Player schema.
 type PlayerClient struct {
 	config
@@ -1444,6 +1869,96 @@ func (c *PlayerClient) QueryGamePlayers(pl *Player) *GamePlayerQuery {
 // Hooks returns the client hooks.
 func (c *PlayerClient) Hooks() []Hook {
 	return c.hooks.Player
+}
+
+// PonClient is a client for the Pon schema.
+type PonClient struct {
+	config
+}
+
+// NewPonClient returns a client for the Pon from the given config.
+func NewPonClient(c config) *PonClient {
+	return &PonClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `pon.Hooks(f(g(h())))`.
+func (c *PonClient) Use(hooks ...Hook) {
+	c.hooks.Pon = append(c.hooks.Pon, hooks...)
+}
+
+// Create returns a builder for creating a Pon entity.
+func (c *PonClient) Create() *PonCreate {
+	mutation := newPonMutation(c.config, OpCreate)
+	return &PonCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Pon entities.
+func (c *PonClient) CreateBulk(builders ...*PonCreate) *PonCreateBulk {
+	return &PonCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Pon.
+func (c *PonClient) Update() *PonUpdate {
+	mutation := newPonMutation(c.config, OpUpdate)
+	return &PonUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *PonClient) UpdateOne(po *Pon) *PonUpdateOne {
+	mutation := newPonMutation(c.config, OpUpdateOne, withPon(po))
+	return &PonUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *PonClient) UpdateOneID(id int) *PonUpdateOne {
+	mutation := newPonMutation(c.config, OpUpdateOne, withPonID(id))
+	return &PonUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Pon.
+func (c *PonClient) Delete() *PonDelete {
+	mutation := newPonMutation(c.config, OpDelete)
+	return &PonDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *PonClient) DeleteOne(po *Pon) *PonDeleteOne {
+	return c.DeleteOneID(po.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *PonClient) DeleteOneID(id int) *PonDeleteOne {
+	builder := c.Delete().Where(pon.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &PonDeleteOne{builder}
+}
+
+// Query returns a query builder for Pon.
+func (c *PonClient) Query() *PonQuery {
+	return &PonQuery{
+		config: c.config,
+	}
+}
+
+// Get returns a Pon entity by its id.
+func (c *PonClient) Get(ctx context.Context, id int) (*Pon, error) {
+	return c.Query().Where(pon.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *PonClient) GetX(ctx context.Context, id int) *Pon {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *PonClient) Hooks() []Hook {
+	return c.hooks.Pon
 }
 
 // RoomClient is a client for the Room schema.
@@ -1688,6 +2203,202 @@ func (c *RoundClient) QueryWinds(r *Round) *WindQuery {
 // Hooks returns the client hooks.
 func (c *RoundClient) Hooks() []Hook {
 	return c.hooks.Round
+}
+
+// TurnClient is a client for the Turn schema.
+type TurnClient struct {
+	config
+}
+
+// NewTurnClient returns a client for the Turn from the given config.
+func NewTurnClient(c config) *TurnClient {
+	return &TurnClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `turn.Hooks(f(g(h())))`.
+func (c *TurnClient) Use(hooks ...Hook) {
+	c.hooks.Turn = append(c.hooks.Turn, hooks...)
+}
+
+// Create returns a builder for creating a Turn entity.
+func (c *TurnClient) Create() *TurnCreate {
+	mutation := newTurnMutation(c.config, OpCreate)
+	return &TurnCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Turn entities.
+func (c *TurnClient) CreateBulk(builders ...*TurnCreate) *TurnCreateBulk {
+	return &TurnCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Turn.
+func (c *TurnClient) Update() *TurnUpdate {
+	mutation := newTurnMutation(c.config, OpUpdate)
+	return &TurnUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *TurnClient) UpdateOne(t *Turn) *TurnUpdateOne {
+	mutation := newTurnMutation(c.config, OpUpdateOne, withTurn(t))
+	return &TurnUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *TurnClient) UpdateOneID(id uuid.UUID) *TurnUpdateOne {
+	mutation := newTurnMutation(c.config, OpUpdateOne, withTurnID(id))
+	return &TurnUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Turn.
+func (c *TurnClient) Delete() *TurnDelete {
+	mutation := newTurnMutation(c.config, OpDelete)
+	return &TurnDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *TurnClient) DeleteOne(t *Turn) *TurnDeleteOne {
+	return c.DeleteOneID(t.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *TurnClient) DeleteOneID(id uuid.UUID) *TurnDeleteOne {
+	builder := c.Delete().Where(turn.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &TurnDeleteOne{builder}
+}
+
+// Query returns a query builder for Turn.
+func (c *TurnClient) Query() *TurnQuery {
+	return &TurnQuery{
+		config: c.config,
+	}
+}
+
+// Get returns a Turn entity by its id.
+func (c *TurnClient) Get(ctx context.Context, id uuid.UUID) (*Turn, error) {
+	return c.Query().Where(turn.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *TurnClient) GetX(ctx context.Context, id uuid.UUID) *Turn {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryHands queries the hands edge of a Turn.
+func (c *TurnClient) QueryHands(t *Turn) *HandQuery {
+	query := &HandQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := t.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(turn.Table, turn.FieldID, id),
+			sqlgraph.To(hand.Table, hand.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, turn.HandsTable, turn.HandsPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(t.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *TurnClient) Hooks() []Hook {
+	return c.hooks.Turn
+}
+
+// WinClient is a client for the Win schema.
+type WinClient struct {
+	config
+}
+
+// NewWinClient returns a client for the Win from the given config.
+func NewWinClient(c config) *WinClient {
+	return &WinClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `win.Hooks(f(g(h())))`.
+func (c *WinClient) Use(hooks ...Hook) {
+	c.hooks.Win = append(c.hooks.Win, hooks...)
+}
+
+// Create returns a builder for creating a Win entity.
+func (c *WinClient) Create() *WinCreate {
+	mutation := newWinMutation(c.config, OpCreate)
+	return &WinCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Win entities.
+func (c *WinClient) CreateBulk(builders ...*WinCreate) *WinCreateBulk {
+	return &WinCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Win.
+func (c *WinClient) Update() *WinUpdate {
+	mutation := newWinMutation(c.config, OpUpdate)
+	return &WinUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *WinClient) UpdateOne(w *Win) *WinUpdateOne {
+	mutation := newWinMutation(c.config, OpUpdateOne, withWin(w))
+	return &WinUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *WinClient) UpdateOneID(id int) *WinUpdateOne {
+	mutation := newWinMutation(c.config, OpUpdateOne, withWinID(id))
+	return &WinUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Win.
+func (c *WinClient) Delete() *WinDelete {
+	mutation := newWinMutation(c.config, OpDelete)
+	return &WinDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *WinClient) DeleteOne(w *Win) *WinDeleteOne {
+	return c.DeleteOneID(w.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *WinClient) DeleteOneID(id int) *WinDeleteOne {
+	builder := c.Delete().Where(win.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &WinDeleteOne{builder}
+}
+
+// Query returns a query builder for Win.
+func (c *WinClient) Query() *WinQuery {
+	return &WinQuery{
+		config: c.config,
+	}
+}
+
+// Get returns a Win entity by its id.
+func (c *WinClient) Get(ctx context.Context, id int) (*Win, error) {
+	return c.Query().Where(win.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *WinClient) GetX(ctx context.Context, id int) *Win {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *WinClient) Hooks() []Hook {
+	return c.hooks.Win
 }
 
 // WindClient is a client for the Wind schema.

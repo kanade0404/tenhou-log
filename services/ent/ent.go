@@ -10,19 +10,26 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/kanade0404/tenhou-log/services/ent/chakan"
+	"github.com/kanade0404/tenhou-log/services/ent/chii"
 	"github.com/kanade0404/tenhou-log/services/ent/compressedmjlog"
+	"github.com/kanade0404/tenhou-log/services/ent/concealedkan"
 	"github.com/kanade0404/tenhou-log/services/ent/dan"
+	"github.com/kanade0404/tenhou-log/services/ent/drawn"
 	"github.com/kanade0404/tenhou-log/services/ent/game"
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayer"
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayerhandhai"
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayerpoint"
-	"github.com/kanade0404/tenhou-log/services/ent/goaround"
 	"github.com/kanade0404/tenhou-log/services/ent/hand"
+	"github.com/kanade0404/tenhou-log/services/ent/meldedkan"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlog"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlogfile"
 	"github.com/kanade0404/tenhou-log/services/ent/player"
+	"github.com/kanade0404/tenhou-log/services/ent/pon"
 	"github.com/kanade0404/tenhou-log/services/ent/room"
 	"github.com/kanade0404/tenhou-log/services/ent/round"
+	"github.com/kanade0404/tenhou-log/services/ent/turn"
+	"github.com/kanade0404/tenhou-log/services/ent/win"
 	"github.com/kanade0404/tenhou-log/services/ent/wind"
 )
 
@@ -44,19 +51,26 @@ type OrderFunc func(*sql.Selector)
 // columnChecker returns a function indicates if the column exists in the given column.
 func columnChecker(table string) func(string) error {
 	checks := map[string]func(string) bool{
+		chakan.Table:            chakan.ValidColumn,
+		chii.Table:              chii.ValidColumn,
 		compressedmjlog.Table:   compressedmjlog.ValidColumn,
+		concealedkan.Table:      concealedkan.ValidColumn,
 		dan.Table:               dan.ValidColumn,
+		drawn.Table:             drawn.ValidColumn,
 		game.Table:              game.ValidColumn,
 		gameplayer.Table:        gameplayer.ValidColumn,
 		gameplayerhandhai.Table: gameplayerhandhai.ValidColumn,
 		gameplayerpoint.Table:   gameplayerpoint.ValidColumn,
-		goaround.Table:          goaround.ValidColumn,
 		hand.Table:              hand.ValidColumn,
 		mjlog.Table:             mjlog.ValidColumn,
 		mjlogfile.Table:         mjlogfile.ValidColumn,
+		meldedkan.Table:         meldedkan.ValidColumn,
 		player.Table:            player.ValidColumn,
+		pon.Table:               pon.ValidColumn,
 		room.Table:              room.ValidColumn,
 		round.Table:             round.ValidColumn,
+		turn.Table:              turn.ValidColumn,
+		win.Table:               win.ValidColumn,
 		wind.Table:              wind.ValidColumn,
 	}
 	check, ok := checks[table]

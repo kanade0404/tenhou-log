@@ -19,6 +19,8 @@ const (
 	FieldReachPoint = "reach_point"
 	// EdgeRounds holds the string denoting the rounds edge name in mutations.
 	EdgeRounds = "rounds"
+	// EdgeTurns holds the string denoting the turns edge name in mutations.
+	EdgeTurns = "turns"
 	// Table holds the table name of the hand in the database.
 	Table = "hands"
 	// RoundsTable is the table that holds the rounds relation/edge.
@@ -28,6 +30,11 @@ const (
 	RoundsInverseTable = "rounds"
 	// RoundsColumn is the table column denoting the rounds relation/edge.
 	RoundsColumn = "round_hands"
+	// TurnsTable is the table that holds the turns relation/edge. The primary key declared below.
+	TurnsTable = "hand_turns"
+	// TurnsInverseTable is the table name for the Turn entity.
+	// It exists in this package in order to avoid circular dependency with the "turn" package.
+	TurnsInverseTable = "turns"
 )
 
 // Columns holds all SQL columns for hand fields.
@@ -43,6 +50,12 @@ var Columns = []string{
 var ForeignKeys = []string{
 	"round_hands",
 }
+
+var (
+	// TurnsPrimaryKey and TurnsColumn2 are the table columns denoting the
+	// primary key for the turns relation (M2M).
+	TurnsPrimaryKey = []string{"hand_id", "turn_id"}
+)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
