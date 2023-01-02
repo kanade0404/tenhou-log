@@ -61,6 +61,14 @@ func init() {
 	goaround.DefaultID = goaroundDescID.Default.(func() uuid.UUID)
 	handFields := schema.Hand{}.Fields()
 	_ = handFields
+	// handDescContinuePoint is the schema descriptor for continue_point field.
+	handDescContinuePoint := handFields[2].Descriptor()
+	// hand.ContinuePointValidator is a validator for the "continue_point" field. It is called by the builders before save.
+	hand.ContinuePointValidator = handDescContinuePoint.Validators[0].(func(uint) error)
+	// handDescReachPoint is the schema descriptor for reach_point field.
+	handDescReachPoint := handFields[3].Descriptor()
+	// hand.ReachPointValidator is a validator for the "reach_point" field. It is called by the builders before save.
+	hand.ReachPointValidator = handDescReachPoint.Validators[0].(func(uint) error)
 	// handDescID is the schema descriptor for id field.
 	handDescID := handFields[0].Descriptor()
 	// hand.DefaultID holds the default value on creation for the id field.

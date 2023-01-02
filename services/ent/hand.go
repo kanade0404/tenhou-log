@@ -6,15 +6,49 @@ import (
 	"fmt"
 	"strings"
 
+	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/hand"
+	"github.com/kanade0404/tenhou-log/services/ent/round"
 )
 
 // Hand is the model entity for the Hand schema.
 type Hand struct {
-	config
+	config `json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
+	// Num holds the value of the "num" field.
+	Num uint `json:"num,omitempty"`
+	// ContinuePoint holds the value of the "continue_point" field.
+	ContinuePoint uint `json:"continue_point,omitempty"`
+	// ReachPoint holds the value of the "reach_point" field.
+	ReachPoint uint `json:"reach_point,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the HandQuery when eager-loading is set.
+	Edges       HandEdges `json:"edges"`
+	round_hands *uuid.UUID
+}
+
+// HandEdges holds the relations/edges for other nodes in the graph.
+type HandEdges struct {
+	// Rounds holds the value of the rounds edge.
+	Rounds *Round `json:"rounds,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// RoundsOrErr returns the Rounds value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e HandEdges) RoundsOrErr() (*Round, error) {
+	if e.loadedTypes[0] {
+		if e.Rounds == nil {
+			// Edge was loaded but was not found.
+			return nil, &NotFoundError{label: round.Label}
+		}
+		return e.Rounds, nil
+	}
+	return nil, &NotLoadedError{edge: "rounds"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -22,8 +56,12 @@ func (*Hand) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case hand.FieldNum, hand.FieldContinuePoint, hand.FieldReachPoint:
+			values[i] = new(sql.NullInt64)
 		case hand.FieldID:
 			values[i] = new(uuid.UUID)
+		case hand.ForeignKeys[0]: // round_hands
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Hand", columns[i])
 		}
@@ -45,9 +83,39 @@ func (h *Hand) assignValues(columns []string, values []any) error {
 			} else if value != nil {
 				h.ID = *value
 			}
+		case hand.FieldNum:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field num", values[i])
+			} else if value.Valid {
+				h.Num = uint(value.Int64)
+			}
+		case hand.FieldContinuePoint:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field continue_point", values[i])
+			} else if value.Valid {
+				h.ContinuePoint = uint(value.Int64)
+			}
+		case hand.FieldReachPoint:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field reach_point", values[i])
+			} else if value.Valid {
+				h.ReachPoint = uint(value.Int64)
+			}
+		case hand.ForeignKeys[0]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field round_hands", values[i])
+			} else if value.Valid {
+				h.round_hands = new(uuid.UUID)
+				*h.round_hands = *value.S.(*uuid.UUID)
+			}
 		}
 	}
 	return nil
+}
+
+// QueryRounds queries the "rounds" edge of the Hand entity.
+func (h *Hand) QueryRounds() *RoundQuery {
+	return (&HandClient{config: h.config}).QueryRounds(h)
 }
 
 // Update returns a builder for updating this Hand.
@@ -72,7 +140,15 @@ func (h *Hand) Unwrap() *Hand {
 func (h *Hand) String() string {
 	var builder strings.Builder
 	builder.WriteString("Hand(")
-	builder.WriteString(fmt.Sprintf("id=%v", h.ID))
+	builder.WriteString(fmt.Sprintf("id=%v, ", h.ID))
+	builder.WriteString("num=")
+	builder.WriteString(fmt.Sprintf("%v", h.Num))
+	builder.WriteString(", ")
+	builder.WriteString("continue_point=")
+	builder.WriteString(fmt.Sprintf("%v", h.ContinuePoint))
+	builder.WriteString(", ")
+	builder.WriteString("reach_point=")
+	builder.WriteString(fmt.Sprintf("%v", h.ReachPoint))
 	builder.WriteByte(')')
 	return builder.String()
 }

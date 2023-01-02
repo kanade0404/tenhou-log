@@ -113,12 +113,24 @@ var (
 	// HandsColumns holds the columns for the "hands" table.
 	HandsColumns = []*schema.Column{
 		{Name: "oid", Type: field.TypeUUID},
+		{Name: "num", Type: field.TypeUint},
+		{Name: "continue_point", Type: field.TypeUint},
+		{Name: "reach_point", Type: field.TypeUint},
+		{Name: "round_hands", Type: field.TypeUUID, Nullable: true},
 	}
 	// HandsTable holds the schema information for the "hands" table.
 	HandsTable = &schema.Table{
 		Name:       "hands",
 		Columns:    HandsColumns,
 		PrimaryKey: []*schema.Column{HandsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "hands_rounds_hands",
+				Columns:    []*schema.Column{HandsColumns[4]},
+				RefColumns: []*schema.Column{RoundsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
 	}
 	// MjLogsColumns holds the columns for the "mj_logs" table.
 	MjLogsColumns = []*schema.Column{
@@ -279,6 +291,7 @@ func init() {
 	GamesTable.ForeignKeys[0].RefTable = RoomsTable
 	GamePlayersTable.ForeignKeys[0].RefTable = DansTable
 	GamePlayersTable.ForeignKeys[1].RefTable = PlayersTable
+	HandsTable.ForeignKeys[0].RefTable = RoundsTable
 	MjLogsTable.ForeignKeys[0].RefTable = GamesTable
 	MjLogsTable.ForeignKeys[1].RefTable = MjLogFilesTable
 	MjLogFilesTable.ForeignKeys[0].RefTable = CompressedMjLogsTable

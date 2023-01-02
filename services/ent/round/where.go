@@ -108,6 +108,34 @@ func HasGamesWith(preds ...predicate.Game) predicate.Round {
 	})
 }
 
+// HasHands applies the HasEdge predicate on the "hands" edge.
+func HasHands() predicate.Round {
+	return predicate.Round(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(HandsTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, HandsTable, HandsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasHandsWith applies the HasEdge predicate on the "hands" edge with a given conditions (other predicates).
+func HasHandsWith(preds ...predicate.Hand) predicate.Round {
+	return predicate.Round(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(HandsInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, HandsTable, HandsColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasWinds applies the HasEdge predicate on the "winds" edge.
 func HasWinds() predicate.Round {
 	return predicate.Round(func(s *sql.Selector) {

@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/game"
+	"github.com/kanade0404/tenhou-log/services/ent/hand"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 	"github.com/kanade0404/tenhou-log/services/ent/round"
 	"github.com/kanade0404/tenhou-log/services/ent/wind"
@@ -49,6 +50,21 @@ func (ru *RoundUpdate) SetGames(g *Game) *RoundUpdate {
 	return ru.SetGamesID(g.ID)
 }
 
+// AddHandIDs adds the "hands" edge to the Hand entity by IDs.
+func (ru *RoundUpdate) AddHandIDs(ids ...uuid.UUID) *RoundUpdate {
+	ru.mutation.AddHandIDs(ids...)
+	return ru
+}
+
+// AddHands adds the "hands" edges to the Hand entity.
+func (ru *RoundUpdate) AddHands(h ...*Hand) *RoundUpdate {
+	ids := make([]uuid.UUID, len(h))
+	for i := range h {
+		ids[i] = h[i].ID
+	}
+	return ru.AddHandIDs(ids...)
+}
+
 // SetWindsID sets the "winds" edge to the Wind entity by ID.
 func (ru *RoundUpdate) SetWindsID(id uuid.UUID) *RoundUpdate {
 	ru.mutation.SetWindsID(id)
@@ -77,6 +93,27 @@ func (ru *RoundUpdate) Mutation() *RoundMutation {
 func (ru *RoundUpdate) ClearGames() *RoundUpdate {
 	ru.mutation.ClearGames()
 	return ru
+}
+
+// ClearHands clears all "hands" edges to the Hand entity.
+func (ru *RoundUpdate) ClearHands() *RoundUpdate {
+	ru.mutation.ClearHands()
+	return ru
+}
+
+// RemoveHandIDs removes the "hands" edge to Hand entities by IDs.
+func (ru *RoundUpdate) RemoveHandIDs(ids ...uuid.UUID) *RoundUpdate {
+	ru.mutation.RemoveHandIDs(ids...)
+	return ru
+}
+
+// RemoveHands removes "hands" edges to Hand entities.
+func (ru *RoundUpdate) RemoveHands(h ...*Hand) *RoundUpdate {
+	ids := make([]uuid.UUID, len(h))
+	for i := range h {
+		ids[i] = h[i].ID
+	}
+	return ru.RemoveHandIDs(ids...)
 }
 
 // ClearWinds clears the "winds" edge to the Wind entity.
@@ -192,6 +229,60 @@ func (ru *RoundUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if ru.mutation.HandsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   round.HandsTable,
+			Columns: []string{round.HandsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: hand.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ru.mutation.RemovedHandsIDs(); len(nodes) > 0 && !ru.mutation.HandsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   round.HandsTable,
+			Columns: []string{round.HandsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: hand.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ru.mutation.HandsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   round.HandsTable,
+			Columns: []string{round.HandsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: hand.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if ru.mutation.WindsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -265,6 +356,21 @@ func (ruo *RoundUpdateOne) SetGames(g *Game) *RoundUpdateOne {
 	return ruo.SetGamesID(g.ID)
 }
 
+// AddHandIDs adds the "hands" edge to the Hand entity by IDs.
+func (ruo *RoundUpdateOne) AddHandIDs(ids ...uuid.UUID) *RoundUpdateOne {
+	ruo.mutation.AddHandIDs(ids...)
+	return ruo
+}
+
+// AddHands adds the "hands" edges to the Hand entity.
+func (ruo *RoundUpdateOne) AddHands(h ...*Hand) *RoundUpdateOne {
+	ids := make([]uuid.UUID, len(h))
+	for i := range h {
+		ids[i] = h[i].ID
+	}
+	return ruo.AddHandIDs(ids...)
+}
+
 // SetWindsID sets the "winds" edge to the Wind entity by ID.
 func (ruo *RoundUpdateOne) SetWindsID(id uuid.UUID) *RoundUpdateOne {
 	ruo.mutation.SetWindsID(id)
@@ -293,6 +399,27 @@ func (ruo *RoundUpdateOne) Mutation() *RoundMutation {
 func (ruo *RoundUpdateOne) ClearGames() *RoundUpdateOne {
 	ruo.mutation.ClearGames()
 	return ruo
+}
+
+// ClearHands clears all "hands" edges to the Hand entity.
+func (ruo *RoundUpdateOne) ClearHands() *RoundUpdateOne {
+	ruo.mutation.ClearHands()
+	return ruo
+}
+
+// RemoveHandIDs removes the "hands" edge to Hand entities by IDs.
+func (ruo *RoundUpdateOne) RemoveHandIDs(ids ...uuid.UUID) *RoundUpdateOne {
+	ruo.mutation.RemoveHandIDs(ids...)
+	return ruo
+}
+
+// RemoveHands removes "hands" edges to Hand entities.
+func (ruo *RoundUpdateOne) RemoveHands(h ...*Hand) *RoundUpdateOne {
+	ids := make([]uuid.UUID, len(h))
+	for i := range h {
+		ids[i] = h[i].ID
+	}
+	return ruo.RemoveHandIDs(ids...)
 }
 
 // ClearWinds clears the "winds" edge to the Wind entity.
@@ -430,6 +557,60 @@ func (ruo *RoundUpdateOne) sqlSave(ctx context.Context) (_node *Round, err error
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: game.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if ruo.mutation.HandsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   round.HandsTable,
+			Columns: []string{round.HandsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: hand.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ruo.mutation.RemovedHandsIDs(); len(nodes) > 0 && !ruo.mutation.HandsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   round.HandsTable,
+			Columns: []string{round.HandsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: hand.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ruo.mutation.HandsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   round.HandsTable,
+			Columns: []string{round.HandsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: hand.FieldID,
 				},
 			},
 		}

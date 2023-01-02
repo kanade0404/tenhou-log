@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -12,6 +13,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/game"
+	"github.com/kanade0404/tenhou-log/services/ent/hand"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 	"github.com/kanade0404/tenhou-log/services/ent/round"
 	"github.com/kanade0404/tenhou-log/services/ent/wind"
@@ -27,6 +29,7 @@ type RoundQuery struct {
 	fields     []string
 	predicates []predicate.Round
 	withGames  *GameQuery
+	withHands  *HandQuery
 	withWinds  *WindQuery
 	withFKs    bool
 	// intermediate query (i.e. traversal path).
@@ -80,6 +83,28 @@ func (rq *RoundQuery) QueryGames() *GameQuery {
 			sqlgraph.From(round.Table, round.FieldID, selector),
 			sqlgraph.To(game.Table, game.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, round.GamesTable, round.GamesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(rq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryHands chains the current query on the "hands" edge.
+func (rq *RoundQuery) QueryHands() *HandQuery {
+	query := &HandQuery{config: rq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := rq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := rq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(round.Table, round.FieldID, selector),
+			sqlgraph.To(hand.Table, hand.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, round.HandsTable, round.HandsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(rq.driver.Dialect(), step)
 		return fromU, nil
@@ -291,6 +316,7 @@ func (rq *RoundQuery) Clone() *RoundQuery {
 		order:      append([]OrderFunc{}, rq.order...),
 		predicates: append([]predicate.Round{}, rq.predicates...),
 		withGames:  rq.withGames.Clone(),
+		withHands:  rq.withHands.Clone(),
 		withWinds:  rq.withWinds.Clone(),
 		// clone intermediate query.
 		sql:    rq.sql.Clone(),
@@ -307,6 +333,17 @@ func (rq *RoundQuery) WithGames(opts ...func(*GameQuery)) *RoundQuery {
 		opt(query)
 	}
 	rq.withGames = query
+	return rq
+}
+
+// WithHands tells the query-builder to eager-load the nodes that are connected to
+// the "hands" edge. The optional arguments are used to configure the query builder of the edge.
+func (rq *RoundQuery) WithHands(opts ...func(*HandQuery)) *RoundQuery {
+	query := &HandQuery{config: rq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	rq.withHands = query
 	return rq
 }
 
@@ -373,8 +410,9 @@ func (rq *RoundQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Round,
 		nodes       = []*Round{}
 		withFKs     = rq.withFKs
 		_spec       = rq.querySpec()
-		loadedTypes = [2]bool{
+		loadedTypes = [3]bool{
 			rq.withGames != nil,
+			rq.withHands != nil,
 			rq.withWinds != nil,
 		}
 	)
@@ -405,6 +443,13 @@ func (rq *RoundQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Round,
 	if query := rq.withGames; query != nil {
 		if err := rq.loadGames(ctx, query, nodes, nil,
 			func(n *Round, e *Game) { n.Edges.Games = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := rq.withHands; query != nil {
+		if err := rq.loadHands(ctx, query, nodes,
+			func(n *Round) { n.Edges.Hands = []*Hand{} },
+			func(n *Round, e *Hand) { n.Edges.Hands = append(n.Edges.Hands, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -443,6 +488,37 @@ func (rq *RoundQuery) loadGames(ctx context.Context, query *GameQuery, nodes []*
 		for i := range nodes {
 			assign(nodes[i], n)
 		}
+	}
+	return nil
+}
+func (rq *RoundQuery) loadHands(ctx context.Context, query *HandQuery, nodes []*Round, init func(*Round), assign func(*Round, *Hand)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Round)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.Hand(func(s *sql.Selector) {
+		s.Where(sql.InValues(round.HandsColumn, fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.round_hands
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "round_hands" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "round_hands" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
 	}
 	return nil
 }

@@ -4,12 +4,14 @@ package ent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/hand"
+	"github.com/kanade0404/tenhou-log/services/ent/round"
 )
 
 // HandCreate is the builder for creating a Hand entity.
@@ -17,6 +19,24 @@ type HandCreate struct {
 	config
 	mutation *HandMutation
 	hooks    []Hook
+}
+
+// SetNum sets the "num" field.
+func (hc *HandCreate) SetNum(u uint) *HandCreate {
+	hc.mutation.SetNum(u)
+	return hc
+}
+
+// SetContinuePoint sets the "continue_point" field.
+func (hc *HandCreate) SetContinuePoint(u uint) *HandCreate {
+	hc.mutation.SetContinuePoint(u)
+	return hc
+}
+
+// SetReachPoint sets the "reach_point" field.
+func (hc *HandCreate) SetReachPoint(u uint) *HandCreate {
+	hc.mutation.SetReachPoint(u)
+	return hc
 }
 
 // SetID sets the "id" field.
@@ -31,6 +51,25 @@ func (hc *HandCreate) SetNillableID(u *uuid.UUID) *HandCreate {
 		hc.SetID(*u)
 	}
 	return hc
+}
+
+// SetRoundsID sets the "rounds" edge to the Round entity by ID.
+func (hc *HandCreate) SetRoundsID(id uuid.UUID) *HandCreate {
+	hc.mutation.SetRoundsID(id)
+	return hc
+}
+
+// SetNillableRoundsID sets the "rounds" edge to the Round entity by ID if the given value is not nil.
+func (hc *HandCreate) SetNillableRoundsID(id *uuid.UUID) *HandCreate {
+	if id != nil {
+		hc = hc.SetRoundsID(*id)
+	}
+	return hc
+}
+
+// SetRounds sets the "rounds" edge to the Round entity.
+func (hc *HandCreate) SetRounds(r *Round) *HandCreate {
+	return hc.SetRoundsID(r.ID)
 }
 
 // Mutation returns the HandMutation object of the builder.
@@ -118,6 +157,25 @@ func (hc *HandCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (hc *HandCreate) check() error {
+	if _, ok := hc.mutation.Num(); !ok {
+		return &ValidationError{Name: "num", err: errors.New(`ent: missing required field "Hand.num"`)}
+	}
+	if _, ok := hc.mutation.ContinuePoint(); !ok {
+		return &ValidationError{Name: "continue_point", err: errors.New(`ent: missing required field "Hand.continue_point"`)}
+	}
+	if v, ok := hc.mutation.ContinuePoint(); ok {
+		if err := hand.ContinuePointValidator(v); err != nil {
+			return &ValidationError{Name: "continue_point", err: fmt.Errorf(`ent: validator failed for field "Hand.continue_point": %w`, err)}
+		}
+	}
+	if _, ok := hc.mutation.ReachPoint(); !ok {
+		return &ValidationError{Name: "reach_point", err: errors.New(`ent: missing required field "Hand.reach_point"`)}
+	}
+	if v, ok := hc.mutation.ReachPoint(); ok {
+		if err := hand.ReachPointValidator(v); err != nil {
+			return &ValidationError{Name: "reach_point", err: fmt.Errorf(`ent: validator failed for field "Hand.reach_point": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -153,6 +211,38 @@ func (hc *HandCreate) createSpec() (*Hand, *sqlgraph.CreateSpec) {
 	if id, ok := hc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
+	}
+	if value, ok := hc.mutation.Num(); ok {
+		_spec.SetField(hand.FieldNum, field.TypeUint, value)
+		_node.Num = value
+	}
+	if value, ok := hc.mutation.ContinuePoint(); ok {
+		_spec.SetField(hand.FieldContinuePoint, field.TypeUint, value)
+		_node.ContinuePoint = value
+	}
+	if value, ok := hc.mutation.ReachPoint(); ok {
+		_spec.SetField(hand.FieldReachPoint, field.TypeUint, value)
+		_node.ReachPoint = value
+	}
+	if nodes := hc.mutation.RoundsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   hand.RoundsTable,
+			Columns: []string{hand.RoundsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: round.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.round_hands = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

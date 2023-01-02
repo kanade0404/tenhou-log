@@ -10,6 +10,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/game"
+	"github.com/kanade0404/tenhou-log/services/ent/hand"
 	"github.com/kanade0404/tenhou-log/services/ent/round"
 	"github.com/kanade0404/tenhou-log/services/ent/wind"
 )
@@ -52,6 +53,21 @@ func (rc *RoundCreate) SetNillableGamesID(id *uuid.UUID) *RoundCreate {
 // SetGames sets the "games" edge to the Game entity.
 func (rc *RoundCreate) SetGames(g *Game) *RoundCreate {
 	return rc.SetGamesID(g.ID)
+}
+
+// AddHandIDs adds the "hands" edge to the Hand entity by IDs.
+func (rc *RoundCreate) AddHandIDs(ids ...uuid.UUID) *RoundCreate {
+	rc.mutation.AddHandIDs(ids...)
+	return rc
+}
+
+// AddHands adds the "hands" edges to the Hand entity.
+func (rc *RoundCreate) AddHands(h ...*Hand) *RoundCreate {
+	ids := make([]uuid.UUID, len(h))
+	for i := range h {
+		ids[i] = h[i].ID
+	}
+	return rc.AddHandIDs(ids...)
 }
 
 // SetWindsID sets the "winds" edge to the Wind entity by ID.
@@ -212,6 +228,25 @@ func (rc *RoundCreate) createSpec() (*Round, *sqlgraph.CreateSpec) {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.game_rounds = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := rc.mutation.HandsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   round.HandsTable,
+			Columns: []string{round.HandsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: hand.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := rc.mutation.WindsIDs(); len(nodes) > 0 {

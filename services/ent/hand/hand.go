@@ -11,13 +11,37 @@ const (
 	Label = "hand"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "oid"
+	// FieldNum holds the string denoting the num field in the database.
+	FieldNum = "num"
+	// FieldContinuePoint holds the string denoting the continue_point field in the database.
+	FieldContinuePoint = "continue_point"
+	// FieldReachPoint holds the string denoting the reach_point field in the database.
+	FieldReachPoint = "reach_point"
+	// EdgeRounds holds the string denoting the rounds edge name in mutations.
+	EdgeRounds = "rounds"
 	// Table holds the table name of the hand in the database.
 	Table = "hands"
+	// RoundsTable is the table that holds the rounds relation/edge.
+	RoundsTable = "hands"
+	// RoundsInverseTable is the table name for the Round entity.
+	// It exists in this package in order to avoid circular dependency with the "round" package.
+	RoundsInverseTable = "rounds"
+	// RoundsColumn is the table column denoting the rounds relation/edge.
+	RoundsColumn = "round_hands"
 )
 
 // Columns holds all SQL columns for hand fields.
 var Columns = []string{
 	FieldID,
+	FieldNum,
+	FieldContinuePoint,
+	FieldReachPoint,
+}
+
+// ForeignKeys holds the SQL foreign-keys that are owned by the "hands"
+// table and are not defined as standalone fields in the schema.
+var ForeignKeys = []string{
+	"round_hands",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -27,10 +51,19 @@ func ValidColumn(column string) bool {
 			return true
 		}
 	}
+	for i := range ForeignKeys {
+		if column == ForeignKeys[i] {
+			return true
+		}
+	}
 	return false
 }
 
 var (
+	// ContinuePointValidator is a validator for the "continue_point" field. It is called by the builders before save.
+	ContinuePointValidator func(uint) error
+	// ReachPointValidator is a validator for the "reach_point" field. It is called by the builders before save.
+	ReachPointValidator func(uint) error
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )

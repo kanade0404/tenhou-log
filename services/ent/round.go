@@ -29,11 +29,13 @@ type Round struct {
 type RoundEdges struct {
 	// Games holds the value of the games edge.
 	Games *Game `json:"games,omitempty"`
+	// Hands holds the value of the hands edge.
+	Hands []*Hand `json:"hands,omitempty"`
 	// Winds holds the value of the winds edge.
 	Winds *Wind `json:"winds,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [3]bool
 }
 
 // GamesOrErr returns the Games value or an error if the edge
@@ -49,10 +51,19 @@ func (e RoundEdges) GamesOrErr() (*Game, error) {
 	return nil, &NotLoadedError{edge: "games"}
 }
 
+// HandsOrErr returns the Hands value or an error if the edge
+// was not loaded in eager-loading.
+func (e RoundEdges) HandsOrErr() ([]*Hand, error) {
+	if e.loadedTypes[1] {
+		return e.Hands, nil
+	}
+	return nil, &NotLoadedError{edge: "hands"}
+}
+
 // WindsOrErr returns the Winds value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
 func (e RoundEdges) WindsOrErr() (*Wind, error) {
-	if e.loadedTypes[1] {
+	if e.loadedTypes[2] {
 		if e.Winds == nil {
 			// Edge was loaded but was not found.
 			return nil, &NotFoundError{label: wind.Label}
@@ -116,6 +127,11 @@ func (r *Round) assignValues(columns []string, values []any) error {
 // QueryGames queries the "games" edge of the Round entity.
 func (r *Round) QueryGames() *GameQuery {
 	return (&RoundClient{config: r.config}).QueryGames(r)
+}
+
+// QueryHands queries the "hands" edge of the Round entity.
+func (r *Round) QueryHands() *HandQuery {
+	return (&RoundClient{config: r.config}).QueryHands(r)
 }
 
 // QueryWinds queries the "winds" edge of the Round entity.

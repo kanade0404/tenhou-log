@@ -14,6 +14,7 @@ import (
 	"github.com/kanade0404/tenhou-log/services/ent/dan"
 	"github.com/kanade0404/tenhou-log/services/ent/game"
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayer"
+	"github.com/kanade0404/tenhou-log/services/ent/hand"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlog"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlogfile"
 	"github.com/kanade0404/tenhou-log/services/ent/player"
@@ -2973,13 +2974,21 @@ func (m *GoAroundMutation) ResetEdge(name string) error {
 // HandMutation represents an operation that mutates the Hand nodes in the graph.
 type HandMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *uuid.UUID
-	clearedFields map[string]struct{}
-	done          bool
-	oldValue      func(context.Context) (*Hand, error)
-	predicates    []predicate.Hand
+	op                Op
+	typ               string
+	id                *uuid.UUID
+	num               *uint
+	addnum            *int
+	continue_point    *uint
+	addcontinue_point *int
+	reach_point       *uint
+	addreach_point    *int
+	clearedFields     map[string]struct{}
+	rounds            *uuid.UUID
+	clearedrounds     bool
+	done              bool
+	oldValue          func(context.Context) (*Hand, error)
+	predicates        []predicate.Hand
 }
 
 var _ ent.Mutation = (*HandMutation)(nil)
@@ -3086,6 +3095,213 @@ func (m *HandMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	}
 }
 
+// SetNum sets the "num" field.
+func (m *HandMutation) SetNum(u uint) {
+	m.num = &u
+	m.addnum = nil
+}
+
+// Num returns the value of the "num" field in the mutation.
+func (m *HandMutation) Num() (r uint, exists bool) {
+	v := m.num
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldNum returns the old "num" field's value of the Hand entity.
+// If the Hand object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HandMutation) OldNum(ctx context.Context) (v uint, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldNum is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldNum requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldNum: %w", err)
+	}
+	return oldValue.Num, nil
+}
+
+// AddNum adds u to the "num" field.
+func (m *HandMutation) AddNum(u int) {
+	if m.addnum != nil {
+		*m.addnum += u
+	} else {
+		m.addnum = &u
+	}
+}
+
+// AddedNum returns the value that was added to the "num" field in this mutation.
+func (m *HandMutation) AddedNum() (r int, exists bool) {
+	v := m.addnum
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetNum resets all changes to the "num" field.
+func (m *HandMutation) ResetNum() {
+	m.num = nil
+	m.addnum = nil
+}
+
+// SetContinuePoint sets the "continue_point" field.
+func (m *HandMutation) SetContinuePoint(u uint) {
+	m.continue_point = &u
+	m.addcontinue_point = nil
+}
+
+// ContinuePoint returns the value of the "continue_point" field in the mutation.
+func (m *HandMutation) ContinuePoint() (r uint, exists bool) {
+	v := m.continue_point
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldContinuePoint returns the old "continue_point" field's value of the Hand entity.
+// If the Hand object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HandMutation) OldContinuePoint(ctx context.Context) (v uint, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldContinuePoint is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldContinuePoint requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldContinuePoint: %w", err)
+	}
+	return oldValue.ContinuePoint, nil
+}
+
+// AddContinuePoint adds u to the "continue_point" field.
+func (m *HandMutation) AddContinuePoint(u int) {
+	if m.addcontinue_point != nil {
+		*m.addcontinue_point += u
+	} else {
+		m.addcontinue_point = &u
+	}
+}
+
+// AddedContinuePoint returns the value that was added to the "continue_point" field in this mutation.
+func (m *HandMutation) AddedContinuePoint() (r int, exists bool) {
+	v := m.addcontinue_point
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetContinuePoint resets all changes to the "continue_point" field.
+func (m *HandMutation) ResetContinuePoint() {
+	m.continue_point = nil
+	m.addcontinue_point = nil
+}
+
+// SetReachPoint sets the "reach_point" field.
+func (m *HandMutation) SetReachPoint(u uint) {
+	m.reach_point = &u
+	m.addreach_point = nil
+}
+
+// ReachPoint returns the value of the "reach_point" field in the mutation.
+func (m *HandMutation) ReachPoint() (r uint, exists bool) {
+	v := m.reach_point
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReachPoint returns the old "reach_point" field's value of the Hand entity.
+// If the Hand object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *HandMutation) OldReachPoint(ctx context.Context) (v uint, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReachPoint is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReachPoint requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReachPoint: %w", err)
+	}
+	return oldValue.ReachPoint, nil
+}
+
+// AddReachPoint adds u to the "reach_point" field.
+func (m *HandMutation) AddReachPoint(u int) {
+	if m.addreach_point != nil {
+		*m.addreach_point += u
+	} else {
+		m.addreach_point = &u
+	}
+}
+
+// AddedReachPoint returns the value that was added to the "reach_point" field in this mutation.
+func (m *HandMutation) AddedReachPoint() (r int, exists bool) {
+	v := m.addreach_point
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetReachPoint resets all changes to the "reach_point" field.
+func (m *HandMutation) ResetReachPoint() {
+	m.reach_point = nil
+	m.addreach_point = nil
+}
+
+// SetRoundsID sets the "rounds" edge to the Round entity by id.
+func (m *HandMutation) SetRoundsID(id uuid.UUID) {
+	m.rounds = &id
+}
+
+// ClearRounds clears the "rounds" edge to the Round entity.
+func (m *HandMutation) ClearRounds() {
+	m.clearedrounds = true
+}
+
+// RoundsCleared reports if the "rounds" edge to the Round entity was cleared.
+func (m *HandMutation) RoundsCleared() bool {
+	return m.clearedrounds
+}
+
+// RoundsID returns the "rounds" edge ID in the mutation.
+func (m *HandMutation) RoundsID() (id uuid.UUID, exists bool) {
+	if m.rounds != nil {
+		return *m.rounds, true
+	}
+	return
+}
+
+// RoundsIDs returns the "rounds" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// RoundsID instead. It exists only for internal usage by the builders.
+func (m *HandMutation) RoundsIDs() (ids []uuid.UUID) {
+	if id := m.rounds; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetRounds resets all changes to the "rounds" edge.
+func (m *HandMutation) ResetRounds() {
+	m.rounds = nil
+	m.clearedrounds = false
+}
+
 // Where appends a list predicates to the HandMutation builder.
 func (m *HandMutation) Where(ps ...predicate.Hand) {
 	m.predicates = append(m.predicates, ps...)
@@ -3105,7 +3321,16 @@ func (m *HandMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *HandMutation) Fields() []string {
-	fields := make([]string, 0, 0)
+	fields := make([]string, 0, 3)
+	if m.num != nil {
+		fields = append(fields, hand.FieldNum)
+	}
+	if m.continue_point != nil {
+		fields = append(fields, hand.FieldContinuePoint)
+	}
+	if m.reach_point != nil {
+		fields = append(fields, hand.FieldReachPoint)
+	}
 	return fields
 }
 
@@ -3113,6 +3338,14 @@ func (m *HandMutation) Fields() []string {
 // return value indicates that this field was not set, or was not defined in the
 // schema.
 func (m *HandMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case hand.FieldNum:
+		return m.Num()
+	case hand.FieldContinuePoint:
+		return m.ContinuePoint()
+	case hand.FieldReachPoint:
+		return m.ReachPoint()
+	}
 	return nil, false
 }
 
@@ -3120,6 +3353,14 @@ func (m *HandMutation) Field(name string) (ent.Value, bool) {
 // returned if the mutation operation is not UpdateOne, or the query to the
 // database failed.
 func (m *HandMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case hand.FieldNum:
+		return m.OldNum(ctx)
+	case hand.FieldContinuePoint:
+		return m.OldContinuePoint(ctx)
+	case hand.FieldReachPoint:
+		return m.OldReachPoint(ctx)
+	}
 	return nil, fmt.Errorf("unknown Hand field %s", name)
 }
 
@@ -3128,6 +3369,27 @@ func (m *HandMutation) OldField(ctx context.Context, name string) (ent.Value, er
 // type.
 func (m *HandMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case hand.FieldNum:
+		v, ok := value.(uint)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetNum(v)
+		return nil
+	case hand.FieldContinuePoint:
+		v, ok := value.(uint)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetContinuePoint(v)
+		return nil
+	case hand.FieldReachPoint:
+		v, ok := value.(uint)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReachPoint(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Hand field %s", name)
 }
@@ -3135,13 +3397,31 @@ func (m *HandMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *HandMutation) AddedFields() []string {
-	return nil
+	var fields []string
+	if m.addnum != nil {
+		fields = append(fields, hand.FieldNum)
+	}
+	if m.addcontinue_point != nil {
+		fields = append(fields, hand.FieldContinuePoint)
+	}
+	if m.addreach_point != nil {
+		fields = append(fields, hand.FieldReachPoint)
+	}
+	return fields
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *HandMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case hand.FieldNum:
+		return m.AddedNum()
+	case hand.FieldContinuePoint:
+		return m.AddedContinuePoint()
+	case hand.FieldReachPoint:
+		return m.AddedReachPoint()
+	}
 	return nil, false
 }
 
@@ -3149,6 +3429,29 @@ func (m *HandMutation) AddedField(name string) (ent.Value, bool) {
 // the field is not defined in the schema, or if the type mismatched the field
 // type.
 func (m *HandMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case hand.FieldNum:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddNum(v)
+		return nil
+	case hand.FieldContinuePoint:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddContinuePoint(v)
+		return nil
+	case hand.FieldReachPoint:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddReachPoint(v)
+		return nil
+	}
 	return fmt.Errorf("unknown Hand numeric field %s", name)
 }
 
@@ -3174,24 +3477,44 @@ func (m *HandMutation) ClearField(name string) error {
 // ResetField resets all changes in the mutation for the field with the given name.
 // It returns an error if the field is not defined in the schema.
 func (m *HandMutation) ResetField(name string) error {
+	switch name {
+	case hand.FieldNum:
+		m.ResetNum()
+		return nil
+	case hand.FieldContinuePoint:
+		m.ResetContinuePoint()
+		return nil
+	case hand.FieldReachPoint:
+		m.ResetReachPoint()
+		return nil
+	}
 	return fmt.Errorf("unknown Hand field %s", name)
 }
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *HandMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.rounds != nil {
+		edges = append(edges, hand.EdgeRounds)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *HandMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case hand.EdgeRounds:
+		if id := m.rounds; id != nil {
+			return []ent.Value{*id}
+		}
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *HandMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
 	return edges
 }
 
@@ -3203,25 +3526,42 @@ func (m *HandMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *HandMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.clearedrounds {
+		edges = append(edges, hand.EdgeRounds)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *HandMutation) EdgeCleared(name string) bool {
+	switch name {
+	case hand.EdgeRounds:
+		return m.clearedrounds
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *HandMutation) ClearEdge(name string) error {
+	switch name {
+	case hand.EdgeRounds:
+		m.ClearRounds()
+		return nil
+	}
 	return fmt.Errorf("unknown Hand unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *HandMutation) ResetEdge(name string) error {
+	switch name {
+	case hand.EdgeRounds:
+		m.ResetRounds()
+		return nil
+	}
 	return fmt.Errorf("unknown Hand edge %s", name)
 }
 
@@ -5192,6 +5532,9 @@ type RoundMutation struct {
 	clearedFields map[string]struct{}
 	games         *uuid.UUID
 	clearedgames  bool
+	hands         map[uuid.UUID]struct{}
+	removedhands  map[uuid.UUID]struct{}
+	clearedhands  bool
 	winds         *uuid.UUID
 	clearedwinds  bool
 	done          bool
@@ -5342,6 +5685,60 @@ func (m *RoundMutation) ResetGames() {
 	m.clearedgames = false
 }
 
+// AddHandIDs adds the "hands" edge to the Hand entity by ids.
+func (m *RoundMutation) AddHandIDs(ids ...uuid.UUID) {
+	if m.hands == nil {
+		m.hands = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.hands[ids[i]] = struct{}{}
+	}
+}
+
+// ClearHands clears the "hands" edge to the Hand entity.
+func (m *RoundMutation) ClearHands() {
+	m.clearedhands = true
+}
+
+// HandsCleared reports if the "hands" edge to the Hand entity was cleared.
+func (m *RoundMutation) HandsCleared() bool {
+	return m.clearedhands
+}
+
+// RemoveHandIDs removes the "hands" edge to the Hand entity by IDs.
+func (m *RoundMutation) RemoveHandIDs(ids ...uuid.UUID) {
+	if m.removedhands == nil {
+		m.removedhands = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.hands, ids[i])
+		m.removedhands[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedHands returns the removed IDs of the "hands" edge to the Hand entity.
+func (m *RoundMutation) RemovedHandsIDs() (ids []uuid.UUID) {
+	for id := range m.removedhands {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// HandsIDs returns the "hands" edge IDs in the mutation.
+func (m *RoundMutation) HandsIDs() (ids []uuid.UUID) {
+	for id := range m.hands {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetHands resets all changes to the "hands" edge.
+func (m *RoundMutation) ResetHands() {
+	m.hands = nil
+	m.clearedhands = false
+	m.removedhands = nil
+}
+
 // SetWindsID sets the "winds" edge to the Wind entity by id.
 func (m *RoundMutation) SetWindsID(id uuid.UUID) {
 	m.winds = &id
@@ -5474,9 +5871,12 @@ func (m *RoundMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *RoundMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.games != nil {
 		edges = append(edges, round.EdgeGames)
+	}
+	if m.hands != nil {
+		edges = append(edges, round.EdgeHands)
 	}
 	if m.winds != nil {
 		edges = append(edges, round.EdgeWinds)
@@ -5492,6 +5892,12 @@ func (m *RoundMutation) AddedIDs(name string) []ent.Value {
 		if id := m.games; id != nil {
 			return []ent.Value{*id}
 		}
+	case round.EdgeHands:
+		ids := make([]ent.Value, 0, len(m.hands))
+		for id := range m.hands {
+			ids = append(ids, id)
+		}
+		return ids
 	case round.EdgeWinds:
 		if id := m.winds; id != nil {
 			return []ent.Value{*id}
@@ -5502,21 +5908,35 @@ func (m *RoundMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *RoundMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
+	if m.removedhands != nil {
+		edges = append(edges, round.EdgeHands)
+	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *RoundMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case round.EdgeHands:
+		ids := make([]ent.Value, 0, len(m.removedhands))
+		for id := range m.removedhands {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *RoundMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.clearedgames {
 		edges = append(edges, round.EdgeGames)
+	}
+	if m.clearedhands {
+		edges = append(edges, round.EdgeHands)
 	}
 	if m.clearedwinds {
 		edges = append(edges, round.EdgeWinds)
@@ -5530,6 +5950,8 @@ func (m *RoundMutation) EdgeCleared(name string) bool {
 	switch name {
 	case round.EdgeGames:
 		return m.clearedgames
+	case round.EdgeHands:
+		return m.clearedhands
 	case round.EdgeWinds:
 		return m.clearedwinds
 	}
@@ -5556,6 +5978,9 @@ func (m *RoundMutation) ResetEdge(name string) error {
 	switch name {
 	case round.EdgeGames:
 		m.ResetGames()
+		return nil
+	case round.EdgeHands:
+		m.ResetHands()
 		return nil
 	case round.EdgeWinds:
 		m.ResetWinds()

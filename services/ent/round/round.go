@@ -13,6 +13,8 @@ const (
 	FieldID = "oid"
 	// EdgeGames holds the string denoting the games edge name in mutations.
 	EdgeGames = "games"
+	// EdgeHands holds the string denoting the hands edge name in mutations.
+	EdgeHands = "hands"
 	// EdgeWinds holds the string denoting the winds edge name in mutations.
 	EdgeWinds = "winds"
 	// Table holds the table name of the round in the database.
@@ -24,6 +26,13 @@ const (
 	GamesInverseTable = "games"
 	// GamesColumn is the table column denoting the games relation/edge.
 	GamesColumn = "game_rounds"
+	// HandsTable is the table that holds the hands relation/edge.
+	HandsTable = "hands"
+	// HandsInverseTable is the table name for the Hand entity.
+	// It exists in this package in order to avoid circular dependency with the "hand" package.
+	HandsInverseTable = "hands"
+	// HandsColumn is the table column denoting the hands relation/edge.
+	HandsColumn = "round_hands"
 	// WindsTable is the table that holds the winds relation/edge.
 	WindsTable = "rounds"
 	// WindsInverseTable is the table name for the Wind entity.

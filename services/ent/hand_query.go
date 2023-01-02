@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/hand"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
+	"github.com/kanade0404/tenhou-log/services/ent/round"
 )
 
 // HandQuery is the builder for querying Hand entities.
@@ -24,6 +25,8 @@ type HandQuery struct {
 	order      []OrderFunc
 	fields     []string
 	predicates []predicate.Hand
+	withRounds *RoundQuery
+	withFKs    bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -58,6 +61,28 @@ func (hq *HandQuery) Unique(unique bool) *HandQuery {
 func (hq *HandQuery) Order(o ...OrderFunc) *HandQuery {
 	hq.order = append(hq.order, o...)
 	return hq
+}
+
+// QueryRounds chains the current query on the "rounds" edge.
+func (hq *HandQuery) QueryRounds() *RoundQuery {
+	query := &RoundQuery{config: hq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := hq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := hq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(hand.Table, hand.FieldID, selector),
+			sqlgraph.To(round.Table, round.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, hand.RoundsTable, hand.RoundsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(hq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first Hand entity from the query.
@@ -241,6 +266,7 @@ func (hq *HandQuery) Clone() *HandQuery {
 		offset:     hq.offset,
 		order:      append([]OrderFunc{}, hq.order...),
 		predicates: append([]predicate.Hand{}, hq.predicates...),
+		withRounds: hq.withRounds.Clone(),
 		// clone intermediate query.
 		sql:    hq.sql.Clone(),
 		path:   hq.path,
@@ -248,8 +274,32 @@ func (hq *HandQuery) Clone() *HandQuery {
 	}
 }
 
+// WithRounds tells the query-builder to eager-load the nodes that are connected to
+// the "rounds" edge. The optional arguments are used to configure the query builder of the edge.
+func (hq *HandQuery) WithRounds(opts ...func(*RoundQuery)) *HandQuery {
+	query := &RoundQuery{config: hq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	hq.withRounds = query
+	return hq
+}
+
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
+//
+// Example:
+//
+//	var v []struct {
+//		Num uint `json:"num,omitempty"`
+//		Count int `json:"count,omitempty"`
+//	}
+//
+//	client.Hand.Query().
+//		GroupBy(hand.FieldNum).
+//		Aggregate(ent.Count()).
+//		Scan(ctx, &v)
+//
 func (hq *HandQuery) GroupBy(field string, fields ...string) *HandGroupBy {
 	grbuild := &HandGroupBy{config: hq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -266,6 +316,17 @@ func (hq *HandQuery) GroupBy(field string, fields ...string) *HandGroupBy {
 
 // Select allows the selection one or more fields/columns for the given query,
 // instead of selecting all fields in the entity.
+//
+// Example:
+//
+//	var v []struct {
+//		Num uint `json:"num,omitempty"`
+//	}
+//
+//	client.Hand.Query().
+//		Select(hand.FieldNum).
+//		Scan(ctx, &v)
+//
 func (hq *HandQuery) Select(fields ...string) *HandSelect {
 	hq.fields = append(hq.fields, fields...)
 	selbuild := &HandSelect{HandQuery: hq}
@@ -297,15 +358,26 @@ func (hq *HandQuery) prepareQuery(ctx context.Context) error {
 
 func (hq *HandQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Hand, error) {
 	var (
-		nodes = []*Hand{}
-		_spec = hq.querySpec()
+		nodes       = []*Hand{}
+		withFKs     = hq.withFKs
+		_spec       = hq.querySpec()
+		loadedTypes = [1]bool{
+			hq.withRounds != nil,
+		}
 	)
+	if hq.withRounds != nil {
+		withFKs = true
+	}
+	if withFKs {
+		_spec.Node.Columns = append(_spec.Node.Columns, hand.ForeignKeys...)
+	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Hand).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &Hand{config: hq.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -317,7 +389,43 @@ func (hq *HandQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Hand, e
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := hq.withRounds; query != nil {
+		if err := hq.loadRounds(ctx, query, nodes, nil,
+			func(n *Hand, e *Round) { n.Edges.Rounds = e }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (hq *HandQuery) loadRounds(ctx context.Context, query *RoundQuery, nodes []*Hand, init func(*Hand), assign func(*Hand, *Round)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Hand)
+	for i := range nodes {
+		if nodes[i].round_hands == nil {
+			continue
+		}
+		fk := *nodes[i].round_hands
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	query.Where(round.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "round_hands" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
 }
 
 func (hq *HandQuery) sqlCount(ctx context.Context) (int, error) {

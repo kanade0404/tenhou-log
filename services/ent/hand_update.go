@@ -10,8 +10,10 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/hand"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
+	"github.com/kanade0404/tenhou-log/services/ent/round"
 )
 
 // HandUpdate is the builder for updating Hand entities.
@@ -27,9 +29,34 @@ func (hu *HandUpdate) Where(ps ...predicate.Hand) *HandUpdate {
 	return hu
 }
 
+// SetRoundsID sets the "rounds" edge to the Round entity by ID.
+func (hu *HandUpdate) SetRoundsID(id uuid.UUID) *HandUpdate {
+	hu.mutation.SetRoundsID(id)
+	return hu
+}
+
+// SetNillableRoundsID sets the "rounds" edge to the Round entity by ID if the given value is not nil.
+func (hu *HandUpdate) SetNillableRoundsID(id *uuid.UUID) *HandUpdate {
+	if id != nil {
+		hu = hu.SetRoundsID(*id)
+	}
+	return hu
+}
+
+// SetRounds sets the "rounds" edge to the Round entity.
+func (hu *HandUpdate) SetRounds(r *Round) *HandUpdate {
+	return hu.SetRoundsID(r.ID)
+}
+
 // Mutation returns the HandMutation object of the builder.
 func (hu *HandUpdate) Mutation() *HandMutation {
 	return hu.mutation
+}
+
+// ClearRounds clears the "rounds" edge to the Round entity.
+func (hu *HandUpdate) ClearRounds() *HandUpdate {
+	hu.mutation.ClearRounds()
+	return hu
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -104,6 +131,41 @@ func (hu *HandUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			}
 		}
 	}
+	if hu.mutation.RoundsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   hand.RoundsTable,
+			Columns: []string{hand.RoundsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: round.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := hu.mutation.RoundsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   hand.RoundsTable,
+			Columns: []string{hand.RoundsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: round.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, hu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{hand.Label}
@@ -123,9 +185,34 @@ type HandUpdateOne struct {
 	mutation *HandMutation
 }
 
+// SetRoundsID sets the "rounds" edge to the Round entity by ID.
+func (huo *HandUpdateOne) SetRoundsID(id uuid.UUID) *HandUpdateOne {
+	huo.mutation.SetRoundsID(id)
+	return huo
+}
+
+// SetNillableRoundsID sets the "rounds" edge to the Round entity by ID if the given value is not nil.
+func (huo *HandUpdateOne) SetNillableRoundsID(id *uuid.UUID) *HandUpdateOne {
+	if id != nil {
+		huo = huo.SetRoundsID(*id)
+	}
+	return huo
+}
+
+// SetRounds sets the "rounds" edge to the Round entity.
+func (huo *HandUpdateOne) SetRounds(r *Round) *HandUpdateOne {
+	return huo.SetRoundsID(r.ID)
+}
+
 // Mutation returns the HandMutation object of the builder.
 func (huo *HandUpdateOne) Mutation() *HandMutation {
 	return huo.mutation
+}
+
+// ClearRounds clears the "rounds" edge to the Round entity.
+func (huo *HandUpdateOne) ClearRounds() *HandUpdateOne {
+	huo.mutation.ClearRounds()
+	return huo
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -229,6 +316,41 @@ func (huo *HandUpdateOne) sqlSave(ctx context.Context) (_node *Hand, err error) 
 				ps[i](selector)
 			}
 		}
+	}
+	if huo.mutation.RoundsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   hand.RoundsTable,
+			Columns: []string{hand.RoundsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: round.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := huo.mutation.RoundsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   hand.RoundsTable,
+			Columns: []string{hand.RoundsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: round.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &Hand{config: huo.config}
 	_spec.Assign = _node.assignValues

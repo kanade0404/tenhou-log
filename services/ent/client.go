@@ -1075,6 +1075,22 @@ func (c *HandClient) GetX(ctx context.Context, id uuid.UUID) *Hand {
 	return obj
 }
 
+// QueryRounds queries the rounds edge of a Hand.
+func (c *HandClient) QueryRounds(h *Hand) *RoundQuery {
+	query := &RoundQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := h.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(hand.Table, hand.FieldID, id),
+			sqlgraph.To(round.Table, round.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, hand.RoundsTable, hand.RoundsColumn),
+		)
+		fromV = sqlgraph.Neighbors(h.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *HandClient) Hooks() []Hook {
 	return c.hooks.Hand
@@ -1630,6 +1646,22 @@ func (c *RoundClient) QueryGames(r *Round) *GameQuery {
 			sqlgraph.From(round.Table, round.FieldID, id),
 			sqlgraph.To(game.Table, game.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, round.GamesTable, round.GamesColumn),
+		)
+		fromV = sqlgraph.Neighbors(r.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryHands queries the hands edge of a Round.
+func (c *RoundClient) QueryHands(r *Round) *HandQuery {
+	query := &HandQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := r.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(round.Table, round.FieldID, id),
+			sqlgraph.To(hand.Table, hand.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, round.HandsTable, round.HandsColumn),
 		)
 		fromV = sqlgraph.Neighbors(r.driver.Dialect(), step)
 		return fromV, nil
