@@ -22,7 +22,7 @@ func (Round) Fields() []ent.Field {
 // Edges of the Round.
 func (Round) Edges() []ent.Edge {
 	return []ent.Edge{
-		//edge.From("games", Game.Type).Ref("rounds").Unique(),
+		edge.From("games", Game.Type).Ref("rounds").Unique(),
 		//edge.To("hands", Game.Type),
 		edge.From("winds", Wind.Type).Ref("rounds").Unique(),
 	}

@@ -15,6 +15,7 @@ import (
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayer"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlog"
 	"github.com/kanade0404/tenhou-log/services/ent/room"
+	"github.com/kanade0404/tenhou-log/services/ent/round"
 )
 
 // GameCreate is the builder for creating a Game entity.
@@ -101,6 +102,21 @@ func (gc *GameCreate) SetNillableRoomsID(id *uuid.UUID) *GameCreate {
 // SetRooms sets the "rooms" edge to the Room entity.
 func (gc *GameCreate) SetRooms(r *Room) *GameCreate {
 	return gc.SetRoomsID(r.ID)
+}
+
+// AddRoundIDs adds the "rounds" edge to the Round entity by IDs.
+func (gc *GameCreate) AddRoundIDs(ids ...uuid.UUID) *GameCreate {
+	gc.mutation.AddRoundIDs(ids...)
+	return gc
+}
+
+// AddRounds adds the "rounds" edges to the Round entity.
+func (gc *GameCreate) AddRounds(r ...*Round) *GameCreate {
+	ids := make([]uuid.UUID, len(r))
+	for i := range r {
+		ids[i] = r[i].ID
+	}
+	return gc.AddRoundIDs(ids...)
 }
 
 // Mutation returns the GameMutation object of the builder.
@@ -294,6 +310,25 @@ func (gc *GameCreate) createSpec() (*Game, *sqlgraph.CreateSpec) {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.room_games = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := gc.mutation.RoundsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   game.RoundsTable,
+			Columns: []string{game.RoundsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: round.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

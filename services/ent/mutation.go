@@ -950,6 +950,9 @@ type GameMutation struct {
 	clearedgame_players bool
 	rooms               *uuid.UUID
 	clearedrooms        bool
+	rounds              map[uuid.UUID]struct{}
+	removedrounds       map[uuid.UUID]struct{}
+	clearedrounds       bool
 	done                bool
 	oldValue            func(context.Context) (*Game, error)
 	predicates          []predicate.Game
@@ -1263,6 +1266,60 @@ func (m *GameMutation) ResetRooms() {
 	m.clearedrooms = false
 }
 
+// AddRoundIDs adds the "rounds" edge to the Round entity by ids.
+func (m *GameMutation) AddRoundIDs(ids ...uuid.UUID) {
+	if m.rounds == nil {
+		m.rounds = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.rounds[ids[i]] = struct{}{}
+	}
+}
+
+// ClearRounds clears the "rounds" edge to the Round entity.
+func (m *GameMutation) ClearRounds() {
+	m.clearedrounds = true
+}
+
+// RoundsCleared reports if the "rounds" edge to the Round entity was cleared.
+func (m *GameMutation) RoundsCleared() bool {
+	return m.clearedrounds
+}
+
+// RemoveRoundIDs removes the "rounds" edge to the Round entity by IDs.
+func (m *GameMutation) RemoveRoundIDs(ids ...uuid.UUID) {
+	if m.removedrounds == nil {
+		m.removedrounds = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.rounds, ids[i])
+		m.removedrounds[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedRounds returns the removed IDs of the "rounds" edge to the Round entity.
+func (m *GameMutation) RemovedRoundsIDs() (ids []uuid.UUID) {
+	for id := range m.removedrounds {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// RoundsIDs returns the "rounds" edge IDs in the mutation.
+func (m *GameMutation) RoundsIDs() (ids []uuid.UUID) {
+	for id := range m.rounds {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetRounds resets all changes to the "rounds" edge.
+func (m *GameMutation) ResetRounds() {
+	m.rounds = nil
+	m.clearedrounds = false
+	m.removedrounds = nil
+}
+
 // Where appends a list predicates to the GameMutation builder.
 func (m *GameMutation) Where(ps ...predicate.Game) {
 	m.predicates = append(m.predicates, ps...)
@@ -1398,7 +1455,7 @@ func (m *GameMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *GameMutation) AddedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.mjlogs != nil {
 		edges = append(edges, game.EdgeMjlogs)
 	}
@@ -1407,6 +1464,9 @@ func (m *GameMutation) AddedEdges() []string {
 	}
 	if m.rooms != nil {
 		edges = append(edges, game.EdgeRooms)
+	}
+	if m.rounds != nil {
+		edges = append(edges, game.EdgeRounds)
 	}
 	return edges
 }
@@ -1429,15 +1489,24 @@ func (m *GameMutation) AddedIDs(name string) []ent.Value {
 		if id := m.rooms; id != nil {
 			return []ent.Value{*id}
 		}
+	case game.EdgeRounds:
+		ids := make([]ent.Value, 0, len(m.rounds))
+		for id := range m.rounds {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *GameMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.removedgame_players != nil {
 		edges = append(edges, game.EdgeGamePlayers)
+	}
+	if m.removedrounds != nil {
+		edges = append(edges, game.EdgeRounds)
 	}
 	return edges
 }
@@ -1452,13 +1521,19 @@ func (m *GameMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case game.EdgeRounds:
+		ids := make([]ent.Value, 0, len(m.removedrounds))
+		for id := range m.removedrounds {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *GameMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.clearedmjlogs {
 		edges = append(edges, game.EdgeMjlogs)
 	}
@@ -1467,6 +1542,9 @@ func (m *GameMutation) ClearedEdges() []string {
 	}
 	if m.clearedrooms {
 		edges = append(edges, game.EdgeRooms)
+	}
+	if m.clearedrounds {
+		edges = append(edges, game.EdgeRounds)
 	}
 	return edges
 }
@@ -1481,6 +1559,8 @@ func (m *GameMutation) EdgeCleared(name string) bool {
 		return m.clearedgame_players
 	case game.EdgeRooms:
 		return m.clearedrooms
+	case game.EdgeRounds:
+		return m.clearedrounds
 	}
 	return false
 }
@@ -1511,6 +1591,9 @@ func (m *GameMutation) ResetEdge(name string) error {
 		return nil
 	case game.EdgeRooms:
 		m.ResetRooms()
+		return nil
+	case game.EdgeRounds:
+		m.ResetRounds()
 		return nil
 	}
 	return fmt.Errorf("unknown Game edge %s", name)
@@ -5107,6 +5190,8 @@ type RoundMutation struct {
 	typ           string
 	id            *uuid.UUID
 	clearedFields map[string]struct{}
+	games         *uuid.UUID
+	clearedgames  bool
 	winds         *uuid.UUID
 	clearedwinds  bool
 	done          bool
@@ -5216,6 +5301,45 @@ func (m *RoundMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetGamesID sets the "games" edge to the Game entity by id.
+func (m *RoundMutation) SetGamesID(id uuid.UUID) {
+	m.games = &id
+}
+
+// ClearGames clears the "games" edge to the Game entity.
+func (m *RoundMutation) ClearGames() {
+	m.clearedgames = true
+}
+
+// GamesCleared reports if the "games" edge to the Game entity was cleared.
+func (m *RoundMutation) GamesCleared() bool {
+	return m.clearedgames
+}
+
+// GamesID returns the "games" edge ID in the mutation.
+func (m *RoundMutation) GamesID() (id uuid.UUID, exists bool) {
+	if m.games != nil {
+		return *m.games, true
+	}
+	return
+}
+
+// GamesIDs returns the "games" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// GamesID instead. It exists only for internal usage by the builders.
+func (m *RoundMutation) GamesIDs() (ids []uuid.UUID) {
+	if id := m.games; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetGames resets all changes to the "games" edge.
+func (m *RoundMutation) ResetGames() {
+	m.games = nil
+	m.clearedgames = false
 }
 
 // SetWindsID sets the "winds" edge to the Wind entity by id.
@@ -5350,7 +5474,10 @@ func (m *RoundMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *RoundMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
+	if m.games != nil {
+		edges = append(edges, round.EdgeGames)
+	}
 	if m.winds != nil {
 		edges = append(edges, round.EdgeWinds)
 	}
@@ -5361,6 +5488,10 @@ func (m *RoundMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *RoundMutation) AddedIDs(name string) []ent.Value {
 	switch name {
+	case round.EdgeGames:
+		if id := m.games; id != nil {
+			return []ent.Value{*id}
+		}
 	case round.EdgeWinds:
 		if id := m.winds; id != nil {
 			return []ent.Value{*id}
@@ -5371,7 +5502,7 @@ func (m *RoundMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *RoundMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	return edges
 }
 
@@ -5383,7 +5514,10 @@ func (m *RoundMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *RoundMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
+	if m.clearedgames {
+		edges = append(edges, round.EdgeGames)
+	}
 	if m.clearedwinds {
 		edges = append(edges, round.EdgeWinds)
 	}
@@ -5394,6 +5528,8 @@ func (m *RoundMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *RoundMutation) EdgeCleared(name string) bool {
 	switch name {
+	case round.EdgeGames:
+		return m.clearedgames
 	case round.EdgeWinds:
 		return m.clearedwinds
 	}
@@ -5404,6 +5540,9 @@ func (m *RoundMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *RoundMutation) ClearEdge(name string) error {
 	switch name {
+	case round.EdgeGames:
+		m.ClearGames()
+		return nil
 	case round.EdgeWinds:
 		m.ClearWinds()
 		return nil
@@ -5415,6 +5554,9 @@ func (m *RoundMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *RoundMutation) ResetEdge(name string) error {
 	switch name {
+	case round.EdgeGames:
+		m.ResetGames()
+		return nil
 	case round.EdgeWinds:
 		m.ResetWinds()
 		return nil

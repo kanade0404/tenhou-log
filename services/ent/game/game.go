@@ -21,6 +21,8 @@ const (
 	EdgeGamePlayers = "game_players"
 	// EdgeRooms holds the string denoting the rooms edge name in mutations.
 	EdgeRooms = "rooms"
+	// EdgeRounds holds the string denoting the rounds edge name in mutations.
+	EdgeRounds = "rounds"
 	// Table holds the table name of the game in the database.
 	Table = "games"
 	// MjlogsTable is the table that holds the mjlogs relation/edge.
@@ -42,6 +44,13 @@ const (
 	RoomsInverseTable = "rooms"
 	// RoomsColumn is the table column denoting the rooms relation/edge.
 	RoomsColumn = "room_games"
+	// RoundsTable is the table that holds the rounds relation/edge.
+	RoundsTable = "rounds"
+	// RoundsInverseTable is the table name for the Round entity.
+	// It exists in this package in order to avoid circular dependency with the "round" package.
+	RoundsInverseTable = "rounds"
+	// RoundsColumn is the table column denoting the rounds relation/edge.
+	RoundsColumn = "game_rounds"
 )
 
 // Columns holds all SQL columns for game fields.

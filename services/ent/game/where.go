@@ -343,6 +343,34 @@ func HasRoomsWith(preds ...predicate.Room) predicate.Game {
 	})
 }
 
+// HasRounds applies the HasEdge predicate on the "rounds" edge.
+func HasRounds() predicate.Game {
+	return predicate.Game(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(RoundsTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, RoundsTable, RoundsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasRoundsWith applies the HasEdge predicate on the "rounds" edge with a given conditions (other predicates).
+func HasRoundsWith(preds ...predicate.Round) predicate.Game {
+	return predicate.Game(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(RoundsInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, RoundsTable, RoundsColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Game) predicate.Game {
 	return predicate.Game(func(s *sql.Selector) {

@@ -17,6 +17,7 @@ import (
 	"github.com/kanade0404/tenhou-log/services/ent/mjlog"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 	"github.com/kanade0404/tenhou-log/services/ent/room"
+	"github.com/kanade0404/tenhou-log/services/ent/round"
 )
 
 // GameQuery is the builder for querying Game entities.
@@ -31,6 +32,7 @@ type GameQuery struct {
 	withMjlogs      *MJLogQuery
 	withGamePlayers *GamePlayerQuery
 	withRooms       *RoomQuery
+	withRounds      *RoundQuery
 	withFKs         bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -127,6 +129,28 @@ func (gq *GameQuery) QueryRooms() *RoomQuery {
 			sqlgraph.From(game.Table, game.FieldID, selector),
 			sqlgraph.To(room.Table, room.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, game.RoomsTable, game.RoomsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(gq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryRounds chains the current query on the "rounds" edge.
+func (gq *GameQuery) QueryRounds() *RoundQuery {
+	query := &RoundQuery{config: gq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := gq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := gq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(game.Table, game.FieldID, selector),
+			sqlgraph.To(round.Table, round.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, game.RoundsTable, game.RoundsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(gq.driver.Dialect(), step)
 		return fromU, nil
@@ -318,6 +342,7 @@ func (gq *GameQuery) Clone() *GameQuery {
 		withMjlogs:      gq.withMjlogs.Clone(),
 		withGamePlayers: gq.withGamePlayers.Clone(),
 		withRooms:       gq.withRooms.Clone(),
+		withRounds:      gq.withRounds.Clone(),
 		// clone intermediate query.
 		sql:    gq.sql.Clone(),
 		path:   gq.path,
@@ -355,6 +380,17 @@ func (gq *GameQuery) WithRooms(opts ...func(*RoomQuery)) *GameQuery {
 		opt(query)
 	}
 	gq.withRooms = query
+	return gq
+}
+
+// WithRounds tells the query-builder to eager-load the nodes that are connected to
+// the "rounds" edge. The optional arguments are used to configure the query builder of the edge.
+func (gq *GameQuery) WithRounds(opts ...func(*RoundQuery)) *GameQuery {
+	query := &RoundQuery{config: gq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	gq.withRounds = query
 	return gq
 }
 
@@ -434,10 +470,11 @@ func (gq *GameQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Game, e
 		nodes       = []*Game{}
 		withFKs     = gq.withFKs
 		_spec       = gq.querySpec()
-		loadedTypes = [3]bool{
+		loadedTypes = [4]bool{
 			gq.withMjlogs != nil,
 			gq.withGamePlayers != nil,
 			gq.withRooms != nil,
+			gq.withRounds != nil,
 		}
 	)
 	if gq.withRooms != nil {
@@ -480,6 +517,13 @@ func (gq *GameQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Game, e
 	if query := gq.withRooms; query != nil {
 		if err := gq.loadRooms(ctx, query, nodes, nil,
 			func(n *Game, e *Room) { n.Edges.Rooms = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := gq.withRounds; query != nil {
+		if err := gq.loadRounds(ctx, query, nodes,
+			func(n *Game) { n.Edges.Rounds = []*Round{} },
+			func(n *Game, e *Round) { n.Edges.Rounds = append(n.Edges.Rounds, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -598,6 +642,37 @@ func (gq *GameQuery) loadRooms(ctx context.Context, query *RoomQuery, nodes []*G
 		for i := range nodes {
 			assign(nodes[i], n)
 		}
+	}
+	return nil
+}
+func (gq *GameQuery) loadRounds(ctx context.Context, query *RoundQuery, nodes []*Game, init func(*Game), assign func(*Game, *Round)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Game)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.Round(func(s *sql.Selector) {
+		s.Where(sql.InValues(game.RoundsColumn, fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.game_rounds
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "game_rounds" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "game_rounds" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
 	}
 	return nil
 }

@@ -27,6 +27,6 @@ func (Game) Edges() []ent.Edge {
 		edge.To("mjlogs", MJLog.Type).Unique(),
 		edge.To("game_players", GamePlayer.Type),
 		edge.From("rooms", Room.Type).Ref("games").Unique(),
-		//edge.To("rounds", Round.Type),
+		edge.To("rounds", Round.Type),
 	}
 }

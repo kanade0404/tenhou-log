@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/game"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 	"github.com/kanade0404/tenhou-log/services/ent/round"
 	"github.com/kanade0404/tenhou-log/services/ent/wind"
@@ -27,6 +28,25 @@ type RoundUpdate struct {
 func (ru *RoundUpdate) Where(ps ...predicate.Round) *RoundUpdate {
 	ru.mutation.Where(ps...)
 	return ru
+}
+
+// SetGamesID sets the "games" edge to the Game entity by ID.
+func (ru *RoundUpdate) SetGamesID(id uuid.UUID) *RoundUpdate {
+	ru.mutation.SetGamesID(id)
+	return ru
+}
+
+// SetNillableGamesID sets the "games" edge to the Game entity by ID if the given value is not nil.
+func (ru *RoundUpdate) SetNillableGamesID(id *uuid.UUID) *RoundUpdate {
+	if id != nil {
+		ru = ru.SetGamesID(*id)
+	}
+	return ru
+}
+
+// SetGames sets the "games" edge to the Game entity.
+func (ru *RoundUpdate) SetGames(g *Game) *RoundUpdate {
+	return ru.SetGamesID(g.ID)
 }
 
 // SetWindsID sets the "winds" edge to the Wind entity by ID.
@@ -51,6 +71,12 @@ func (ru *RoundUpdate) SetWinds(w *Wind) *RoundUpdate {
 // Mutation returns the RoundMutation object of the builder.
 func (ru *RoundUpdate) Mutation() *RoundMutation {
 	return ru.mutation
+}
+
+// ClearGames clears the "games" edge to the Game entity.
+func (ru *RoundUpdate) ClearGames() *RoundUpdate {
+	ru.mutation.ClearGames()
+	return ru
 }
 
 // ClearWinds clears the "winds" edge to the Wind entity.
@@ -131,6 +157,41 @@ func (ru *RoundUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			}
 		}
 	}
+	if ru.mutation.GamesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   round.GamesTable,
+			Columns: []string{round.GamesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: game.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ru.mutation.GamesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   round.GamesTable,
+			Columns: []string{round.GamesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: game.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if ru.mutation.WindsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -185,6 +246,25 @@ type RoundUpdateOne struct {
 	mutation *RoundMutation
 }
 
+// SetGamesID sets the "games" edge to the Game entity by ID.
+func (ruo *RoundUpdateOne) SetGamesID(id uuid.UUID) *RoundUpdateOne {
+	ruo.mutation.SetGamesID(id)
+	return ruo
+}
+
+// SetNillableGamesID sets the "games" edge to the Game entity by ID if the given value is not nil.
+func (ruo *RoundUpdateOne) SetNillableGamesID(id *uuid.UUID) *RoundUpdateOne {
+	if id != nil {
+		ruo = ruo.SetGamesID(*id)
+	}
+	return ruo
+}
+
+// SetGames sets the "games" edge to the Game entity.
+func (ruo *RoundUpdateOne) SetGames(g *Game) *RoundUpdateOne {
+	return ruo.SetGamesID(g.ID)
+}
+
 // SetWindsID sets the "winds" edge to the Wind entity by ID.
 func (ruo *RoundUpdateOne) SetWindsID(id uuid.UUID) *RoundUpdateOne {
 	ruo.mutation.SetWindsID(id)
@@ -207,6 +287,12 @@ func (ruo *RoundUpdateOne) SetWinds(w *Wind) *RoundUpdateOne {
 // Mutation returns the RoundMutation object of the builder.
 func (ruo *RoundUpdateOne) Mutation() *RoundMutation {
 	return ruo.mutation
+}
+
+// ClearGames clears the "games" edge to the Game entity.
+func (ruo *RoundUpdateOne) ClearGames() *RoundUpdateOne {
+	ruo.mutation.ClearGames()
+	return ruo
 }
 
 // ClearWinds clears the "winds" edge to the Wind entity.
@@ -316,6 +402,41 @@ func (ruo *RoundUpdateOne) sqlSave(ctx context.Context) (_node *Round, err error
 				ps[i](selector)
 			}
 		}
+	}
+	if ruo.mutation.GamesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   round.GamesTable,
+			Columns: []string{round.GamesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: game.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ruo.mutation.GamesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   round.GamesTable,
+			Columns: []string{round.GamesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: game.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if ruo.mutation.WindsCleared() {
 		edge := &sqlgraph.EdgeSpec{

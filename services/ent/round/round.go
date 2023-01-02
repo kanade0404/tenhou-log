@@ -11,10 +11,19 @@ const (
 	Label = "round"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "oid"
+	// EdgeGames holds the string denoting the games edge name in mutations.
+	EdgeGames = "games"
 	// EdgeWinds holds the string denoting the winds edge name in mutations.
 	EdgeWinds = "winds"
 	// Table holds the table name of the round in the database.
 	Table = "rounds"
+	// GamesTable is the table that holds the games relation/edge.
+	GamesTable = "rounds"
+	// GamesInverseTable is the table name for the Game entity.
+	// It exists in this package in order to avoid circular dependency with the "game" package.
+	GamesInverseTable = "games"
+	// GamesColumn is the table column denoting the games relation/edge.
+	GamesColumn = "game_rounds"
 	// WindsTable is the table that holds the winds relation/edge.
 	WindsTable = "rounds"
 	// WindsInverseTable is the table name for the Wind entity.
@@ -32,6 +41,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "rounds"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
+	"game_rounds",
 	"wind_rounds",
 }
 

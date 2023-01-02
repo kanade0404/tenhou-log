@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/game"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 	"github.com/kanade0404/tenhou-log/services/ent/round"
 	"github.com/kanade0404/tenhou-log/services/ent/wind"
@@ -25,6 +26,7 @@ type RoundQuery struct {
 	order      []OrderFunc
 	fields     []string
 	predicates []predicate.Round
+	withGames  *GameQuery
 	withWinds  *WindQuery
 	withFKs    bool
 	// intermediate query (i.e. traversal path).
@@ -61,6 +63,28 @@ func (rq *RoundQuery) Unique(unique bool) *RoundQuery {
 func (rq *RoundQuery) Order(o ...OrderFunc) *RoundQuery {
 	rq.order = append(rq.order, o...)
 	return rq
+}
+
+// QueryGames chains the current query on the "games" edge.
+func (rq *RoundQuery) QueryGames() *GameQuery {
+	query := &GameQuery{config: rq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := rq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := rq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(round.Table, round.FieldID, selector),
+			sqlgraph.To(game.Table, game.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, round.GamesTable, round.GamesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(rq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // QueryWinds chains the current query on the "winds" edge.
@@ -266,12 +290,24 @@ func (rq *RoundQuery) Clone() *RoundQuery {
 		offset:     rq.offset,
 		order:      append([]OrderFunc{}, rq.order...),
 		predicates: append([]predicate.Round{}, rq.predicates...),
+		withGames:  rq.withGames.Clone(),
 		withWinds:  rq.withWinds.Clone(),
 		// clone intermediate query.
 		sql:    rq.sql.Clone(),
 		path:   rq.path,
 		unique: rq.unique,
 	}
+}
+
+// WithGames tells the query-builder to eager-load the nodes that are connected to
+// the "games" edge. The optional arguments are used to configure the query builder of the edge.
+func (rq *RoundQuery) WithGames(opts ...func(*GameQuery)) *RoundQuery {
+	query := &GameQuery{config: rq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	rq.withGames = query
+	return rq
 }
 
 // WithWinds tells the query-builder to eager-load the nodes that are connected to
@@ -337,11 +373,12 @@ func (rq *RoundQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Round,
 		nodes       = []*Round{}
 		withFKs     = rq.withFKs
 		_spec       = rq.querySpec()
-		loadedTypes = [1]bool{
+		loadedTypes = [2]bool{
+			rq.withGames != nil,
 			rq.withWinds != nil,
 		}
 	)
-	if rq.withWinds != nil {
+	if rq.withGames != nil || rq.withWinds != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -365,6 +402,12 @@ func (rq *RoundQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Round,
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := rq.withGames; query != nil {
+		if err := rq.loadGames(ctx, query, nodes, nil,
+			func(n *Round, e *Game) { n.Edges.Games = e }); err != nil {
+			return nil, err
+		}
+	}
 	if query := rq.withWinds; query != nil {
 		if err := rq.loadWinds(ctx, query, nodes, nil,
 			func(n *Round, e *Wind) { n.Edges.Winds = e }); err != nil {
@@ -374,6 +417,35 @@ func (rq *RoundQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Round,
 	return nodes, nil
 }
 
+func (rq *RoundQuery) loadGames(ctx context.Context, query *GameQuery, nodes []*Round, init func(*Round), assign func(*Round, *Game)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Round)
+	for i := range nodes {
+		if nodes[i].game_rounds == nil {
+			continue
+		}
+		fk := *nodes[i].game_rounds
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	query.Where(game.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "game_rounds" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
 func (rq *RoundQuery) loadWinds(ctx context.Context, query *WindQuery, nodes []*Round, init func(*Round), assign func(*Round, *Wind)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Round)

@@ -37,9 +37,11 @@ type GameEdges struct {
 	GamePlayers []*GamePlayer `json:"game_players,omitempty"`
 	// Rooms holds the value of the rooms edge.
 	Rooms *Room `json:"rooms,omitempty"`
+	// Rounds holds the value of the rounds edge.
+	Rounds []*Round `json:"rounds,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [4]bool
 }
 
 // MjlogsOrErr returns the Mjlogs value or an error if the edge
@@ -75,6 +77,15 @@ func (e GameEdges) RoomsOrErr() (*Room, error) {
 		return e.Rooms, nil
 	}
 	return nil, &NotLoadedError{edge: "rooms"}
+}
+
+// RoundsOrErr returns the Rounds value or an error if the edge
+// was not loaded in eager-loading.
+func (e GameEdges) RoundsOrErr() ([]*Round, error) {
+	if e.loadedTypes[3] {
+		return e.Rounds, nil
+	}
+	return nil, &NotLoadedError{edge: "rounds"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -148,6 +159,11 @@ func (ga *Game) QueryGamePlayers() *GamePlayerQuery {
 // QueryRooms queries the "rooms" edge of the Game entity.
 func (ga *Game) QueryRooms() *RoomQuery {
 	return (&GameClient{config: ga.config}).QueryRooms(ga)
+}
+
+// QueryRounds queries the "rounds" edge of the Game entity.
+func (ga *Game) QueryRounds() *RoundQuery {
+	return (&GameClient{config: ga.config}).QueryRounds(ga)
 }
 
 // Update returns a builder for updating this Game.

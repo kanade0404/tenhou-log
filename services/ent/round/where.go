@@ -80,6 +80,34 @@ func IDLTE(id uuid.UUID) predicate.Round {
 	})
 }
 
+// HasGames applies the HasEdge predicate on the "games" edge.
+func HasGames() predicate.Round {
+	return predicate.Round(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(GamesTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, GamesTable, GamesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasGamesWith applies the HasEdge predicate on the "games" edge with a given conditions (other predicates).
+func HasGamesWith(preds ...predicate.Game) predicate.Round {
+	return predicate.Round(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(GamesInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, GamesTable, GamesColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasWinds applies the HasEdge predicate on the "winds" edge.
 func HasWinds() predicate.Round {
 	return predicate.Round(func(s *sql.Selector) {

@@ -561,6 +561,22 @@ func (c *GameClient) QueryRooms(ga *Game) *RoomQuery {
 	return query
 }
 
+// QueryRounds queries the rounds edge of a Game.
+func (c *GameClient) QueryRounds(ga *Game) *RoundQuery {
+	query := &RoundQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := ga.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(game.Table, game.FieldID, id),
+			sqlgraph.To(round.Table, round.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, game.RoundsTable, game.RoundsColumn),
+		)
+		fromV = sqlgraph.Neighbors(ga.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *GameClient) Hooks() []Hook {
 	return c.hooks.Game
@@ -1603,6 +1619,22 @@ func (c *RoundClient) GetX(ctx context.Context, id uuid.UUID) *Round {
 		panic(err)
 	}
 	return obj
+}
+
+// QueryGames queries the games edge of a Round.
+func (c *RoundClient) QueryGames(r *Round) *GameQuery {
+	query := &GameQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := r.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(round.Table, round.FieldID, id),
+			sqlgraph.To(game.Table, game.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, round.GamesTable, round.GamesColumn),
+		)
+		fromV = sqlgraph.Neighbors(r.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // QueryWinds queries the winds edge of a Round.

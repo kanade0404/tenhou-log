@@ -16,6 +16,7 @@ import (
 	"github.com/kanade0404/tenhou-log/services/ent/mjlog"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 	"github.com/kanade0404/tenhou-log/services/ent/room"
+	"github.com/kanade0404/tenhou-log/services/ent/round"
 )
 
 // GameUpdate is the builder for updating Game entities.
@@ -84,6 +85,21 @@ func (gu *GameUpdate) SetRooms(r *Room) *GameUpdate {
 	return gu.SetRoomsID(r.ID)
 }
 
+// AddRoundIDs adds the "rounds" edge to the Round entity by IDs.
+func (gu *GameUpdate) AddRoundIDs(ids ...uuid.UUID) *GameUpdate {
+	gu.mutation.AddRoundIDs(ids...)
+	return gu
+}
+
+// AddRounds adds the "rounds" edges to the Round entity.
+func (gu *GameUpdate) AddRounds(r ...*Round) *GameUpdate {
+	ids := make([]uuid.UUID, len(r))
+	for i := range r {
+		ids[i] = r[i].ID
+	}
+	return gu.AddRoundIDs(ids...)
+}
+
 // Mutation returns the GameMutation object of the builder.
 func (gu *GameUpdate) Mutation() *GameMutation {
 	return gu.mutation
@@ -120,6 +136,27 @@ func (gu *GameUpdate) RemoveGamePlayers(g ...*GamePlayer) *GameUpdate {
 func (gu *GameUpdate) ClearRooms() *GameUpdate {
 	gu.mutation.ClearRooms()
 	return gu
+}
+
+// ClearRounds clears all "rounds" edges to the Round entity.
+func (gu *GameUpdate) ClearRounds() *GameUpdate {
+	gu.mutation.ClearRounds()
+	return gu
+}
+
+// RemoveRoundIDs removes the "rounds" edge to Round entities by IDs.
+func (gu *GameUpdate) RemoveRoundIDs(ids ...uuid.UUID) *GameUpdate {
+	gu.mutation.RemoveRoundIDs(ids...)
+	return gu
+}
+
+// RemoveRounds removes "rounds" edges to Round entities.
+func (gu *GameUpdate) RemoveRounds(r ...*Round) *GameUpdate {
+	ids := make([]uuid.UUID, len(r))
+	for i := range r {
+		ids[i] = r[i].ID
+	}
+	return gu.RemoveRoundIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -318,6 +355,60 @@ func (gu *GameUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if gu.mutation.RoundsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   game.RoundsTable,
+			Columns: []string{game.RoundsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: round.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := gu.mutation.RemovedRoundsIDs(); len(nodes) > 0 && !gu.mutation.RoundsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   game.RoundsTable,
+			Columns: []string{game.RoundsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: round.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := gu.mutation.RoundsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   game.RoundsTable,
+			Columns: []string{game.RoundsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: round.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, gu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{game.Label}
@@ -390,6 +481,21 @@ func (guo *GameUpdateOne) SetRooms(r *Room) *GameUpdateOne {
 	return guo.SetRoomsID(r.ID)
 }
 
+// AddRoundIDs adds the "rounds" edge to the Round entity by IDs.
+func (guo *GameUpdateOne) AddRoundIDs(ids ...uuid.UUID) *GameUpdateOne {
+	guo.mutation.AddRoundIDs(ids...)
+	return guo
+}
+
+// AddRounds adds the "rounds" edges to the Round entity.
+func (guo *GameUpdateOne) AddRounds(r ...*Round) *GameUpdateOne {
+	ids := make([]uuid.UUID, len(r))
+	for i := range r {
+		ids[i] = r[i].ID
+	}
+	return guo.AddRoundIDs(ids...)
+}
+
 // Mutation returns the GameMutation object of the builder.
 func (guo *GameUpdateOne) Mutation() *GameMutation {
 	return guo.mutation
@@ -426,6 +532,27 @@ func (guo *GameUpdateOne) RemoveGamePlayers(g ...*GamePlayer) *GameUpdateOne {
 func (guo *GameUpdateOne) ClearRooms() *GameUpdateOne {
 	guo.mutation.ClearRooms()
 	return guo
+}
+
+// ClearRounds clears all "rounds" edges to the Round entity.
+func (guo *GameUpdateOne) ClearRounds() *GameUpdateOne {
+	guo.mutation.ClearRounds()
+	return guo
+}
+
+// RemoveRoundIDs removes the "rounds" edge to Round entities by IDs.
+func (guo *GameUpdateOne) RemoveRoundIDs(ids ...uuid.UUID) *GameUpdateOne {
+	guo.mutation.RemoveRoundIDs(ids...)
+	return guo
+}
+
+// RemoveRounds removes "rounds" edges to Round entities.
+func (guo *GameUpdateOne) RemoveRounds(r ...*Round) *GameUpdateOne {
+	ids := make([]uuid.UUID, len(r))
+	for i := range r {
+		ids[i] = r[i].ID
+	}
+	return guo.RemoveRoundIDs(ids...)
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -646,6 +773,60 @@ func (guo *GameUpdateOne) sqlSave(ctx context.Context) (_node *Game, err error) 
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: room.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if guo.mutation.RoundsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   game.RoundsTable,
+			Columns: []string{game.RoundsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: round.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := guo.mutation.RemovedRoundsIDs(); len(nodes) > 0 && !guo.mutation.RoundsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   game.RoundsTable,
+			Columns: []string{game.RoundsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: round.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := guo.mutation.RoundsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   game.RoundsTable,
+			Columns: []string{game.RoundsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: round.FieldID,
 				},
 			},
 		}
