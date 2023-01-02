@@ -13,8 +13,15 @@ const (
 	FieldID = "oid"
 	// FieldPoint holds the string denoting the point field in the database.
 	FieldPoint = "point"
+	// EdgeTurns holds the string denoting the turns edge name in mutations.
+	EdgeTurns = "turns"
 	// Table holds the table name of the gameplayerpoint in the database.
 	Table = "game_player_points"
+	// TurnsTable is the table that holds the turns relation/edge. The primary key declared below.
+	TurnsTable = "turn_game_player_points"
+	// TurnsInverseTable is the table name for the Turn entity.
+	// It exists in this package in order to avoid circular dependency with the "turn" package.
+	TurnsInverseTable = "turns"
 )
 
 // Columns holds all SQL columns for gameplayerpoint fields.
@@ -22,6 +29,12 @@ var Columns = []string{
 	FieldID,
 	FieldPoint,
 }
+
+var (
+	// TurnsPrimaryKey and TurnsColumn2 are the table columns denoting the
+	// primary key for the turns relation (M2M).
+	TurnsPrimaryKey = []string{"turn_id", "game_player_point_id"}
+)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {

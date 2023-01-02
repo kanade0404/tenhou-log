@@ -4,6 +4,7 @@ package gameplayerpoint
 
 import (
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 )
@@ -147,6 +148,34 @@ func PointLT(v uint) predicate.GamePlayerPoint {
 func PointLTE(v uint) predicate.GamePlayerPoint {
 	return predicate.GamePlayerPoint(func(s *sql.Selector) {
 		s.Where(sql.LTE(s.C(FieldPoint), v))
+	})
+}
+
+// HasTurns applies the HasEdge predicate on the "turns" edge.
+func HasTurns() predicate.GamePlayerPoint {
+	return predicate.GamePlayerPoint(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(TurnsTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, TurnsTable, TurnsPrimaryKey...),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasTurnsWith applies the HasEdge predicate on the "turns" edge with a given conditions (other predicates).
+func HasTurnsWith(preds ...predicate.Turn) predicate.GamePlayerPoint {
+	return predicate.GamePlayerPoint(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(TurnsInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, TurnsTable, TurnsPrimaryKey...),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
 	})
 }
 

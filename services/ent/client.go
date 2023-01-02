@@ -1304,6 +1304,22 @@ func (c *GamePlayerPointClient) GetX(ctx context.Context, id uuid.UUID) *GamePla
 	return obj
 }
 
+// QueryTurns queries the turns edge of a GamePlayerPoint.
+func (c *GamePlayerPointClient) QueryTurns(gpp *GamePlayerPoint) *TurnQuery {
+	query := &TurnQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := gpp.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(gameplayerpoint.Table, gameplayerpoint.FieldID, id),
+			sqlgraph.To(turn.Table, turn.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, gameplayerpoint.TurnsTable, gameplayerpoint.TurnsPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(gpp.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *GamePlayerPointClient) Hooks() []Hook {
 	return c.hooks.GamePlayerPoint
@@ -2299,6 +2315,22 @@ func (c *TurnClient) QueryHands(t *Turn) *HandQuery {
 			sqlgraph.From(turn.Table, turn.FieldID, id),
 			sqlgraph.To(hand.Table, hand.FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, true, turn.HandsTable, turn.HandsPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(t.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryGamePlayerPoints queries the game_player_points edge of a Turn.
+func (c *TurnClient) QueryGamePlayerPoints(t *Turn) *GamePlayerPointQuery {
+	query := &GamePlayerPointQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := t.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(turn.Table, turn.FieldID, id),
+			sqlgraph.To(gameplayerpoint.Table, gameplayerpoint.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, turn.GamePlayerPointsTable, turn.GamePlayerPointsPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(t.driver.Dialect(), step)
 		return fromV, nil

@@ -15,6 +15,8 @@ const (
 	FieldNum = "num"
 	// EdgeHands holds the string denoting the hands edge name in mutations.
 	EdgeHands = "hands"
+	// EdgeGamePlayerPoints holds the string denoting the game_player_points edge name in mutations.
+	EdgeGamePlayerPoints = "game_player_points"
 	// Table holds the table name of the turn in the database.
 	Table = "turns"
 	// HandsTable is the table that holds the hands relation/edge. The primary key declared below.
@@ -22,6 +24,11 @@ const (
 	// HandsInverseTable is the table name for the Hand entity.
 	// It exists in this package in order to avoid circular dependency with the "hand" package.
 	HandsInverseTable = "hands"
+	// GamePlayerPointsTable is the table that holds the game_player_points relation/edge. The primary key declared below.
+	GamePlayerPointsTable = "turn_game_player_points"
+	// GamePlayerPointsInverseTable is the table name for the GamePlayerPoint entity.
+	// It exists in this package in order to avoid circular dependency with the "gameplayerpoint" package.
+	GamePlayerPointsInverseTable = "game_player_points"
 )
 
 // Columns holds all SQL columns for turn fields.
@@ -34,6 +41,9 @@ var (
 	// HandsPrimaryKey and HandsColumn2 are the table columns denoting the
 	// primary key for the hands relation (M2M).
 	HandsPrimaryKey = []string{"hand_id", "turn_id"}
+	// GamePlayerPointsPrimaryKey and GamePlayerPointsColumn2 are the table columns denoting the
+	// primary key for the game_player_points relation (M2M).
+	GamePlayerPointsPrimaryKey = []string{"turn_id", "game_player_point_id"}
 )
 
 // ValidColumn reports if the column name is valid (part of the table columns).

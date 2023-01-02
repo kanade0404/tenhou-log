@@ -179,6 +179,34 @@ func HasHandsWith(preds ...predicate.Hand) predicate.Turn {
 	})
 }
 
+// HasGamePlayerPoints applies the HasEdge predicate on the "game_player_points" edge.
+func HasGamePlayerPoints() predicate.Turn {
+	return predicate.Turn(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(GamePlayerPointsTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, GamePlayerPointsTable, GamePlayerPointsPrimaryKey...),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasGamePlayerPointsWith applies the HasEdge predicate on the "game_player_points" edge with a given conditions (other predicates).
+func HasGamePlayerPointsWith(preds ...predicate.GamePlayerPoint) predicate.Turn {
+	return predicate.Turn(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(GamePlayerPointsInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, GamePlayerPointsTable, GamePlayerPointsPrimaryKey...),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Turn) predicate.Turn {
 	return predicate.Turn(func(s *sql.Selector) {

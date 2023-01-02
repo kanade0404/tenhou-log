@@ -3481,6 +3481,9 @@ type GamePlayerPointMutation struct {
 	point         *uint
 	addpoint      *int
 	clearedFields map[string]struct{}
+	turns         map[uuid.UUID]struct{}
+	removedturns  map[uuid.UUID]struct{}
+	clearedturns  bool
 	done          bool
 	oldValue      func(context.Context) (*GamePlayerPoint, error)
 	predicates    []predicate.GamePlayerPoint
@@ -3646,6 +3649,60 @@ func (m *GamePlayerPointMutation) ResetPoint() {
 	m.addpoint = nil
 }
 
+// AddTurnIDs adds the "turns" edge to the Turn entity by ids.
+func (m *GamePlayerPointMutation) AddTurnIDs(ids ...uuid.UUID) {
+	if m.turns == nil {
+		m.turns = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.turns[ids[i]] = struct{}{}
+	}
+}
+
+// ClearTurns clears the "turns" edge to the Turn entity.
+func (m *GamePlayerPointMutation) ClearTurns() {
+	m.clearedturns = true
+}
+
+// TurnsCleared reports if the "turns" edge to the Turn entity was cleared.
+func (m *GamePlayerPointMutation) TurnsCleared() bool {
+	return m.clearedturns
+}
+
+// RemoveTurnIDs removes the "turns" edge to the Turn entity by IDs.
+func (m *GamePlayerPointMutation) RemoveTurnIDs(ids ...uuid.UUID) {
+	if m.removedturns == nil {
+		m.removedturns = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.turns, ids[i])
+		m.removedturns[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedTurns returns the removed IDs of the "turns" edge to the Turn entity.
+func (m *GamePlayerPointMutation) RemovedTurnsIDs() (ids []uuid.UUID) {
+	for id := range m.removedturns {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// TurnsIDs returns the "turns" edge IDs in the mutation.
+func (m *GamePlayerPointMutation) TurnsIDs() (ids []uuid.UUID) {
+	for id := range m.turns {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetTurns resets all changes to the "turns" edge.
+func (m *GamePlayerPointMutation) ResetTurns() {
+	m.turns = nil
+	m.clearedturns = false
+	m.removedturns = nil
+}
+
 // Where appends a list predicates to the GamePlayerPointMutation builder.
 func (m *GamePlayerPointMutation) Where(ps ...predicate.GamePlayerPoint) {
 	m.predicates = append(m.predicates, ps...)
@@ -3779,49 +3836,85 @@ func (m *GamePlayerPointMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *GamePlayerPointMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.turns != nil {
+		edges = append(edges, gameplayerpoint.EdgeTurns)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *GamePlayerPointMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case gameplayerpoint.EdgeTurns:
+		ids := make([]ent.Value, 0, len(m.turns))
+		for id := range m.turns {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *GamePlayerPointMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.removedturns != nil {
+		edges = append(edges, gameplayerpoint.EdgeTurns)
+	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *GamePlayerPointMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case gameplayerpoint.EdgeTurns:
+		ids := make([]ent.Value, 0, len(m.removedturns))
+		for id := range m.removedturns {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *GamePlayerPointMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.clearedturns {
+		edges = append(edges, gameplayerpoint.EdgeTurns)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *GamePlayerPointMutation) EdgeCleared(name string) bool {
+	switch name {
+	case gameplayerpoint.EdgeTurns:
+		return m.clearedturns
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *GamePlayerPointMutation) ClearEdge(name string) error {
+	switch name {
+	}
 	return fmt.Errorf("unknown GamePlayerPoint unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *GamePlayerPointMutation) ResetEdge(name string) error {
+	switch name {
+	case gameplayerpoint.EdgeTurns:
+		m.ResetTurns()
+		return nil
+	}
 	return fmt.Errorf("unknown GamePlayerPoint edge %s", name)
 }
 
@@ -7429,18 +7522,21 @@ func (m *RoundMutation) ResetEdge(name string) error {
 // TurnMutation represents an operation that mutates the Turn nodes in the graph.
 type TurnMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *uuid.UUID
-	num           *uint
-	addnum        *int
-	clearedFields map[string]struct{}
-	hands         map[uuid.UUID]struct{}
-	removedhands  map[uuid.UUID]struct{}
-	clearedhands  bool
-	done          bool
-	oldValue      func(context.Context) (*Turn, error)
-	predicates    []predicate.Turn
+	op                        Op
+	typ                       string
+	id                        *uuid.UUID
+	num                       *uint
+	addnum                    *int
+	clearedFields             map[string]struct{}
+	hands                     map[uuid.UUID]struct{}
+	removedhands              map[uuid.UUID]struct{}
+	clearedhands              bool
+	game_player_points        map[uuid.UUID]struct{}
+	removedgame_player_points map[uuid.UUID]struct{}
+	clearedgame_player_points bool
+	done                      bool
+	oldValue                  func(context.Context) (*Turn, error)
+	predicates                []predicate.Turn
 }
 
 var _ ent.Mutation = (*TurnMutation)(nil)
@@ -7657,6 +7753,60 @@ func (m *TurnMutation) ResetHands() {
 	m.removedhands = nil
 }
 
+// AddGamePlayerPointIDs adds the "game_player_points" edge to the GamePlayerPoint entity by ids.
+func (m *TurnMutation) AddGamePlayerPointIDs(ids ...uuid.UUID) {
+	if m.game_player_points == nil {
+		m.game_player_points = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.game_player_points[ids[i]] = struct{}{}
+	}
+}
+
+// ClearGamePlayerPoints clears the "game_player_points" edge to the GamePlayerPoint entity.
+func (m *TurnMutation) ClearGamePlayerPoints() {
+	m.clearedgame_player_points = true
+}
+
+// GamePlayerPointsCleared reports if the "game_player_points" edge to the GamePlayerPoint entity was cleared.
+func (m *TurnMutation) GamePlayerPointsCleared() bool {
+	return m.clearedgame_player_points
+}
+
+// RemoveGamePlayerPointIDs removes the "game_player_points" edge to the GamePlayerPoint entity by IDs.
+func (m *TurnMutation) RemoveGamePlayerPointIDs(ids ...uuid.UUID) {
+	if m.removedgame_player_points == nil {
+		m.removedgame_player_points = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.game_player_points, ids[i])
+		m.removedgame_player_points[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedGamePlayerPoints returns the removed IDs of the "game_player_points" edge to the GamePlayerPoint entity.
+func (m *TurnMutation) RemovedGamePlayerPointsIDs() (ids []uuid.UUID) {
+	for id := range m.removedgame_player_points {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// GamePlayerPointsIDs returns the "game_player_points" edge IDs in the mutation.
+func (m *TurnMutation) GamePlayerPointsIDs() (ids []uuid.UUID) {
+	for id := range m.game_player_points {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetGamePlayerPoints resets all changes to the "game_player_points" edge.
+func (m *TurnMutation) ResetGamePlayerPoints() {
+	m.game_player_points = nil
+	m.clearedgame_player_points = false
+	m.removedgame_player_points = nil
+}
+
 // Where appends a list predicates to the TurnMutation builder.
 func (m *TurnMutation) Where(ps ...predicate.Turn) {
 	m.predicates = append(m.predicates, ps...)
@@ -7790,9 +7940,12 @@ func (m *TurnMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *TurnMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.hands != nil {
 		edges = append(edges, turn.EdgeHands)
+	}
+	if m.game_player_points != nil {
+		edges = append(edges, turn.EdgeGamePlayerPoints)
 	}
 	return edges
 }
@@ -7807,15 +7960,24 @@ func (m *TurnMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case turn.EdgeGamePlayerPoints:
+		ids := make([]ent.Value, 0, len(m.game_player_points))
+		for id := range m.game_player_points {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *TurnMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.removedhands != nil {
 		edges = append(edges, turn.EdgeHands)
+	}
+	if m.removedgame_player_points != nil {
+		edges = append(edges, turn.EdgeGamePlayerPoints)
 	}
 	return edges
 }
@@ -7830,15 +7992,24 @@ func (m *TurnMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case turn.EdgeGamePlayerPoints:
+		ids := make([]ent.Value, 0, len(m.removedgame_player_points))
+		for id := range m.removedgame_player_points {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *TurnMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.clearedhands {
 		edges = append(edges, turn.EdgeHands)
+	}
+	if m.clearedgame_player_points {
+		edges = append(edges, turn.EdgeGamePlayerPoints)
 	}
 	return edges
 }
@@ -7849,6 +8020,8 @@ func (m *TurnMutation) EdgeCleared(name string) bool {
 	switch name {
 	case turn.EdgeHands:
 		return m.clearedhands
+	case turn.EdgeGamePlayerPoints:
+		return m.clearedgame_player_points
 	}
 	return false
 }
@@ -7867,6 +8040,9 @@ func (m *TurnMutation) ResetEdge(name string) error {
 	switch name {
 	case turn.EdgeHands:
 		m.ResetHands()
+		return nil
+	case turn.EdgeGamePlayerPoints:
+		m.ResetGamePlayerPoints()
 		return nil
 	}
 	return fmt.Errorf("unknown Turn edge %s", name)

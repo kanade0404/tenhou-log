@@ -18,6 +18,27 @@ type GamePlayerPoint struct {
 	ID uuid.UUID `json:"id,omitempty"`
 	// Point holds the value of the "point" field.
 	Point uint `json:"point,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the GamePlayerPointQuery when eager-loading is set.
+	Edges GamePlayerPointEdges `json:"edges"`
+}
+
+// GamePlayerPointEdges holds the relations/edges for other nodes in the graph.
+type GamePlayerPointEdges struct {
+	// Turns holds the value of the turns edge.
+	Turns []*Turn `json:"turns,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// TurnsOrErr returns the Turns value or an error if the edge
+// was not loaded in eager-loading.
+func (e GamePlayerPointEdges) TurnsOrErr() ([]*Turn, error) {
+	if e.loadedTypes[0] {
+		return e.Turns, nil
+	}
+	return nil, &NotLoadedError{edge: "turns"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -59,6 +80,11 @@ func (gpp *GamePlayerPoint) assignValues(columns []string, values []any) error {
 		}
 	}
 	return nil
+}
+
+// QueryTurns queries the "turns" edge of the GamePlayerPoint entity.
+func (gpp *GamePlayerPoint) QueryTurns() *TurnQuery {
+	return (&GamePlayerPointClient{config: gpp.config}).QueryTurns(gpp)
 }
 
 // Update returns a builder for updating this GamePlayerPoint.

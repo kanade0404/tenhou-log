@@ -364,6 +364,31 @@ var (
 			},
 		},
 	}
+	// TurnGamePlayerPointsColumns holds the columns for the "turn_game_player_points" table.
+	TurnGamePlayerPointsColumns = []*schema.Column{
+		{Name: "turn_id", Type: field.TypeUUID},
+		{Name: "game_player_point_id", Type: field.TypeUUID},
+	}
+	// TurnGamePlayerPointsTable holds the schema information for the "turn_game_player_points" table.
+	TurnGamePlayerPointsTable = &schema.Table{
+		Name:       "turn_game_player_points",
+		Columns:    TurnGamePlayerPointsColumns,
+		PrimaryKey: []*schema.Column{TurnGamePlayerPointsColumns[0], TurnGamePlayerPointsColumns[1]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "turn_game_player_points_turn_id",
+				Columns:    []*schema.Column{TurnGamePlayerPointsColumns[0]},
+				RefColumns: []*schema.Column{TurnsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "turn_game_player_points_game_player_point_id",
+				Columns:    []*schema.Column{TurnGamePlayerPointsColumns[1]},
+				RefColumns: []*schema.Column{GamePlayerPointsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		ChakansTable,
@@ -389,6 +414,7 @@ var (
 		WindsTable,
 		GameGamePlayersTable,
 		HandTurnsTable,
+		TurnGamePlayerPointsTable,
 	}
 )
 
@@ -406,4 +432,6 @@ func init() {
 	GameGamePlayersTable.ForeignKeys[1].RefTable = GamePlayersTable
 	HandTurnsTable.ForeignKeys[0].RefTable = HandsTable
 	HandTurnsTable.ForeignKeys[1].RefTable = TurnsTable
+	TurnGamePlayerPointsTable.ForeignKeys[0].RefTable = TurnsTable
+	TurnGamePlayerPointsTable.ForeignKeys[1].RefTable = GamePlayerPointsTable
 }

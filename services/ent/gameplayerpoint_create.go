@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayerpoint"
+	"github.com/kanade0404/tenhou-log/services/ent/turn"
 )
 
 // GamePlayerPointCreate is the builder for creating a GamePlayerPoint entity.
@@ -38,6 +39,21 @@ func (gppc *GamePlayerPointCreate) SetNillableID(u *uuid.UUID) *GamePlayerPointC
 		gppc.SetID(*u)
 	}
 	return gppc
+}
+
+// AddTurnIDs adds the "turns" edge to the Turn entity by IDs.
+func (gppc *GamePlayerPointCreate) AddTurnIDs(ids ...uuid.UUID) *GamePlayerPointCreate {
+	gppc.mutation.AddTurnIDs(ids...)
+	return gppc
+}
+
+// AddTurns adds the "turns" edges to the Turn entity.
+func (gppc *GamePlayerPointCreate) AddTurns(t ...*Turn) *GamePlayerPointCreate {
+	ids := make([]uuid.UUID, len(t))
+	for i := range t {
+		ids[i] = t[i].ID
+	}
+	return gppc.AddTurnIDs(ids...)
 }
 
 // Mutation returns the GamePlayerPointMutation object of the builder.
@@ -172,6 +188,25 @@ func (gppc *GamePlayerPointCreate) createSpec() (*GamePlayerPoint, *sqlgraph.Cre
 	if value, ok := gppc.mutation.Point(); ok {
 		_spec.SetField(gameplayerpoint.FieldPoint, field.TypeUint, value)
 		_node.Point = value
+	}
+	if nodes := gppc.mutation.TurnsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   gameplayerpoint.TurnsTable,
+			Columns: gameplayerpoint.TurnsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: turn.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

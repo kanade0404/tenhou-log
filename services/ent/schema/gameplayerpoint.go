@@ -2,6 +2,7 @@ package schema
 
 import (
 	"entgo.io/ent"
+	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"fmt"
 	"github.com/google/uuid"
@@ -28,6 +29,6 @@ func (GamePlayerPoint) Fields() []ent.Field {
 // Edges of the GamePlayerPoint.
 func (GamePlayerPoint) Edges() []ent.Edge {
 	return []ent.Edge{
-		//edge.From("turns", Turn.Type).Ref("game_players"),
+		edge.From("turns", Turn.Type).Ref("game_player_points"),
 	}
 }

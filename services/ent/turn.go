@@ -27,9 +27,11 @@ type Turn struct {
 type TurnEdges struct {
 	// Hands holds the value of the hands edge.
 	Hands []*Hand `json:"hands,omitempty"`
+	// GamePlayerPoints holds the value of the game_player_points edge.
+	GamePlayerPoints []*GamePlayerPoint `json:"game_player_points,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [2]bool
 }
 
 // HandsOrErr returns the Hands value or an error if the edge
@@ -39,6 +41,15 @@ func (e TurnEdges) HandsOrErr() ([]*Hand, error) {
 		return e.Hands, nil
 	}
 	return nil, &NotLoadedError{edge: "hands"}
+}
+
+// GamePlayerPointsOrErr returns the GamePlayerPoints value or an error if the edge
+// was not loaded in eager-loading.
+func (e TurnEdges) GamePlayerPointsOrErr() ([]*GamePlayerPoint, error) {
+	if e.loadedTypes[1] {
+		return e.GamePlayerPoints, nil
+	}
+	return nil, &NotLoadedError{edge: "game_player_points"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -85,6 +96,11 @@ func (t *Turn) assignValues(columns []string, values []any) error {
 // QueryHands queries the "hands" edge of the Turn entity.
 func (t *Turn) QueryHands() *HandQuery {
 	return (&TurnClient{config: t.config}).QueryHands(t)
+}
+
+// QueryGamePlayerPoints queries the "game_player_points" edge of the Turn entity.
+func (t *Turn) QueryGamePlayerPoints() *GamePlayerPointQuery {
+	return (&TurnClient{config: t.config}).QueryGamePlayerPoints(t)
 }
 
 // Update returns a builder for updating this Turn.

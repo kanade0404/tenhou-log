@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/gameplayerpoint"
 	"github.com/kanade0404/tenhou-log/services/ent/hand"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 	"github.com/kanade0404/tenhou-log/services/ent/turn"
@@ -44,6 +45,21 @@ func (tu *TurnUpdate) AddHands(h ...*Hand) *TurnUpdate {
 	return tu.AddHandIDs(ids...)
 }
 
+// AddGamePlayerPointIDs adds the "game_player_points" edge to the GamePlayerPoint entity by IDs.
+func (tu *TurnUpdate) AddGamePlayerPointIDs(ids ...uuid.UUID) *TurnUpdate {
+	tu.mutation.AddGamePlayerPointIDs(ids...)
+	return tu
+}
+
+// AddGamePlayerPoints adds the "game_player_points" edges to the GamePlayerPoint entity.
+func (tu *TurnUpdate) AddGamePlayerPoints(g ...*GamePlayerPoint) *TurnUpdate {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return tu.AddGamePlayerPointIDs(ids...)
+}
+
 // Mutation returns the TurnMutation object of the builder.
 func (tu *TurnUpdate) Mutation() *TurnMutation {
 	return tu.mutation
@@ -68,6 +84,27 @@ func (tu *TurnUpdate) RemoveHands(h ...*Hand) *TurnUpdate {
 		ids[i] = h[i].ID
 	}
 	return tu.RemoveHandIDs(ids...)
+}
+
+// ClearGamePlayerPoints clears all "game_player_points" edges to the GamePlayerPoint entity.
+func (tu *TurnUpdate) ClearGamePlayerPoints() *TurnUpdate {
+	tu.mutation.ClearGamePlayerPoints()
+	return tu
+}
+
+// RemoveGamePlayerPointIDs removes the "game_player_points" edge to GamePlayerPoint entities by IDs.
+func (tu *TurnUpdate) RemoveGamePlayerPointIDs(ids ...uuid.UUID) *TurnUpdate {
+	tu.mutation.RemoveGamePlayerPointIDs(ids...)
+	return tu
+}
+
+// RemoveGamePlayerPoints removes "game_player_points" edges to GamePlayerPoint entities.
+func (tu *TurnUpdate) RemoveGamePlayerPoints(g ...*GamePlayerPoint) *TurnUpdate {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return tu.RemoveGamePlayerPointIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -196,6 +233,60 @@ func (tu *TurnUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if tu.mutation.GamePlayerPointsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   turn.GamePlayerPointsTable,
+			Columns: turn.GamePlayerPointsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: gameplayerpoint.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := tu.mutation.RemovedGamePlayerPointsIDs(); len(nodes) > 0 && !tu.mutation.GamePlayerPointsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   turn.GamePlayerPointsTable,
+			Columns: turn.GamePlayerPointsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: gameplayerpoint.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := tu.mutation.GamePlayerPointsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   turn.GamePlayerPointsTable,
+			Columns: turn.GamePlayerPointsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: gameplayerpoint.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, tu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{turn.Label}
@@ -230,6 +321,21 @@ func (tuo *TurnUpdateOne) AddHands(h ...*Hand) *TurnUpdateOne {
 	return tuo.AddHandIDs(ids...)
 }
 
+// AddGamePlayerPointIDs adds the "game_player_points" edge to the GamePlayerPoint entity by IDs.
+func (tuo *TurnUpdateOne) AddGamePlayerPointIDs(ids ...uuid.UUID) *TurnUpdateOne {
+	tuo.mutation.AddGamePlayerPointIDs(ids...)
+	return tuo
+}
+
+// AddGamePlayerPoints adds the "game_player_points" edges to the GamePlayerPoint entity.
+func (tuo *TurnUpdateOne) AddGamePlayerPoints(g ...*GamePlayerPoint) *TurnUpdateOne {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return tuo.AddGamePlayerPointIDs(ids...)
+}
+
 // Mutation returns the TurnMutation object of the builder.
 func (tuo *TurnUpdateOne) Mutation() *TurnMutation {
 	return tuo.mutation
@@ -254,6 +360,27 @@ func (tuo *TurnUpdateOne) RemoveHands(h ...*Hand) *TurnUpdateOne {
 		ids[i] = h[i].ID
 	}
 	return tuo.RemoveHandIDs(ids...)
+}
+
+// ClearGamePlayerPoints clears all "game_player_points" edges to the GamePlayerPoint entity.
+func (tuo *TurnUpdateOne) ClearGamePlayerPoints() *TurnUpdateOne {
+	tuo.mutation.ClearGamePlayerPoints()
+	return tuo
+}
+
+// RemoveGamePlayerPointIDs removes the "game_player_points" edge to GamePlayerPoint entities by IDs.
+func (tuo *TurnUpdateOne) RemoveGamePlayerPointIDs(ids ...uuid.UUID) *TurnUpdateOne {
+	tuo.mutation.RemoveGamePlayerPointIDs(ids...)
+	return tuo
+}
+
+// RemoveGamePlayerPoints removes "game_player_points" edges to GamePlayerPoint entities.
+func (tuo *TurnUpdateOne) RemoveGamePlayerPoints(g ...*GamePlayerPoint) *TurnUpdateOne {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return tuo.RemoveGamePlayerPointIDs(ids...)
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -404,6 +531,60 @@ func (tuo *TurnUpdateOne) sqlSave(ctx context.Context) (_node *Turn, err error) 
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: hand.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if tuo.mutation.GamePlayerPointsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   turn.GamePlayerPointsTable,
+			Columns: turn.GamePlayerPointsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: gameplayerpoint.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := tuo.mutation.RemovedGamePlayerPointsIDs(); len(nodes) > 0 && !tuo.mutation.GamePlayerPointsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   turn.GamePlayerPointsTable,
+			Columns: turn.GamePlayerPointsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: gameplayerpoint.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := tuo.mutation.GamePlayerPointsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   turn.GamePlayerPointsTable,
+			Columns: turn.GamePlayerPointsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: gameplayerpoint.FieldID,
 				},
 			},
 		}

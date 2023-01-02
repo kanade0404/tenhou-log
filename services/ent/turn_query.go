@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/gameplayerpoint"
 	"github.com/kanade0404/tenhou-log/services/ent/hand"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 	"github.com/kanade0404/tenhou-log/services/ent/turn"
@@ -20,13 +21,14 @@ import (
 // TurnQuery is the builder for querying Turn entities.
 type TurnQuery struct {
 	config
-	limit      *int
-	offset     *int
-	unique     *bool
-	order      []OrderFunc
-	fields     []string
-	predicates []predicate.Turn
-	withHands  *HandQuery
+	limit                *int
+	offset               *int
+	unique               *bool
+	order                []OrderFunc
+	fields               []string
+	predicates           []predicate.Turn
+	withHands            *HandQuery
+	withGamePlayerPoints *GamePlayerPointQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -78,6 +80,28 @@ func (tq *TurnQuery) QueryHands() *HandQuery {
 			sqlgraph.From(turn.Table, turn.FieldID, selector),
 			sqlgraph.To(hand.Table, hand.FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, true, turn.HandsTable, turn.HandsPrimaryKey...),
+		)
+		fromU = sqlgraph.SetNeighbors(tq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryGamePlayerPoints chains the current query on the "game_player_points" edge.
+func (tq *TurnQuery) QueryGamePlayerPoints() *GamePlayerPointQuery {
+	query := &GamePlayerPointQuery{config: tq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := tq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := tq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(turn.Table, turn.FieldID, selector),
+			sqlgraph.To(gameplayerpoint.Table, gameplayerpoint.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, turn.GamePlayerPointsTable, turn.GamePlayerPointsPrimaryKey...),
 		)
 		fromU = sqlgraph.SetNeighbors(tq.driver.Dialect(), step)
 		return fromU, nil
@@ -261,12 +285,13 @@ func (tq *TurnQuery) Clone() *TurnQuery {
 		return nil
 	}
 	return &TurnQuery{
-		config:     tq.config,
-		limit:      tq.limit,
-		offset:     tq.offset,
-		order:      append([]OrderFunc{}, tq.order...),
-		predicates: append([]predicate.Turn{}, tq.predicates...),
-		withHands:  tq.withHands.Clone(),
+		config:               tq.config,
+		limit:                tq.limit,
+		offset:               tq.offset,
+		order:                append([]OrderFunc{}, tq.order...),
+		predicates:           append([]predicate.Turn{}, tq.predicates...),
+		withHands:            tq.withHands.Clone(),
+		withGamePlayerPoints: tq.withGamePlayerPoints.Clone(),
 		// clone intermediate query.
 		sql:    tq.sql.Clone(),
 		path:   tq.path,
@@ -282,6 +307,17 @@ func (tq *TurnQuery) WithHands(opts ...func(*HandQuery)) *TurnQuery {
 		opt(query)
 	}
 	tq.withHands = query
+	return tq
+}
+
+// WithGamePlayerPoints tells the query-builder to eager-load the nodes that are connected to
+// the "game_player_points" edge. The optional arguments are used to configure the query builder of the edge.
+func (tq *TurnQuery) WithGamePlayerPoints(opts ...func(*GamePlayerPointQuery)) *TurnQuery {
+	query := &GamePlayerPointQuery{config: tq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	tq.withGamePlayerPoints = query
 	return tq
 }
 
@@ -360,8 +396,9 @@ func (tq *TurnQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Turn, e
 	var (
 		nodes       = []*Turn{}
 		_spec       = tq.querySpec()
-		loadedTypes = [1]bool{
+		loadedTypes = [2]bool{
 			tq.withHands != nil,
+			tq.withGamePlayerPoints != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -386,6 +423,13 @@ func (tq *TurnQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Turn, e
 		if err := tq.loadHands(ctx, query, nodes,
 			func(n *Turn) { n.Edges.Hands = []*Hand{} },
 			func(n *Turn, e *Hand) { n.Edges.Hands = append(n.Edges.Hands, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := tq.withGamePlayerPoints; query != nil {
+		if err := tq.loadGamePlayerPoints(ctx, query, nodes,
+			func(n *Turn) { n.Edges.GamePlayerPoints = []*GamePlayerPoint{} },
+			func(n *Turn, e *GamePlayerPoint) { n.Edges.GamePlayerPoints = append(n.Edges.GamePlayerPoints, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -443,6 +487,64 @@ func (tq *TurnQuery) loadHands(ctx context.Context, query *HandQuery, nodes []*T
 		nodes, ok := nids[n.ID]
 		if !ok {
 			return fmt.Errorf(`unexpected "hands" node returned %v`, n.ID)
+		}
+		for kn := range nodes {
+			assign(kn, n)
+		}
+	}
+	return nil
+}
+func (tq *TurnQuery) loadGamePlayerPoints(ctx context.Context, query *GamePlayerPointQuery, nodes []*Turn, init func(*Turn), assign func(*Turn, *GamePlayerPoint)) error {
+	edgeIDs := make([]driver.Value, len(nodes))
+	byID := make(map[uuid.UUID]*Turn)
+	nids := make(map[uuid.UUID]map[*Turn]struct{})
+	for i, node := range nodes {
+		edgeIDs[i] = node.ID
+		byID[node.ID] = node
+		if init != nil {
+			init(node)
+		}
+	}
+	query.Where(func(s *sql.Selector) {
+		joinT := sql.Table(turn.GamePlayerPointsTable)
+		s.Join(joinT).On(s.C(gameplayerpoint.FieldID), joinT.C(turn.GamePlayerPointsPrimaryKey[1]))
+		s.Where(sql.InValues(joinT.C(turn.GamePlayerPointsPrimaryKey[0]), edgeIDs...))
+		columns := s.SelectedColumns()
+		s.Select(joinT.C(turn.GamePlayerPointsPrimaryKey[0]))
+		s.AppendSelect(columns...)
+		s.SetDistinct(false)
+	})
+	if err := query.prepareQuery(ctx); err != nil {
+		return err
+	}
+	neighbors, err := query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
+		assign := spec.Assign
+		values := spec.ScanValues
+		spec.ScanValues = func(columns []string) ([]any, error) {
+			values, err := values(columns[1:])
+			if err != nil {
+				return nil, err
+			}
+			return append([]any{new(uuid.UUID)}, values...), nil
+		}
+		spec.Assign = func(columns []string, values []any) error {
+			outValue := *values[0].(*uuid.UUID)
+			inValue := *values[1].(*uuid.UUID)
+			if nids[inValue] == nil {
+				nids[inValue] = map[*Turn]struct{}{byID[outValue]: {}}
+				return assign(columns[1:], values[1:])
+			}
+			nids[inValue][byID[outValue]] = struct{}{}
+			return nil
+		}
+	})
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected "game_player_points" node returned %v`, n.ID)
 		}
 		for kn := range nodes {
 			assign(kn, n)

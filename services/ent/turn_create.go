@@ -10,6 +10,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/gameplayerpoint"
 	"github.com/kanade0404/tenhou-log/services/ent/hand"
 	"github.com/kanade0404/tenhou-log/services/ent/turn"
 )
@@ -54,6 +55,21 @@ func (tc *TurnCreate) AddHands(h ...*Hand) *TurnCreate {
 		ids[i] = h[i].ID
 	}
 	return tc.AddHandIDs(ids...)
+}
+
+// AddGamePlayerPointIDs adds the "game_player_points" edge to the GamePlayerPoint entity by IDs.
+func (tc *TurnCreate) AddGamePlayerPointIDs(ids ...uuid.UUID) *TurnCreate {
+	tc.mutation.AddGamePlayerPointIDs(ids...)
+	return tc
+}
+
+// AddGamePlayerPoints adds the "game_player_points" edges to the GamePlayerPoint entity.
+func (tc *TurnCreate) AddGamePlayerPoints(g ...*GamePlayerPoint) *TurnCreate {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return tc.AddGamePlayerPointIDs(ids...)
 }
 
 // Mutation returns the TurnMutation object of the builder.
@@ -195,6 +211,25 @@ func (tc *TurnCreate) createSpec() (*Turn, *sqlgraph.CreateSpec) {
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: hand.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := tc.mutation.GamePlayerPointsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   turn.GamePlayerPointsTable,
+			Columns: turn.GamePlayerPointsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: gameplayerpoint.FieldID,
 				},
 			},
 		}
