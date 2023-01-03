@@ -10,19 +10,19 @@ import (
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/game"
 	"github.com/kanade0404/tenhou-log/services/ent/round"
-	"github.com/kanade0404/tenhou-log/services/ent/wind"
 )
 
 // Round is the model entity for the Round schema.
 type Round struct {
-	config
+	config `json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
+	// Wind holds the value of the "wind" field.
+	Wind string `json:"wind,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the RoundQuery when eager-loading is set.
 	Edges       RoundEdges `json:"edges"`
 	game_rounds *uuid.UUID
-	wind_rounds *uuid.UUID
 }
 
 // RoundEdges holds the relations/edges for other nodes in the graph.
@@ -31,11 +31,9 @@ type RoundEdges struct {
 	Games *Game `json:"games,omitempty"`
 	// Hands holds the value of the hands edge.
 	Hands []*Hand `json:"hands,omitempty"`
-	// Winds holds the value of the winds edge.
-	Winds *Wind `json:"winds,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [2]bool
 }
 
 // GamesOrErr returns the Games value or an error if the edge
@@ -60,29 +58,16 @@ func (e RoundEdges) HandsOrErr() ([]*Hand, error) {
 	return nil, &NotLoadedError{edge: "hands"}
 }
 
-// WindsOrErr returns the Winds value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e RoundEdges) WindsOrErr() (*Wind, error) {
-	if e.loadedTypes[2] {
-		if e.Winds == nil {
-			// Edge was loaded but was not found.
-			return nil, &NotFoundError{label: wind.Label}
-		}
-		return e.Winds, nil
-	}
-	return nil, &NotLoadedError{edge: "winds"}
-}
-
 // scanValues returns the types for scanning values from sql.Rows.
 func (*Round) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case round.FieldWind:
+			values[i] = new(sql.NullString)
 		case round.FieldID:
 			values[i] = new(uuid.UUID)
 		case round.ForeignKeys[0]: // game_rounds
-			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case round.ForeignKeys[1]: // wind_rounds
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Round", columns[i])
@@ -105,19 +90,18 @@ func (r *Round) assignValues(columns []string, values []any) error {
 			} else if value != nil {
 				r.ID = *value
 			}
+		case round.FieldWind:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field wind", values[i])
+			} else if value.Valid {
+				r.Wind = value.String
+			}
 		case round.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field game_rounds", values[i])
 			} else if value.Valid {
 				r.game_rounds = new(uuid.UUID)
 				*r.game_rounds = *value.S.(*uuid.UUID)
-			}
-		case round.ForeignKeys[1]:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field wind_rounds", values[i])
-			} else if value.Valid {
-				r.wind_rounds = new(uuid.UUID)
-				*r.wind_rounds = *value.S.(*uuid.UUID)
 			}
 		}
 	}
@@ -132,11 +116,6 @@ func (r *Round) QueryGames() *GameQuery {
 // QueryHands queries the "hands" edge of the Round entity.
 func (r *Round) QueryHands() *HandQuery {
 	return (&RoundClient{config: r.config}).QueryHands(r)
-}
-
-// QueryWinds queries the "winds" edge of the Round entity.
-func (r *Round) QueryWinds() *WindQuery {
-	return (&RoundClient{config: r.config}).QueryWinds(r)
 }
 
 // Update returns a builder for updating this Round.
@@ -161,7 +140,9 @@ func (r *Round) Unwrap() *Round {
 func (r *Round) String() string {
 	var builder strings.Builder
 	builder.WriteString("Round(")
-	builder.WriteString(fmt.Sprintf("id=%v", r.ID))
+	builder.WriteString(fmt.Sprintf("id=%v, ", r.ID))
+	builder.WriteString("wind=")
+	builder.WriteString(r.Wind)
 	builder.WriteByte(')')
 	return builder.String()
 }

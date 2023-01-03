@@ -30,7 +30,6 @@ import (
 	"github.com/kanade0404/tenhou-log/services/ent/round"
 	"github.com/kanade0404/tenhou-log/services/ent/turn"
 	"github.com/kanade0404/tenhou-log/services/ent/win"
-	"github.com/kanade0404/tenhou-log/services/ent/wind"
 )
 
 // ent aliases to avoid import conflicts in user's code.
@@ -71,7 +70,6 @@ func columnChecker(table string) func(string) error {
 		round.Table:             round.ValidColumn,
 		turn.Table:              turn.ValidColumn,
 		win.Table:               win.ValidColumn,
-		wind.Table:              wind.ValidColumn,
 	}
 	check, ok := checks[table]
 	if !ok {

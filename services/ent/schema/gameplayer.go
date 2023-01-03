@@ -28,6 +28,5 @@ func (GamePlayer) Edges() []ent.Edge {
 		edge.From("games", Game.Type).Ref("game_players"),
 		edge.From("players", Player.Type).Ref("game_players").Unique(),
 		edge.From("dans", Dan.Type).Ref("game_players").Unique(),
-		//edge.To("go_arounds", GoAround.Type),
 	}
 }

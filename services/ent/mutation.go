@@ -23,7 +23,6 @@ import (
 	"github.com/kanade0404/tenhou-log/services/ent/room"
 	"github.com/kanade0404/tenhou-log/services/ent/round"
 	"github.com/kanade0404/tenhou-log/services/ent/turn"
-	"github.com/kanade0404/tenhou-log/services/ent/wind"
 
 	"entgo.io/ent"
 )
@@ -57,7 +56,6 @@ const (
 	TypeRound             = "Round"
 	TypeTurn              = "Turn"
 	TypeWin               = "Win"
-	TypeWind              = "Wind"
 )
 
 // ChakanMutation represents an operation that mutates the Chakan nodes in the graph.
@@ -7059,14 +7057,13 @@ type RoundMutation struct {
 	op            Op
 	typ           string
 	id            *uuid.UUID
+	wind          *string
 	clearedFields map[string]struct{}
 	games         *uuid.UUID
 	clearedgames  bool
 	hands         map[uuid.UUID]struct{}
 	removedhands  map[uuid.UUID]struct{}
 	clearedhands  bool
-	winds         *uuid.UUID
-	clearedwinds  bool
 	done          bool
 	oldValue      func(context.Context) (*Round, error)
 	predicates    []predicate.Round
@@ -7176,6 +7173,42 @@ func (m *RoundMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	}
 }
 
+// SetWind sets the "wind" field.
+func (m *RoundMutation) SetWind(s string) {
+	m.wind = &s
+}
+
+// Wind returns the value of the "wind" field in the mutation.
+func (m *RoundMutation) Wind() (r string, exists bool) {
+	v := m.wind
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWind returns the old "wind" field's value of the Round entity.
+// If the Round object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RoundMutation) OldWind(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWind is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWind requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWind: %w", err)
+	}
+	return oldValue.Wind, nil
+}
+
+// ResetWind resets all changes to the "wind" field.
+func (m *RoundMutation) ResetWind() {
+	m.wind = nil
+}
+
 // SetGamesID sets the "games" edge to the Game entity by id.
 func (m *RoundMutation) SetGamesID(id uuid.UUID) {
 	m.games = &id
@@ -7269,45 +7302,6 @@ func (m *RoundMutation) ResetHands() {
 	m.removedhands = nil
 }
 
-// SetWindsID sets the "winds" edge to the Wind entity by id.
-func (m *RoundMutation) SetWindsID(id uuid.UUID) {
-	m.winds = &id
-}
-
-// ClearWinds clears the "winds" edge to the Wind entity.
-func (m *RoundMutation) ClearWinds() {
-	m.clearedwinds = true
-}
-
-// WindsCleared reports if the "winds" edge to the Wind entity was cleared.
-func (m *RoundMutation) WindsCleared() bool {
-	return m.clearedwinds
-}
-
-// WindsID returns the "winds" edge ID in the mutation.
-func (m *RoundMutation) WindsID() (id uuid.UUID, exists bool) {
-	if m.winds != nil {
-		return *m.winds, true
-	}
-	return
-}
-
-// WindsIDs returns the "winds" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// WindsID instead. It exists only for internal usage by the builders.
-func (m *RoundMutation) WindsIDs() (ids []uuid.UUID) {
-	if id := m.winds; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetWinds resets all changes to the "winds" edge.
-func (m *RoundMutation) ResetWinds() {
-	m.winds = nil
-	m.clearedwinds = false
-}
-
 // Where appends a list predicates to the RoundMutation builder.
 func (m *RoundMutation) Where(ps ...predicate.Round) {
 	m.predicates = append(m.predicates, ps...)
@@ -7327,7 +7321,10 @@ func (m *RoundMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *RoundMutation) Fields() []string {
-	fields := make([]string, 0, 0)
+	fields := make([]string, 0, 1)
+	if m.wind != nil {
+		fields = append(fields, round.FieldWind)
+	}
 	return fields
 }
 
@@ -7335,6 +7332,10 @@ func (m *RoundMutation) Fields() []string {
 // return value indicates that this field was not set, or was not defined in the
 // schema.
 func (m *RoundMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case round.FieldWind:
+		return m.Wind()
+	}
 	return nil, false
 }
 
@@ -7342,6 +7343,10 @@ func (m *RoundMutation) Field(name string) (ent.Value, bool) {
 // returned if the mutation operation is not UpdateOne, or the query to the
 // database failed.
 func (m *RoundMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case round.FieldWind:
+		return m.OldWind(ctx)
+	}
 	return nil, fmt.Errorf("unknown Round field %s", name)
 }
 
@@ -7350,6 +7355,13 @@ func (m *RoundMutation) OldField(ctx context.Context, name string) (ent.Value, e
 // type.
 func (m *RoundMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case round.FieldWind:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWind(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Round field %s", name)
 }
@@ -7371,6 +7383,8 @@ func (m *RoundMutation) AddedField(name string) (ent.Value, bool) {
 // the field is not defined in the schema, or if the type mismatched the field
 // type.
 func (m *RoundMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
 	return fmt.Errorf("unknown Round numeric field %s", name)
 }
 
@@ -7396,20 +7410,22 @@ func (m *RoundMutation) ClearField(name string) error {
 // ResetField resets all changes in the mutation for the field with the given name.
 // It returns an error if the field is not defined in the schema.
 func (m *RoundMutation) ResetField(name string) error {
+	switch name {
+	case round.FieldWind:
+		m.ResetWind()
+		return nil
+	}
 	return fmt.Errorf("unknown Round field %s", name)
 }
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *RoundMutation) AddedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 2)
 	if m.games != nil {
 		edges = append(edges, round.EdgeGames)
 	}
 	if m.hands != nil {
 		edges = append(edges, round.EdgeHands)
-	}
-	if m.winds != nil {
-		edges = append(edges, round.EdgeWinds)
 	}
 	return edges
 }
@@ -7428,17 +7444,13 @@ func (m *RoundMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
-	case round.EdgeWinds:
-		if id := m.winds; id != nil {
-			return []ent.Value{*id}
-		}
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *RoundMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 2)
 	if m.removedhands != nil {
 		edges = append(edges, round.EdgeHands)
 	}
@@ -7461,15 +7473,12 @@ func (m *RoundMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *RoundMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 2)
 	if m.clearedgames {
 		edges = append(edges, round.EdgeGames)
 	}
 	if m.clearedhands {
 		edges = append(edges, round.EdgeHands)
-	}
-	if m.clearedwinds {
-		edges = append(edges, round.EdgeWinds)
 	}
 	return edges
 }
@@ -7482,8 +7491,6 @@ func (m *RoundMutation) EdgeCleared(name string) bool {
 		return m.clearedgames
 	case round.EdgeHands:
 		return m.clearedhands
-	case round.EdgeWinds:
-		return m.clearedwinds
 	}
 	return false
 }
@@ -7494,9 +7501,6 @@ func (m *RoundMutation) ClearEdge(name string) error {
 	switch name {
 	case round.EdgeGames:
 		m.ClearGames()
-		return nil
-	case round.EdgeWinds:
-		m.ClearWinds()
 		return nil
 	}
 	return fmt.Errorf("unknown Round unique edge %s", name)
@@ -7511,9 +7515,6 @@ func (m *RoundMutation) ResetEdge(name string) error {
 		return nil
 	case round.EdgeHands:
 		m.ResetHands()
-		return nil
-	case round.EdgeWinds:
-		m.ResetWinds()
 		return nil
 	}
 	return fmt.Errorf("unknown Round edge %s", name)
@@ -8295,414 +8296,4 @@ func (m *WinMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *WinMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown Win edge %s", name)
-}
-
-// WindMutation represents an operation that mutates the Wind nodes in the graph.
-type WindMutation struct {
-	config
-	op            Op
-	typ           string
-	id            *uuid.UUID
-	name          *string
-	clearedFields map[string]struct{}
-	rounds        map[uuid.UUID]struct{}
-	removedrounds map[uuid.UUID]struct{}
-	clearedrounds bool
-	done          bool
-	oldValue      func(context.Context) (*Wind, error)
-	predicates    []predicate.Wind
-}
-
-var _ ent.Mutation = (*WindMutation)(nil)
-
-// windOption allows management of the mutation configuration using functional options.
-type windOption func(*WindMutation)
-
-// newWindMutation creates new mutation for the Wind entity.
-func newWindMutation(c config, op Op, opts ...windOption) *WindMutation {
-	m := &WindMutation{
-		config:        c,
-		op:            op,
-		typ:           TypeWind,
-		clearedFields: make(map[string]struct{}),
-	}
-	for _, opt := range opts {
-		opt(m)
-	}
-	return m
-}
-
-// withWindID sets the ID field of the mutation.
-func withWindID(id uuid.UUID) windOption {
-	return func(m *WindMutation) {
-		var (
-			err   error
-			once  sync.Once
-			value *Wind
-		)
-		m.oldValue = func(ctx context.Context) (*Wind, error) {
-			once.Do(func() {
-				if m.done {
-					err = errors.New("querying old values post mutation is not allowed")
-				} else {
-					value, err = m.Client().Wind.Get(ctx, id)
-				}
-			})
-			return value, err
-		}
-		m.id = &id
-	}
-}
-
-// withWind sets the old Wind of the mutation.
-func withWind(node *Wind) windOption {
-	return func(m *WindMutation) {
-		m.oldValue = func(context.Context) (*Wind, error) {
-			return node, nil
-		}
-		m.id = &node.ID
-	}
-}
-
-// Client returns a new `ent.Client` from the mutation. If the mutation was
-// executed in a transaction (ent.Tx), a transactional client is returned.
-func (m WindMutation) Client() *Client {
-	client := &Client{config: m.config}
-	client.init()
-	return client
-}
-
-// Tx returns an `ent.Tx` for mutations that were executed in transactions;
-// it returns an error otherwise.
-func (m WindMutation) Tx() (*Tx, error) {
-	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, errors.New("ent: mutation is not running in a transaction")
-	}
-	tx := &Tx{config: m.config}
-	tx.init()
-	return tx, nil
-}
-
-// SetID sets the value of the id field. Note that this
-// operation is only accepted on creation of Wind entities.
-func (m *WindMutation) SetID(id uuid.UUID) {
-	m.id = &id
-}
-
-// ID returns the ID value in the mutation. Note that the ID is only available
-// if it was provided to the builder or after it was returned from the database.
-func (m *WindMutation) ID() (id uuid.UUID, exists bool) {
-	if m.id == nil {
-		return
-	}
-	return *m.id, true
-}
-
-// IDs queries the database and returns the entity ids that match the mutation's predicate.
-// That means, if the mutation is applied within a transaction with an isolation level such
-// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
-// or updated by the mutation.
-func (m *WindMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	switch {
-	case m.op.Is(OpUpdateOne | OpDeleteOne):
-		id, exists := m.ID()
-		if exists {
-			return []uuid.UUID{id}, nil
-		}
-		fallthrough
-	case m.op.Is(OpUpdate | OpDelete):
-		return m.Client().Wind.Query().Where(m.predicates...).IDs(ctx)
-	default:
-		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
-	}
-}
-
-// SetName sets the "name" field.
-func (m *WindMutation) SetName(s string) {
-	m.name = &s
-}
-
-// Name returns the value of the "name" field in the mutation.
-func (m *WindMutation) Name() (r string, exists bool) {
-	v := m.name
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldName returns the old "name" field's value of the Wind entity.
-// If the Wind object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *WindMutation) OldName(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldName is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldName requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldName: %w", err)
-	}
-	return oldValue.Name, nil
-}
-
-// ResetName resets all changes to the "name" field.
-func (m *WindMutation) ResetName() {
-	m.name = nil
-}
-
-// AddRoundIDs adds the "rounds" edge to the Round entity by ids.
-func (m *WindMutation) AddRoundIDs(ids ...uuid.UUID) {
-	if m.rounds == nil {
-		m.rounds = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		m.rounds[ids[i]] = struct{}{}
-	}
-}
-
-// ClearRounds clears the "rounds" edge to the Round entity.
-func (m *WindMutation) ClearRounds() {
-	m.clearedrounds = true
-}
-
-// RoundsCleared reports if the "rounds" edge to the Round entity was cleared.
-func (m *WindMutation) RoundsCleared() bool {
-	return m.clearedrounds
-}
-
-// RemoveRoundIDs removes the "rounds" edge to the Round entity by IDs.
-func (m *WindMutation) RemoveRoundIDs(ids ...uuid.UUID) {
-	if m.removedrounds == nil {
-		m.removedrounds = make(map[uuid.UUID]struct{})
-	}
-	for i := range ids {
-		delete(m.rounds, ids[i])
-		m.removedrounds[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedRounds returns the removed IDs of the "rounds" edge to the Round entity.
-func (m *WindMutation) RemovedRoundsIDs() (ids []uuid.UUID) {
-	for id := range m.removedrounds {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// RoundsIDs returns the "rounds" edge IDs in the mutation.
-func (m *WindMutation) RoundsIDs() (ids []uuid.UUID) {
-	for id := range m.rounds {
-		ids = append(ids, id)
-	}
-	return
-}
-
-// ResetRounds resets all changes to the "rounds" edge.
-func (m *WindMutation) ResetRounds() {
-	m.rounds = nil
-	m.clearedrounds = false
-	m.removedrounds = nil
-}
-
-// Where appends a list predicates to the WindMutation builder.
-func (m *WindMutation) Where(ps ...predicate.Wind) {
-	m.predicates = append(m.predicates, ps...)
-}
-
-// Op returns the operation name.
-func (m *WindMutation) Op() Op {
-	return m.op
-}
-
-// Type returns the node type of this mutation (Wind).
-func (m *WindMutation) Type() string {
-	return m.typ
-}
-
-// Fields returns all fields that were changed during this mutation. Note that in
-// order to get all numeric fields that were incremented/decremented, call
-// AddedFields().
-func (m *WindMutation) Fields() []string {
-	fields := make([]string, 0, 1)
-	if m.name != nil {
-		fields = append(fields, wind.FieldName)
-	}
-	return fields
-}
-
-// Field returns the value of a field with the given name. The second boolean
-// return value indicates that this field was not set, or was not defined in the
-// schema.
-func (m *WindMutation) Field(name string) (ent.Value, bool) {
-	switch name {
-	case wind.FieldName:
-		return m.Name()
-	}
-	return nil, false
-}
-
-// OldField returns the old value of the field from the database. An error is
-// returned if the mutation operation is not UpdateOne, or the query to the
-// database failed.
-func (m *WindMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
-	switch name {
-	case wind.FieldName:
-		return m.OldName(ctx)
-	}
-	return nil, fmt.Errorf("unknown Wind field %s", name)
-}
-
-// SetField sets the value of a field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *WindMutation) SetField(name string, value ent.Value) error {
-	switch name {
-	case wind.FieldName:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetName(v)
-		return nil
-	}
-	return fmt.Errorf("unknown Wind field %s", name)
-}
-
-// AddedFields returns all numeric fields that were incremented/decremented during
-// this mutation.
-func (m *WindMutation) AddedFields() []string {
-	return nil
-}
-
-// AddedField returns the numeric value that was incremented/decremented on a field
-// with the given name. The second boolean return value indicates that this field
-// was not set, or was not defined in the schema.
-func (m *WindMutation) AddedField(name string) (ent.Value, bool) {
-	return nil, false
-}
-
-// AddField adds the value to the field with the given name. It returns an error if
-// the field is not defined in the schema, or if the type mismatched the field
-// type.
-func (m *WindMutation) AddField(name string, value ent.Value) error {
-	switch name {
-	}
-	return fmt.Errorf("unknown Wind numeric field %s", name)
-}
-
-// ClearedFields returns all nullable fields that were cleared during this
-// mutation.
-func (m *WindMutation) ClearedFields() []string {
-	return nil
-}
-
-// FieldCleared returns a boolean indicating if a field with the given name was
-// cleared in this mutation.
-func (m *WindMutation) FieldCleared(name string) bool {
-	_, ok := m.clearedFields[name]
-	return ok
-}
-
-// ClearField clears the value of the field with the given name. It returns an
-// error if the field is not defined in the schema.
-func (m *WindMutation) ClearField(name string) error {
-	return fmt.Errorf("unknown Wind nullable field %s", name)
-}
-
-// ResetField resets all changes in the mutation for the field with the given name.
-// It returns an error if the field is not defined in the schema.
-func (m *WindMutation) ResetField(name string) error {
-	switch name {
-	case wind.FieldName:
-		m.ResetName()
-		return nil
-	}
-	return fmt.Errorf("unknown Wind field %s", name)
-}
-
-// AddedEdges returns all edge names that were set/added in this mutation.
-func (m *WindMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.rounds != nil {
-		edges = append(edges, wind.EdgeRounds)
-	}
-	return edges
-}
-
-// AddedIDs returns all IDs (to other nodes) that were added for the given edge
-// name in this mutation.
-func (m *WindMutation) AddedIDs(name string) []ent.Value {
-	switch name {
-	case wind.EdgeRounds:
-		ids := make([]ent.Value, 0, len(m.rounds))
-		for id := range m.rounds {
-			ids = append(ids, id)
-		}
-		return ids
-	}
-	return nil
-}
-
-// RemovedEdges returns all edge names that were removed in this mutation.
-func (m *WindMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.removedrounds != nil {
-		edges = append(edges, wind.EdgeRounds)
-	}
-	return edges
-}
-
-// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
-// the given name in this mutation.
-func (m *WindMutation) RemovedIDs(name string) []ent.Value {
-	switch name {
-	case wind.EdgeRounds:
-		ids := make([]ent.Value, 0, len(m.removedrounds))
-		for id := range m.removedrounds {
-			ids = append(ids, id)
-		}
-		return ids
-	}
-	return nil
-}
-
-// ClearedEdges returns all edge names that were cleared in this mutation.
-func (m *WindMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.clearedrounds {
-		edges = append(edges, wind.EdgeRounds)
-	}
-	return edges
-}
-
-// EdgeCleared returns a boolean which indicates if the edge with the given name
-// was cleared in this mutation.
-func (m *WindMutation) EdgeCleared(name string) bool {
-	switch name {
-	case wind.EdgeRounds:
-		return m.clearedrounds
-	}
-	return false
-}
-
-// ClearEdge clears the value of the edge with the given name. It returns an error
-// if that edge is not defined in the schema.
-func (m *WindMutation) ClearEdge(name string) error {
-	switch name {
-	}
-	return fmt.Errorf("unknown Wind unique edge %s", name)
-}
-
-// ResetEdge resets all changes to the edge with the given name in this mutation.
-// It returns an error if the edge is not defined in the schema.
-func (m *WindMutation) ResetEdge(name string) error {
-	switch name {
-	case wind.EdgeRounds:
-		m.ResetRounds()
-		return nil
-	}
-	return fmt.Errorf("unknown Wind edge %s", name)
 }

@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -12,7 +13,6 @@ import (
 	"github.com/kanade0404/tenhou-log/services/ent/game"
 	"github.com/kanade0404/tenhou-log/services/ent/hand"
 	"github.com/kanade0404/tenhou-log/services/ent/round"
-	"github.com/kanade0404/tenhou-log/services/ent/wind"
 )
 
 // RoundCreate is the builder for creating a Round entity.
@@ -20,6 +20,12 @@ type RoundCreate struct {
 	config
 	mutation *RoundMutation
 	hooks    []Hook
+}
+
+// SetWind sets the "wind" field.
+func (rc *RoundCreate) SetWind(s string) *RoundCreate {
+	rc.mutation.SetWind(s)
+	return rc
 }
 
 // SetID sets the "id" field.
@@ -68,25 +74,6 @@ func (rc *RoundCreate) AddHands(h ...*Hand) *RoundCreate {
 		ids[i] = h[i].ID
 	}
 	return rc.AddHandIDs(ids...)
-}
-
-// SetWindsID sets the "winds" edge to the Wind entity by ID.
-func (rc *RoundCreate) SetWindsID(id uuid.UUID) *RoundCreate {
-	rc.mutation.SetWindsID(id)
-	return rc
-}
-
-// SetNillableWindsID sets the "winds" edge to the Wind entity by ID if the given value is not nil.
-func (rc *RoundCreate) SetNillableWindsID(id *uuid.UUID) *RoundCreate {
-	if id != nil {
-		rc = rc.SetWindsID(*id)
-	}
-	return rc
-}
-
-// SetWinds sets the "winds" edge to the Wind entity.
-func (rc *RoundCreate) SetWinds(w *Wind) *RoundCreate {
-	return rc.SetWindsID(w.ID)
 }
 
 // Mutation returns the RoundMutation object of the builder.
@@ -174,6 +161,14 @@ func (rc *RoundCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (rc *RoundCreate) check() error {
+	if _, ok := rc.mutation.Wind(); !ok {
+		return &ValidationError{Name: "wind", err: errors.New(`ent: missing required field "Round.wind"`)}
+	}
+	if v, ok := rc.mutation.Wind(); ok {
+		if err := round.WindValidator(v); err != nil {
+			return &ValidationError{Name: "wind", err: fmt.Errorf(`ent: validator failed for field "Round.wind": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -209,6 +204,10 @@ func (rc *RoundCreate) createSpec() (*Round, *sqlgraph.CreateSpec) {
 	if id, ok := rc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
+	}
+	if value, ok := rc.mutation.Wind(); ok {
+		_spec.SetField(round.FieldWind, field.TypeString, value)
+		_node.Wind = value
 	}
 	if nodes := rc.mutation.GamesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -247,26 +246,6 @@ func (rc *RoundCreate) createSpec() (*Round, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := rc.mutation.WindsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   round.WindsTable,
-			Columns: []string{round.WindsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: wind.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_node.wind_rounds = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

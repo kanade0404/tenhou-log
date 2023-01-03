@@ -44,7 +44,6 @@ type hooks struct {
 	Round             []ent.Hook
 	Turn              []ent.Hook
 	Win               []ent.Hook
-	Wind              []ent.Hook
 }
 
 // Options applies the options on the config object.

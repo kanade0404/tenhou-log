@@ -269,19 +269,6 @@ func (f WinFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) 
 	return f(ctx, mv)
 }
 
-// The WindFunc type is an adapter to allow the use of ordinary
-// function as Wind mutator.
-type WindFunc func(context.Context, *ent.WindMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f WindFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	mv, ok := m.(*ent.WindMutation)
-	if !ok {
-		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.WindMutation", m)
-	}
-	return f(ctx, mv)
-}
-
 // Condition is a hook condition function.
 type Condition func(context.Context, ent.Mutation) bool
 

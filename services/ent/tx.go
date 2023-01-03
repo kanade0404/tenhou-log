@@ -52,8 +52,6 @@ type Tx struct {
 	Turn *TurnClient
 	// Win is the client for interacting with the Win builders.
 	Win *WinClient
-	// Wind is the client for interacting with the Wind builders.
-	Wind *WindClient
 
 	// lazily loaded.
 	client     *Client
@@ -205,7 +203,6 @@ func (tx *Tx) init() {
 	tx.Round = NewRoundClient(tx.config)
 	tx.Turn = NewTurnClient(tx.config)
 	tx.Win = NewWinClient(tx.config)
-	tx.Wind = NewWindClient(tx.config)
 }
 
 // txDriver wraps the given dialect.Tx with a nop dialect.Driver implementation.

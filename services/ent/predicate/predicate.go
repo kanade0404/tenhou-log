@@ -65,6 +65,3 @@ type Turn func(*sql.Selector)
 
 // Win is the predicate function for win builders.
 type Win func(*sql.Selector)
-
-// Wind is the predicate function for wind builders.
-type Wind func(*sql.Selector)

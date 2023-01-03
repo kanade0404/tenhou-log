@@ -80,6 +80,112 @@ func IDLTE(id uuid.UUID) predicate.Round {
 	})
 }
 
+// Wind applies equality check predicate on the "wind" field. It's identical to WindEQ.
+func Wind(v string) predicate.Round {
+	return predicate.Round(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldWind), v))
+	})
+}
+
+// WindEQ applies the EQ predicate on the "wind" field.
+func WindEQ(v string) predicate.Round {
+	return predicate.Round(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldWind), v))
+	})
+}
+
+// WindNEQ applies the NEQ predicate on the "wind" field.
+func WindNEQ(v string) predicate.Round {
+	return predicate.Round(func(s *sql.Selector) {
+		s.Where(sql.NEQ(s.C(FieldWind), v))
+	})
+}
+
+// WindIn applies the In predicate on the "wind" field.
+func WindIn(vs ...string) predicate.Round {
+	v := make([]any, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.Round(func(s *sql.Selector) {
+		s.Where(sql.In(s.C(FieldWind), v...))
+	})
+}
+
+// WindNotIn applies the NotIn predicate on the "wind" field.
+func WindNotIn(vs ...string) predicate.Round {
+	v := make([]any, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.Round(func(s *sql.Selector) {
+		s.Where(sql.NotIn(s.C(FieldWind), v...))
+	})
+}
+
+// WindGT applies the GT predicate on the "wind" field.
+func WindGT(v string) predicate.Round {
+	return predicate.Round(func(s *sql.Selector) {
+		s.Where(sql.GT(s.C(FieldWind), v))
+	})
+}
+
+// WindGTE applies the GTE predicate on the "wind" field.
+func WindGTE(v string) predicate.Round {
+	return predicate.Round(func(s *sql.Selector) {
+		s.Where(sql.GTE(s.C(FieldWind), v))
+	})
+}
+
+// WindLT applies the LT predicate on the "wind" field.
+func WindLT(v string) predicate.Round {
+	return predicate.Round(func(s *sql.Selector) {
+		s.Where(sql.LT(s.C(FieldWind), v))
+	})
+}
+
+// WindLTE applies the LTE predicate on the "wind" field.
+func WindLTE(v string) predicate.Round {
+	return predicate.Round(func(s *sql.Selector) {
+		s.Where(sql.LTE(s.C(FieldWind), v))
+	})
+}
+
+// WindContains applies the Contains predicate on the "wind" field.
+func WindContains(v string) predicate.Round {
+	return predicate.Round(func(s *sql.Selector) {
+		s.Where(sql.Contains(s.C(FieldWind), v))
+	})
+}
+
+// WindHasPrefix applies the HasPrefix predicate on the "wind" field.
+func WindHasPrefix(v string) predicate.Round {
+	return predicate.Round(func(s *sql.Selector) {
+		s.Where(sql.HasPrefix(s.C(FieldWind), v))
+	})
+}
+
+// WindHasSuffix applies the HasSuffix predicate on the "wind" field.
+func WindHasSuffix(v string) predicate.Round {
+	return predicate.Round(func(s *sql.Selector) {
+		s.Where(sql.HasSuffix(s.C(FieldWind), v))
+	})
+}
+
+// WindEqualFold applies the EqualFold predicate on the "wind" field.
+func WindEqualFold(v string) predicate.Round {
+	return predicate.Round(func(s *sql.Selector) {
+		s.Where(sql.EqualFold(s.C(FieldWind), v))
+	})
+}
+
+// WindContainsFold applies the ContainsFold predicate on the "wind" field.
+func WindContainsFold(v string) predicate.Round {
+	return predicate.Round(func(s *sql.Selector) {
+		s.Where(sql.ContainsFold(s.C(FieldWind), v))
+	})
+}
+
 // HasGames applies the HasEdge predicate on the "games" edge.
 func HasGames() predicate.Round {
 	return predicate.Round(func(s *sql.Selector) {
@@ -127,34 +233,6 @@ func HasHandsWith(preds ...predicate.Hand) predicate.Round {
 			sqlgraph.From(Table, FieldID),
 			sqlgraph.To(HandsInverseTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, HandsTable, HandsColumn),
-		)
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
-// HasWinds applies the HasEdge predicate on the "winds" edge.
-func HasWinds() predicate.Round {
-	return predicate.Round(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(WindsTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, WindsTable, WindsColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasWindsWith applies the HasEdge predicate on the "winds" edge with a given conditions (other predicates).
-func HasWindsWith(preds ...predicate.Wind) predicate.Round {
-	return predicate.Round(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(WindsInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, WindsTable, WindsColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

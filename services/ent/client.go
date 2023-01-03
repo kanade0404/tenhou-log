@@ -31,7 +31,6 @@ import (
 	"github.com/kanade0404/tenhou-log/services/ent/round"
 	"github.com/kanade0404/tenhou-log/services/ent/turn"
 	"github.com/kanade0404/tenhou-log/services/ent/win"
-	"github.com/kanade0404/tenhou-log/services/ent/wind"
 
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
@@ -83,8 +82,6 @@ type Client struct {
 	Turn *TurnClient
 	// Win is the client for interacting with the Win builders.
 	Win *WinClient
-	// Wind is the client for interacting with the Wind builders.
-	Wind *WindClient
 }
 
 // NewClient creates a new client configured with the given options.
@@ -118,7 +115,6 @@ func (c *Client) init() {
 	c.Round = NewRoundClient(c.config)
 	c.Turn = NewTurnClient(c.config)
 	c.Win = NewWinClient(c.config)
-	c.Wind = NewWindClient(c.config)
 }
 
 // Open opens a database/sql.DB specified by the driver name and
@@ -172,7 +168,6 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		Round:             NewRoundClient(cfg),
 		Turn:              NewTurnClient(cfg),
 		Win:               NewWinClient(cfg),
-		Wind:              NewWindClient(cfg),
 	}, nil
 }
 
@@ -212,7 +207,6 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		Round:             NewRoundClient(cfg),
 		Turn:              NewTurnClient(cfg),
 		Win:               NewWinClient(cfg),
-		Wind:              NewWindClient(cfg),
 	}, nil
 }
 
@@ -262,7 +256,6 @@ func (c *Client) Use(hooks ...Hook) {
 	c.Round.Use(hooks...)
 	c.Turn.Use(hooks...)
 	c.Win.Use(hooks...)
-	c.Wind.Use(hooks...)
 }
 
 // ChakanClient is a client for the Chakan schema.
@@ -2200,22 +2193,6 @@ func (c *RoundClient) QueryHands(r *Round) *HandQuery {
 	return query
 }
 
-// QueryWinds queries the winds edge of a Round.
-func (c *RoundClient) QueryWinds(r *Round) *WindQuery {
-	query := &WindQuery{config: c.config}
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := r.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(round.Table, round.FieldID, id),
-			sqlgraph.To(wind.Table, wind.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, round.WindsTable, round.WindsColumn),
-		)
-		fromV = sqlgraph.Neighbors(r.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
 // Hooks returns the client hooks.
 func (c *RoundClient) Hooks() []Hook {
 	return c.hooks.Round
@@ -2431,110 +2408,4 @@ func (c *WinClient) GetX(ctx context.Context, id int) *Win {
 // Hooks returns the client hooks.
 func (c *WinClient) Hooks() []Hook {
 	return c.hooks.Win
-}
-
-// WindClient is a client for the Wind schema.
-type WindClient struct {
-	config
-}
-
-// NewWindClient returns a client for the Wind from the given config.
-func NewWindClient(c config) *WindClient {
-	return &WindClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `wind.Hooks(f(g(h())))`.
-func (c *WindClient) Use(hooks ...Hook) {
-	c.hooks.Wind = append(c.hooks.Wind, hooks...)
-}
-
-// Create returns a builder for creating a Wind entity.
-func (c *WindClient) Create() *WindCreate {
-	mutation := newWindMutation(c.config, OpCreate)
-	return &WindCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of Wind entities.
-func (c *WindClient) CreateBulk(builders ...*WindCreate) *WindCreateBulk {
-	return &WindCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for Wind.
-func (c *WindClient) Update() *WindUpdate {
-	mutation := newWindMutation(c.config, OpUpdate)
-	return &WindUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *WindClient) UpdateOne(w *Wind) *WindUpdateOne {
-	mutation := newWindMutation(c.config, OpUpdateOne, withWind(w))
-	return &WindUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *WindClient) UpdateOneID(id uuid.UUID) *WindUpdateOne {
-	mutation := newWindMutation(c.config, OpUpdateOne, withWindID(id))
-	return &WindUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for Wind.
-func (c *WindClient) Delete() *WindDelete {
-	mutation := newWindMutation(c.config, OpDelete)
-	return &WindDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *WindClient) DeleteOne(w *Wind) *WindDeleteOne {
-	return c.DeleteOneID(w.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *WindClient) DeleteOneID(id uuid.UUID) *WindDeleteOne {
-	builder := c.Delete().Where(wind.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &WindDeleteOne{builder}
-}
-
-// Query returns a query builder for Wind.
-func (c *WindClient) Query() *WindQuery {
-	return &WindQuery{
-		config: c.config,
-	}
-}
-
-// Get returns a Wind entity by its id.
-func (c *WindClient) Get(ctx context.Context, id uuid.UUID) (*Wind, error) {
-	return c.Query().Where(wind.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *WindClient) GetX(ctx context.Context, id uuid.UUID) *Wind {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// QueryRounds queries the rounds edge of a Wind.
-func (c *WindClient) QueryRounds(w *Wind) *RoundQuery {
-	query := &RoundQuery{config: c.config}
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := w.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(wind.Table, wind.FieldID, id),
-			sqlgraph.To(round.Table, round.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, wind.RoundsTable, wind.RoundsColumn),
-		)
-		fromV = sqlgraph.Neighbors(w.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// Hooks returns the client hooks.
-func (c *WindClient) Hooks() []Hook {
-	return c.hooks.Wind
 }

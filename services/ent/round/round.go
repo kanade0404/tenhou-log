@@ -11,12 +11,12 @@ const (
 	Label = "round"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "oid"
+	// FieldWind holds the string denoting the wind field in the database.
+	FieldWind = "wind"
 	// EdgeGames holds the string denoting the games edge name in mutations.
 	EdgeGames = "games"
 	// EdgeHands holds the string denoting the hands edge name in mutations.
 	EdgeHands = "hands"
-	// EdgeWinds holds the string denoting the winds edge name in mutations.
-	EdgeWinds = "winds"
 	// Table holds the table name of the round in the database.
 	Table = "rounds"
 	// GamesTable is the table that holds the games relation/edge.
@@ -33,25 +33,18 @@ const (
 	HandsInverseTable = "hands"
 	// HandsColumn is the table column denoting the hands relation/edge.
 	HandsColumn = "round_hands"
-	// WindsTable is the table that holds the winds relation/edge.
-	WindsTable = "rounds"
-	// WindsInverseTable is the table name for the Wind entity.
-	// It exists in this package in order to avoid circular dependency with the "wind" package.
-	WindsInverseTable = "winds"
-	// WindsColumn is the table column denoting the winds relation/edge.
-	WindsColumn = "wind_rounds"
 )
 
 // Columns holds all SQL columns for round fields.
 var Columns = []string{
 	FieldID,
+	FieldWind,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "rounds"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
 	"game_rounds",
-	"wind_rounds",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -70,6 +63,8 @@ func ValidColumn(column string) bool {
 }
 
 var (
+	// WindValidator is a validator for the "wind" field. It is called by the builders before save.
+	WindValidator func(string) error
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )

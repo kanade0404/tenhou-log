@@ -16,7 +16,6 @@ import (
 	"github.com/kanade0404/tenhou-log/services/ent/hand"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 	"github.com/kanade0404/tenhou-log/services/ent/round"
-	"github.com/kanade0404/tenhou-log/services/ent/wind"
 )
 
 // RoundQuery is the builder for querying Round entities.
@@ -30,7 +29,6 @@ type RoundQuery struct {
 	predicates []predicate.Round
 	withGames  *GameQuery
 	withHands  *HandQuery
-	withWinds  *WindQuery
 	withFKs    bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -105,28 +103,6 @@ func (rq *RoundQuery) QueryHands() *HandQuery {
 			sqlgraph.From(round.Table, round.FieldID, selector),
 			sqlgraph.To(hand.Table, hand.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, round.HandsTable, round.HandsColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(rq.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
-// QueryWinds chains the current query on the "winds" edge.
-func (rq *RoundQuery) QueryWinds() *WindQuery {
-	query := &WindQuery{config: rq.config}
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := rq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := rq.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(round.Table, round.FieldID, selector),
-			sqlgraph.To(wind.Table, wind.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, round.WindsTable, round.WindsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(rq.driver.Dialect(), step)
 		return fromU, nil
@@ -317,7 +293,6 @@ func (rq *RoundQuery) Clone() *RoundQuery {
 		predicates: append([]predicate.Round{}, rq.predicates...),
 		withGames:  rq.withGames.Clone(),
 		withHands:  rq.withHands.Clone(),
-		withWinds:  rq.withWinds.Clone(),
 		// clone intermediate query.
 		sql:    rq.sql.Clone(),
 		path:   rq.path,
@@ -347,19 +322,21 @@ func (rq *RoundQuery) WithHands(opts ...func(*HandQuery)) *RoundQuery {
 	return rq
 }
 
-// WithWinds tells the query-builder to eager-load the nodes that are connected to
-// the "winds" edge. The optional arguments are used to configure the query builder of the edge.
-func (rq *RoundQuery) WithWinds(opts ...func(*WindQuery)) *RoundQuery {
-	query := &WindQuery{config: rq.config}
-	for _, opt := range opts {
-		opt(query)
-	}
-	rq.withWinds = query
-	return rq
-}
-
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
+//
+// Example:
+//
+//	var v []struct {
+//		Wind string `json:"wind,omitempty"`
+//		Count int `json:"count,omitempty"`
+//	}
+//
+//	client.Round.Query().
+//		GroupBy(round.FieldWind).
+//		Aggregate(ent.Count()).
+//		Scan(ctx, &v)
+//
 func (rq *RoundQuery) GroupBy(field string, fields ...string) *RoundGroupBy {
 	grbuild := &RoundGroupBy{config: rq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -376,6 +353,17 @@ func (rq *RoundQuery) GroupBy(field string, fields ...string) *RoundGroupBy {
 
 // Select allows the selection one or more fields/columns for the given query,
 // instead of selecting all fields in the entity.
+//
+// Example:
+//
+//	var v []struct {
+//		Wind string `json:"wind,omitempty"`
+//	}
+//
+//	client.Round.Query().
+//		Select(round.FieldWind).
+//		Scan(ctx, &v)
+//
 func (rq *RoundQuery) Select(fields ...string) *RoundSelect {
 	rq.fields = append(rq.fields, fields...)
 	selbuild := &RoundSelect{RoundQuery: rq}
@@ -410,13 +398,12 @@ func (rq *RoundQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Round,
 		nodes       = []*Round{}
 		withFKs     = rq.withFKs
 		_spec       = rq.querySpec()
-		loadedTypes = [3]bool{
+		loadedTypes = [2]bool{
 			rq.withGames != nil,
 			rq.withHands != nil,
-			rq.withWinds != nil,
 		}
 	)
-	if rq.withGames != nil || rq.withWinds != nil {
+	if rq.withGames != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -450,12 +437,6 @@ func (rq *RoundQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Round,
 		if err := rq.loadHands(ctx, query, nodes,
 			func(n *Round) { n.Edges.Hands = []*Hand{} },
 			func(n *Round, e *Hand) { n.Edges.Hands = append(n.Edges.Hands, e) }); err != nil {
-			return nil, err
-		}
-	}
-	if query := rq.withWinds; query != nil {
-		if err := rq.loadWinds(ctx, query, nodes, nil,
-			func(n *Round, e *Wind) { n.Edges.Winds = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -519,35 +500,6 @@ func (rq *RoundQuery) loadHands(ctx context.Context, query *HandQuery, nodes []*
 			return fmt.Errorf(`unexpected foreign-key "round_hands" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
-	}
-	return nil
-}
-func (rq *RoundQuery) loadWinds(ctx context.Context, query *WindQuery, nodes []*Round, init func(*Round), assign func(*Round, *Wind)) error {
-	ids := make([]uuid.UUID, 0, len(nodes))
-	nodeids := make(map[uuid.UUID][]*Round)
-	for i := range nodes {
-		if nodes[i].wind_rounds == nil {
-			continue
-		}
-		fk := *nodes[i].wind_rounds
-		if _, ok := nodeids[fk]; !ok {
-			ids = append(ids, fk)
-		}
-		nodeids[fk] = append(nodeids[fk], nodes[i])
-	}
-	query.Where(wind.IDIn(ids...))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		nodes, ok := nodeids[n.ID]
-		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "wind_rounds" returned %v`, n.ID)
-		}
-		for i := range nodes {
-			assign(nodes[i], n)
-		}
 	}
 	return nil
 }

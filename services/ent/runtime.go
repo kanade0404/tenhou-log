@@ -19,7 +19,6 @@ import (
 	"github.com/kanade0404/tenhou-log/services/ent/round"
 	"github.com/kanade0404/tenhou-log/services/ent/schema"
 	"github.com/kanade0404/tenhou-log/services/ent/turn"
-	"github.com/kanade0404/tenhou-log/services/ent/wind"
 )
 
 // The init function reads all schema descriptors with runtime code
@@ -112,6 +111,10 @@ func init() {
 	room.DefaultID = roomDescID.Default.(func() uuid.UUID)
 	roundFields := schema.Round{}.Fields()
 	_ = roundFields
+	// roundDescWind is the schema descriptor for wind field.
+	roundDescWind := roundFields[1].Descriptor()
+	// round.WindValidator is a validator for the "wind" field. It is called by the builders before save.
+	round.WindValidator = roundDescWind.Validators[0].(func(string) error)
 	// roundDescID is the schema descriptor for id field.
 	roundDescID := roundFields[0].Descriptor()
 	// round.DefaultID holds the default value on creation for the id field.
@@ -122,14 +125,4 @@ func init() {
 	turnDescID := turnFields[0].Descriptor()
 	// turn.DefaultID holds the default value on creation for the id field.
 	turn.DefaultID = turnDescID.Default.(func() uuid.UUID)
-	windFields := schema.Wind{}.Fields()
-	_ = windFields
-	// windDescName is the schema descriptor for name field.
-	windDescName := windFields[1].Descriptor()
-	// wind.NameValidator is a validator for the "name" field. It is called by the builders before save.
-	wind.NameValidator = windDescName.Validators[0].(func(string) error)
-	// windDescID is the schema descriptor for id field.
-	windDescID := windFields[0].Descriptor()
-	// wind.DefaultID holds the default value on creation for the id field.
-	wind.DefaultID = windDescID.Default.(func() uuid.UUID)
 }
