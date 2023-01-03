@@ -10,12 +10,14 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/kanade0404/tenhou-log/services/ent/call"
 	"github.com/kanade0404/tenhou-log/services/ent/chakan"
 	"github.com/kanade0404/tenhou-log/services/ent/chii"
 	"github.com/kanade0404/tenhou-log/services/ent/compressedmjlog"
 	"github.com/kanade0404/tenhou-log/services/ent/concealedkan"
 	"github.com/kanade0404/tenhou-log/services/ent/dan"
 	"github.com/kanade0404/tenhou-log/services/ent/drawn"
+	"github.com/kanade0404/tenhou-log/services/ent/event"
 	"github.com/kanade0404/tenhou-log/services/ent/game"
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayer"
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayerhandhai"
@@ -50,12 +52,14 @@ type OrderFunc func(*sql.Selector)
 // columnChecker returns a function indicates if the column exists in the given column.
 func columnChecker(table string) func(string) error {
 	checks := map[string]func(string) bool{
+		call.Table:              call.ValidColumn,
 		chakan.Table:            chakan.ValidColumn,
 		chii.Table:              chii.ValidColumn,
 		compressedmjlog.Table:   compressedmjlog.ValidColumn,
 		concealedkan.Table:      concealedkan.ValidColumn,
 		dan.Table:               dan.ValidColumn,
 		drawn.Table:             drawn.ValidColumn,
+		event.Table:             event.ValidColumn,
 		game.Table:              game.ValidColumn,
 		gameplayer.Table:        gameplayer.ValidColumn,
 		gameplayerhandhai.Table: gameplayerhandhai.ValidColumn,

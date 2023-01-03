@@ -9,6 +9,19 @@ import (
 	"github.com/kanade0404/tenhou-log/services/ent"
 )
 
+// The CallFunc type is an adapter to allow the use of ordinary
+// function as Call mutator.
+type CallFunc func(context.Context, *ent.CallMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f CallFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	mv, ok := m.(*ent.CallMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.CallMutation", m)
+	}
+	return f(ctx, mv)
+}
+
 // The ChakanFunc type is an adapter to allow the use of ordinary
 // function as Chakan mutator.
 type ChakanFunc func(context.Context, *ent.ChakanMutation) (ent.Value, error)
@@ -83,6 +96,19 @@ func (f DrawnFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error
 	mv, ok := m.(*ent.DrawnMutation)
 	if !ok {
 		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.DrawnMutation", m)
+	}
+	return f(ctx, mv)
+}
+
+// The EventFunc type is an adapter to allow the use of ordinary
+// function as Event mutator.
+type EventFunc func(context.Context, *ent.EventMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f EventFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	mv, ok := m.(*ent.EventMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.EventMutation", m)
 	}
 	return f(ctx, mv)
 }

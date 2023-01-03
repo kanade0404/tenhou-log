@@ -11,12 +11,14 @@ import (
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/migrate"
 
+	"github.com/kanade0404/tenhou-log/services/ent/call"
 	"github.com/kanade0404/tenhou-log/services/ent/chakan"
 	"github.com/kanade0404/tenhou-log/services/ent/chii"
 	"github.com/kanade0404/tenhou-log/services/ent/compressedmjlog"
 	"github.com/kanade0404/tenhou-log/services/ent/concealedkan"
 	"github.com/kanade0404/tenhou-log/services/ent/dan"
 	"github.com/kanade0404/tenhou-log/services/ent/drawn"
+	"github.com/kanade0404/tenhou-log/services/ent/event"
 	"github.com/kanade0404/tenhou-log/services/ent/game"
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayer"
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayerhandhai"
@@ -42,6 +44,8 @@ type Client struct {
 	config
 	// Schema is the client for creating, migrating and dropping schema.
 	Schema *migrate.Schema
+	// Call is the client for interacting with the Call builders.
+	Call *CallClient
 	// Chakan is the client for interacting with the Chakan builders.
 	Chakan *ChakanClient
 	// Chii is the client for interacting with the Chii builders.
@@ -54,6 +58,8 @@ type Client struct {
 	Dan *DanClient
 	// Drawn is the client for interacting with the Drawn builders.
 	Drawn *DrawnClient
+	// Event is the client for interacting with the Event builders.
+	Event *EventClient
 	// Game is the client for interacting with the Game builders.
 	Game *GameClient
 	// GamePlayer is the client for interacting with the GamePlayer builders.
@@ -95,12 +101,14 @@ func NewClient(opts ...Option) *Client {
 
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
+	c.Call = NewCallClient(c.config)
 	c.Chakan = NewChakanClient(c.config)
 	c.Chii = NewChiiClient(c.config)
 	c.CompressedMJLog = NewCompressedMJLogClient(c.config)
 	c.ConcealedKan = NewConcealedKanClient(c.config)
 	c.Dan = NewDanClient(c.config)
 	c.Drawn = NewDrawnClient(c.config)
+	c.Event = NewEventClient(c.config)
 	c.Game = NewGameClient(c.config)
 	c.GamePlayer = NewGamePlayerClient(c.config)
 	c.GamePlayerHandHai = NewGamePlayerHandHaiClient(c.config)
@@ -148,12 +156,14 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	return &Tx{
 		ctx:               ctx,
 		config:            cfg,
+		Call:              NewCallClient(cfg),
 		Chakan:            NewChakanClient(cfg),
 		Chii:              NewChiiClient(cfg),
 		CompressedMJLog:   NewCompressedMJLogClient(cfg),
 		ConcealedKan:      NewConcealedKanClient(cfg),
 		Dan:               NewDanClient(cfg),
 		Drawn:             NewDrawnClient(cfg),
+		Event:             NewEventClient(cfg),
 		Game:              NewGameClient(cfg),
 		GamePlayer:        NewGamePlayerClient(cfg),
 		GamePlayerHandHai: NewGamePlayerHandHaiClient(cfg),
@@ -187,12 +197,14 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	return &Tx{
 		ctx:               ctx,
 		config:            cfg,
+		Call:              NewCallClient(cfg),
 		Chakan:            NewChakanClient(cfg),
 		Chii:              NewChiiClient(cfg),
 		CompressedMJLog:   NewCompressedMJLogClient(cfg),
 		ConcealedKan:      NewConcealedKanClient(cfg),
 		Dan:               NewDanClient(cfg),
 		Drawn:             NewDrawnClient(cfg),
+		Event:             NewEventClient(cfg),
 		Game:              NewGameClient(cfg),
 		GamePlayer:        NewGamePlayerClient(cfg),
 		GamePlayerHandHai: NewGamePlayerHandHaiClient(cfg),
@@ -213,7 +225,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		Chakan.
+//		Call.
 //		Query().
 //		Count(ctx)
 //
@@ -236,12 +248,14 @@ func (c *Client) Close() error {
 // Use adds the mutation hooks to all the entity clients.
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
+	c.Call.Use(hooks...)
 	c.Chakan.Use(hooks...)
 	c.Chii.Use(hooks...)
 	c.CompressedMJLog.Use(hooks...)
 	c.ConcealedKan.Use(hooks...)
 	c.Dan.Use(hooks...)
 	c.Drawn.Use(hooks...)
+	c.Event.Use(hooks...)
 	c.Game.Use(hooks...)
 	c.GamePlayer.Use(hooks...)
 	c.GamePlayerHandHai.Use(hooks...)
@@ -256,6 +270,96 @@ func (c *Client) Use(hooks ...Hook) {
 	c.Round.Use(hooks...)
 	c.Turn.Use(hooks...)
 	c.Win.Use(hooks...)
+}
+
+// CallClient is a client for the Call schema.
+type CallClient struct {
+	config
+}
+
+// NewCallClient returns a client for the Call from the given config.
+func NewCallClient(c config) *CallClient {
+	return &CallClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `call.Hooks(f(g(h())))`.
+func (c *CallClient) Use(hooks ...Hook) {
+	c.hooks.Call = append(c.hooks.Call, hooks...)
+}
+
+// Create returns a builder for creating a Call entity.
+func (c *CallClient) Create() *CallCreate {
+	mutation := newCallMutation(c.config, OpCreate)
+	return &CallCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Call entities.
+func (c *CallClient) CreateBulk(builders ...*CallCreate) *CallCreateBulk {
+	return &CallCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Call.
+func (c *CallClient) Update() *CallUpdate {
+	mutation := newCallMutation(c.config, OpUpdate)
+	return &CallUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *CallClient) UpdateOne(ca *Call) *CallUpdateOne {
+	mutation := newCallMutation(c.config, OpUpdateOne, withCall(ca))
+	return &CallUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *CallClient) UpdateOneID(id int) *CallUpdateOne {
+	mutation := newCallMutation(c.config, OpUpdateOne, withCallID(id))
+	return &CallUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Call.
+func (c *CallClient) Delete() *CallDelete {
+	mutation := newCallMutation(c.config, OpDelete)
+	return &CallDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *CallClient) DeleteOne(ca *Call) *CallDeleteOne {
+	return c.DeleteOneID(ca.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *CallClient) DeleteOneID(id int) *CallDeleteOne {
+	builder := c.Delete().Where(call.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &CallDeleteOne{builder}
+}
+
+// Query returns a query builder for Call.
+func (c *CallClient) Query() *CallQuery {
+	return &CallQuery{
+		config: c.config,
+	}
+}
+
+// Get returns a Call entity by its id.
+func (c *CallClient) Get(ctx context.Context, id int) (*Call, error) {
+	return c.Query().Where(call.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *CallClient) GetX(ctx context.Context, id int) *Call {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *CallClient) Hooks() []Hook {
+	return c.hooks.Call
 }
 
 // ChakanClient is a client for the Chakan schema.
@@ -828,6 +932,96 @@ func (c *DrawnClient) GetX(ctx context.Context, id int) *Drawn {
 // Hooks returns the client hooks.
 func (c *DrawnClient) Hooks() []Hook {
 	return c.hooks.Drawn
+}
+
+// EventClient is a client for the Event schema.
+type EventClient struct {
+	config
+}
+
+// NewEventClient returns a client for the Event from the given config.
+func NewEventClient(c config) *EventClient {
+	return &EventClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `event.Hooks(f(g(h())))`.
+func (c *EventClient) Use(hooks ...Hook) {
+	c.hooks.Event = append(c.hooks.Event, hooks...)
+}
+
+// Create returns a builder for creating a Event entity.
+func (c *EventClient) Create() *EventCreate {
+	mutation := newEventMutation(c.config, OpCreate)
+	return &EventCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Event entities.
+func (c *EventClient) CreateBulk(builders ...*EventCreate) *EventCreateBulk {
+	return &EventCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Event.
+func (c *EventClient) Update() *EventUpdate {
+	mutation := newEventMutation(c.config, OpUpdate)
+	return &EventUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *EventClient) UpdateOne(e *Event) *EventUpdateOne {
+	mutation := newEventMutation(c.config, OpUpdateOne, withEvent(e))
+	return &EventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *EventClient) UpdateOneID(id int) *EventUpdateOne {
+	mutation := newEventMutation(c.config, OpUpdateOne, withEventID(id))
+	return &EventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Event.
+func (c *EventClient) Delete() *EventDelete {
+	mutation := newEventMutation(c.config, OpDelete)
+	return &EventDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *EventClient) DeleteOne(e *Event) *EventDeleteOne {
+	return c.DeleteOneID(e.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *EventClient) DeleteOneID(id int) *EventDeleteOne {
+	builder := c.Delete().Where(event.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &EventDeleteOne{builder}
+}
+
+// Query returns a query builder for Event.
+func (c *EventClient) Query() *EventQuery {
+	return &EventQuery{
+		config: c.config,
+	}
+}
+
+// Get returns a Event entity by its id.
+func (c *EventClient) Get(ctx context.Context, id int) (*Event, error) {
+	return c.Query().Where(event.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *EventClient) GetX(ctx context.Context, id int) *Event {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *EventClient) Hooks() []Hook {
+	return c.hooks.Event
 }
 
 // GameClient is a client for the Game schema.

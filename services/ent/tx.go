@@ -12,6 +12,8 @@ import (
 // Tx is a transactional client that is created by calling Client.Tx().
 type Tx struct {
 	config
+	// Call is the client for interacting with the Call builders.
+	Call *CallClient
 	// Chakan is the client for interacting with the Chakan builders.
 	Chakan *ChakanClient
 	// Chii is the client for interacting with the Chii builders.
@@ -24,6 +26,8 @@ type Tx struct {
 	Dan *DanClient
 	// Drawn is the client for interacting with the Drawn builders.
 	Drawn *DrawnClient
+	// Event is the client for interacting with the Event builders.
+	Event *EventClient
 	// Game is the client for interacting with the Game builders.
 	Game *GameClient
 	// GamePlayer is the client for interacting with the GamePlayer builders.
@@ -183,12 +187,14 @@ func (tx *Tx) Client() *Client {
 }
 
 func (tx *Tx) init() {
+	tx.Call = NewCallClient(tx.config)
 	tx.Chakan = NewChakanClient(tx.config)
 	tx.Chii = NewChiiClient(tx.config)
 	tx.CompressedMJLog = NewCompressedMJLogClient(tx.config)
 	tx.ConcealedKan = NewConcealedKanClient(tx.config)
 	tx.Dan = NewDanClient(tx.config)
 	tx.Drawn = NewDrawnClient(tx.config)
+	tx.Event = NewEventClient(tx.config)
 	tx.Game = NewGameClient(tx.config)
 	tx.GamePlayer = NewGamePlayerClient(tx.config)
 	tx.GamePlayerHandHai = NewGamePlayerHandHaiClient(tx.config)
@@ -212,7 +218,7 @@ func (tx *Tx) init() {
 // of them in order to commit or rollback the transaction.
 //
 // If a closed transaction is embedded in one of the generated entities, and the entity
-// applies a query, for example: Chakan.QueryXXX(), the query will be executed
+// applies a query, for example: Call.QueryXXX(), the query will be executed
 // through the driver which created this transaction.
 //
 // Note that txDriver is not goroutine safe.

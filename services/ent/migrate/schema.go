@@ -8,6 +8,16 @@ import (
 )
 
 var (
+	// CallsColumns holds the columns for the "calls" table.
+	CallsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+	}
+	// CallsTable holds the schema information for the "calls" table.
+	CallsTable = &schema.Table{
+		Name:       "calls",
+		Columns:    CallsColumns,
+		PrimaryKey: []*schema.Column{CallsColumns[0]},
+	}
 	// ChakansColumns holds the columns for the "chakans" table.
 	ChakansColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -70,6 +80,16 @@ var (
 		Name:       "drawns",
 		Columns:    DrawnsColumns,
 		PrimaryKey: []*schema.Column{DrawnsColumns[0]},
+	}
+	// EventsColumns holds the columns for the "events" table.
+	EventsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+	}
+	// EventsTable holds the schema information for the "events" table.
+	EventsTable = &schema.Table{
+		Name:       "events",
+		Columns:    EventsColumns,
+		PrimaryKey: []*schema.Column{EventsColumns[0]},
 	}
 	// GamesColumns holds the columns for the "games" table.
 	GamesColumns = []*schema.Column{
@@ -374,12 +394,14 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		CallsTable,
 		ChakansTable,
 		ChiisTable,
 		CompressedMjLogsTable,
 		ConcealedKansTable,
 		DansTable,
 		DrawnsTable,
+		EventsTable,
 		GamesTable,
 		GamePlayersTable,
 		GamePlayerHandHaisTable,

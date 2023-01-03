@@ -6,6 +6,9 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
+// Call is the predicate function for call builders.
+type Call func(*sql.Selector)
+
 // Chakan is the predicate function for chakan builders.
 type Chakan func(*sql.Selector)
 
@@ -23,6 +26,9 @@ type Dan func(*sql.Selector)
 
 // Drawn is the predicate function for drawn builders.
 type Drawn func(*sql.Selector)
+
+// Event is the predicate function for event builders.
+type Event func(*sql.Selector)
 
 // Game is the predicate function for game builders.
 type Game func(*sql.Selector)
