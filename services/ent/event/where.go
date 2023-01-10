@@ -4,6 +4,7 @@ package event
 
 import (
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 )
 
@@ -75,6 +76,62 @@ func IDLT(id int) predicate.Event {
 func IDLTE(id int) predicate.Event {
 	return predicate.Event(func(s *sql.Selector) {
 		s.Where(sql.LTE(s.C(FieldID), id))
+	})
+}
+
+// HasTurn applies the HasEdge predicate on the "turn" edge.
+func HasTurn() predicate.Event {
+	return predicate.Event(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(TurnTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, TurnTable, TurnColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasTurnWith applies the HasEdge predicate on the "turn" edge with a given conditions (other predicates).
+func HasTurnWith(preds ...predicate.Turn) predicate.Event {
+	return predicate.Event(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(TurnInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, TurnTable, TurnColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasWin applies the HasEdge predicate on the "win" edge.
+func HasWin() predicate.Event {
+	return predicate.Event(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(WinTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, WinTable, WinColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasWinWith applies the HasEdge predicate on the "win" edge with a given conditions (other predicates).
+func HasWinWith(preds ...predicate.Win) predicate.Event {
+	return predicate.Event(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(WinInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, WinTable, WinColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
 	})
 }
 

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"entgo.io/ent/dialect/sql"
+	"github.com/kanade0404/tenhou-log/services/ent/event"
 	"github.com/kanade0404/tenhou-log/services/ent/win"
 )
 
@@ -15,6 +16,32 @@ type Win struct {
 	config
 	// ID of the ent.
 	ID int `json:"id,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the WinQuery when eager-loading is set.
+	Edges     WinEdges `json:"edges"`
+	event_win *int
+}
+
+// WinEdges holds the relations/edges for other nodes in the graph.
+type WinEdges struct {
+	// Event holds the value of the event edge.
+	Event *Event `json:"event,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// EventOrErr returns the Event value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e WinEdges) EventOrErr() (*Event, error) {
+	if e.loadedTypes[0] {
+		if e.Event == nil {
+			// Edge was loaded but was not found.
+			return nil, &NotFoundError{label: event.Label}
+		}
+		return e.Event, nil
+	}
+	return nil, &NotLoadedError{edge: "event"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -23,6 +50,8 @@ func (*Win) scanValues(columns []string) ([]any, error) {
 	for i := range columns {
 		switch columns[i] {
 		case win.FieldID:
+			values[i] = new(sql.NullInt64)
+		case win.ForeignKeys[0]: // event_win
 			values[i] = new(sql.NullInt64)
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Win", columns[i])
@@ -45,9 +74,21 @@ func (w *Win) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
 			w.ID = int(value.Int64)
+		case win.ForeignKeys[0]:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for edge-field event_win", value)
+			} else if value.Valid {
+				w.event_win = new(int)
+				*w.event_win = int(value.Int64)
+			}
 		}
 	}
 	return nil
+}
+
+// QueryEvent queries the "event" edge of the Win entity.
+func (w *Win) QueryEvent() *EventQuery {
+	return (&WinClient{config: w.config}).QueryEvent(w)
 }
 
 // Update returns a builder for updating this Win.

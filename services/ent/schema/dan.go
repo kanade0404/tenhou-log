@@ -15,7 +15,7 @@ type Dan struct {
 // Fields of the Dan.
 func (Dan) Fields() []ent.Field {
 	return []ent.Field{
-		field.UUID("id", uuid.UUID{}).Default(uuid.New).StorageKey("oid"),
+		field.UUID("id", uuid.UUID{}).Default(uuid.New),
 		field.String("name").Unique().Immutable(),
 	}
 }

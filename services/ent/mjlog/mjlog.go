@@ -12,7 +12,7 @@ const (
 	// Label holds the string label denoting the mjlog type in the database.
 	Label = "mj_log"
 	// FieldID holds the string denoting the id field in the database.
-	FieldID = "oid"
+	FieldID = "id"
 	// FieldVersion holds the string denoting the version field in the database.
 	FieldVersion = "version"
 	// FieldSeed holds the string denoting the seed field in the database.

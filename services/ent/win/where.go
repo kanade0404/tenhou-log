@@ -4,6 +4,7 @@ package win
 
 import (
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 )
 
@@ -75,6 +76,34 @@ func IDLT(id int) predicate.Win {
 func IDLTE(id int) predicate.Win {
 	return predicate.Win(func(s *sql.Selector) {
 		s.Where(sql.LTE(s.C(FieldID), id))
+	})
+}
+
+// HasEvent applies the HasEdge predicate on the "event" edge.
+func HasEvent() predicate.Win {
+	return predicate.Win(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(EventTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, EventTable, EventColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasEventWith applies the HasEdge predicate on the "event" edge with a given conditions (other predicates).
+func HasEventWith(preds ...predicate.Event) predicate.Win {
+	return predicate.Win(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(EventInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, EventTable, EventColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
 	})
 }
 

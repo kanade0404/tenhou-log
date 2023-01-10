@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 
+	"entgo.io/ent/dialect"
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -20,6 +22,7 @@ type MJLogFileCreate struct {
 	config
 	mutation *MJLogFileMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // SetName sets the "name" field.
@@ -195,6 +198,7 @@ func (mlfc *MJLogFileCreate) createSpec() (*MJLogFile, *sqlgraph.CreateSpec) {
 			},
 		}
 	)
+	_spec.OnConflict = mlfc.conflict
 	if id, ok := mlfc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
@@ -245,10 +249,149 @@ func (mlfc *MJLogFileCreate) createSpec() (*MJLogFile, *sqlgraph.CreateSpec) {
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.MJLogFile.Create().
+//		SetName(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.MJLogFileUpsert) {
+//			SetName(v+v).
+//		}).
+//		Exec(ctx)
+func (mlfc *MJLogFileCreate) OnConflict(opts ...sql.ConflictOption) *MJLogFileUpsertOne {
+	mlfc.conflict = opts
+	return &MJLogFileUpsertOne{
+		create: mlfc,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.MJLogFile.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (mlfc *MJLogFileCreate) OnConflictColumns(columns ...string) *MJLogFileUpsertOne {
+	mlfc.conflict = append(mlfc.conflict, sql.ConflictColumns(columns...))
+	return &MJLogFileUpsertOne{
+		create: mlfc,
+	}
+}
+
+type (
+	// MJLogFileUpsertOne is the builder for "upsert"-ing
+	//  one MJLogFile node.
+	MJLogFileUpsertOne struct {
+		create *MJLogFileCreate
+	}
+
+	// MJLogFileUpsert is the "OnConflict" setter.
+	MJLogFileUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
+// Using this option is equivalent to using:
+//
+//	client.MJLogFile.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(mjlogfile.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *MJLogFileUpsertOne) UpdateNewValues() *MJLogFileUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.ID(); exists {
+			s.SetIgnore(mjlogfile.FieldID)
+		}
+		if _, exists := u.create.mutation.Name(); exists {
+			s.SetIgnore(mjlogfile.FieldName)
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.MJLogFile.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *MJLogFileUpsertOne) Ignore() *MJLogFileUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *MJLogFileUpsertOne) DoNothing() *MJLogFileUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the MJLogFileCreate.OnConflict
+// documentation for more info.
+func (u *MJLogFileUpsertOne) Update(set func(*MJLogFileUpsert)) *MJLogFileUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&MJLogFileUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// Exec executes the query.
+func (u *MJLogFileUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for MJLogFileCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *MJLogFileUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *MJLogFileUpsertOne) ID(ctx context.Context) (id uuid.UUID, err error) {
+	if u.create.driver.Dialect() == dialect.MySQL {
+		// In case of "ON CONFLICT", there is no way to get back non-numeric ID
+		// fields from the database since MySQL does not support the RETURNING clause.
+		return id, errors.New("ent: MJLogFileUpsertOne.ID is not supported by MySQL driver. Use MJLogFileUpsertOne.Exec instead")
+	}
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *MJLogFileUpsertOne) IDX(ctx context.Context) uuid.UUID {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 // MJLogFileCreateBulk is the builder for creating many MJLogFile entities in bulk.
 type MJLogFileCreateBulk struct {
 	config
 	builders []*MJLogFileCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the MJLogFile entities in the database.
@@ -275,6 +418,7 @@ func (mlfcb *MJLogFileCreateBulk) Save(ctx context.Context) ([]*MJLogFile, error
 					_, err = mutators[i+1].Mutate(root, mlfcb.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = mlfcb.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, mlfcb.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -321,6 +465,120 @@ func (mlfcb *MJLogFileCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (mlfcb *MJLogFileCreateBulk) ExecX(ctx context.Context) {
 	if err := mlfcb.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.MJLogFile.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.MJLogFileUpsert) {
+//			SetName(v+v).
+//		}).
+//		Exec(ctx)
+func (mlfcb *MJLogFileCreateBulk) OnConflict(opts ...sql.ConflictOption) *MJLogFileUpsertBulk {
+	mlfcb.conflict = opts
+	return &MJLogFileUpsertBulk{
+		create: mlfcb,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.MJLogFile.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (mlfcb *MJLogFileCreateBulk) OnConflictColumns(columns ...string) *MJLogFileUpsertBulk {
+	mlfcb.conflict = append(mlfcb.conflict, sql.ConflictColumns(columns...))
+	return &MJLogFileUpsertBulk{
+		create: mlfcb,
+	}
+}
+
+// MJLogFileUpsertBulk is the builder for "upsert"-ing
+// a bulk of MJLogFile nodes.
+type MJLogFileUpsertBulk struct {
+	create *MJLogFileCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.MJLogFile.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(mjlogfile.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *MJLogFileUpsertBulk) UpdateNewValues() *MJLogFileUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.ID(); exists {
+				s.SetIgnore(mjlogfile.FieldID)
+			}
+			if _, exists := b.mutation.Name(); exists {
+				s.SetIgnore(mjlogfile.FieldName)
+			}
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.MJLogFile.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *MJLogFileUpsertBulk) Ignore() *MJLogFileUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *MJLogFileUpsertBulk) DoNothing() *MJLogFileUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the MJLogFileCreateBulk.OnConflict
+// documentation for more info.
+func (u *MJLogFileUpsertBulk) Update(set func(*MJLogFileUpsert)) *MJLogFileUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&MJLogFileUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// Exec executes the query.
+func (u *MJLogFileUpsertBulk) Exec(ctx context.Context) error {
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the MJLogFileCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for MJLogFileCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *MJLogFileUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

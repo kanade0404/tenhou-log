@@ -16,7 +16,7 @@ type Round struct {
 // Fields of the Round.
 func (Round) Fields() []ent.Field {
 	return []ent.Field{
-		field.UUID("id", uuid.UUID{}).Default(uuid.New).StorageKey("oid"),
+		field.UUID("id", uuid.UUID{}).Default(uuid.New),
 		field.String("wind").Immutable().Match(regexp.MustCompile("^[ESWN]$")),
 	}
 }

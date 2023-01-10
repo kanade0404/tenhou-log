@@ -408,7 +408,6 @@ func (gq *GameQuery) WithRounds(opts ...func(*RoundQuery)) *GameQuery {
 //		GroupBy(game.FieldName).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (gq *GameQuery) GroupBy(field string, fields ...string) *GameGroupBy {
 	grbuild := &GameGroupBy{config: gq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -435,7 +434,6 @@ func (gq *GameQuery) GroupBy(field string, fields ...string) *GameGroupBy {
 //	client.Game.Query().
 //		Select(game.FieldName).
 //		Scan(ctx, &v)
-//
 func (gq *GameQuery) Select(fields ...string) *GameSelect {
 	gq.fields = append(gq.fields, fields...)
 	selbuild := &GameSelect{GameQuery: gq}

@@ -4,8 +4,10 @@ package ent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/kanade0404/tenhou-log/services/ent/meldedkan"
@@ -16,6 +18,7 @@ type MeldedKanCreate struct {
 	config
 	mutation *MeldedKanMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // Mutation returns the MeldedKanMutation object of the builder.
@@ -121,13 +124,131 @@ func (mkc *MeldedKanCreate) createSpec() (*MeldedKan, *sqlgraph.CreateSpec) {
 			},
 		}
 	)
+	_spec.OnConflict = mkc.conflict
 	return _node, _spec
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.MeldedKan.Create().
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (mkc *MeldedKanCreate) OnConflict(opts ...sql.ConflictOption) *MeldedKanUpsertOne {
+	mkc.conflict = opts
+	return &MeldedKanUpsertOne{
+		create: mkc,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.MeldedKan.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (mkc *MeldedKanCreate) OnConflictColumns(columns ...string) *MeldedKanUpsertOne {
+	mkc.conflict = append(mkc.conflict, sql.ConflictColumns(columns...))
+	return &MeldedKanUpsertOne{
+		create: mkc,
+	}
+}
+
+type (
+	// MeldedKanUpsertOne is the builder for "upsert"-ing
+	//  one MeldedKan node.
+	MeldedKanUpsertOne struct {
+		create *MeldedKanCreate
+	}
+
+	// MeldedKanUpsert is the "OnConflict" setter.
+	MeldedKanUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create.
+// Using this option is equivalent to using:
+//
+//	client.MeldedKan.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (u *MeldedKanUpsertOne) UpdateNewValues() *MeldedKanUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.MeldedKan.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *MeldedKanUpsertOne) Ignore() *MeldedKanUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *MeldedKanUpsertOne) DoNothing() *MeldedKanUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the MeldedKanCreate.OnConflict
+// documentation for more info.
+func (u *MeldedKanUpsertOne) Update(set func(*MeldedKanUpsert)) *MeldedKanUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&MeldedKanUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// Exec executes the query.
+func (u *MeldedKanUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for MeldedKanCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *MeldedKanUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *MeldedKanUpsertOne) ID(ctx context.Context) (id int, err error) {
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *MeldedKanUpsertOne) IDX(ctx context.Context) int {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
 }
 
 // MeldedKanCreateBulk is the builder for creating many MeldedKan entities in bulk.
 type MeldedKanCreateBulk struct {
 	config
 	builders []*MeldedKanCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the MeldedKan entities in the database.
@@ -153,6 +274,7 @@ func (mkcb *MeldedKanCreateBulk) Save(ctx context.Context) ([]*MeldedKan, error)
 					_, err = mutators[i+1].Mutate(root, mkcb.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = mkcb.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, mkcb.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -203,6 +325,102 @@ func (mkcb *MeldedKanCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (mkcb *MeldedKanCreateBulk) ExecX(ctx context.Context) {
 	if err := mkcb.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.MeldedKan.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (mkcb *MeldedKanCreateBulk) OnConflict(opts ...sql.ConflictOption) *MeldedKanUpsertBulk {
+	mkcb.conflict = opts
+	return &MeldedKanUpsertBulk{
+		create: mkcb,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.MeldedKan.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (mkcb *MeldedKanCreateBulk) OnConflictColumns(columns ...string) *MeldedKanUpsertBulk {
+	mkcb.conflict = append(mkcb.conflict, sql.ConflictColumns(columns...))
+	return &MeldedKanUpsertBulk{
+		create: mkcb,
+	}
+}
+
+// MeldedKanUpsertBulk is the builder for "upsert"-ing
+// a bulk of MeldedKan nodes.
+type MeldedKanUpsertBulk struct {
+	create *MeldedKanCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.MeldedKan.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (u *MeldedKanUpsertBulk) UpdateNewValues() *MeldedKanUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.MeldedKan.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *MeldedKanUpsertBulk) Ignore() *MeldedKanUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *MeldedKanUpsertBulk) DoNothing() *MeldedKanUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the MeldedKanCreateBulk.OnConflict
+// documentation for more info.
+func (u *MeldedKanUpsertBulk) Update(set func(*MeldedKanUpsert)) *MeldedKanUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&MeldedKanUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// Exec executes the query.
+func (u *MeldedKanUpsertBulk) Exec(ctx context.Context) error {
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the MeldedKanCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for MeldedKanCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *MeldedKanUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

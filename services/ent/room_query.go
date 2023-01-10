@@ -299,7 +299,6 @@ func (rq *RoomQuery) WithGames(opts ...func(*GameQuery)) *RoomQuery {
 //		GroupBy(room.FieldName).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (rq *RoomQuery) GroupBy(field string, fields ...string) *RoomGroupBy {
 	grbuild := &RoomGroupBy{config: rq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -326,7 +325,6 @@ func (rq *RoomQuery) GroupBy(field string, fields ...string) *RoomGroupBy {
 //	client.Room.Query().
 //		Select(room.FieldName).
 //		Scan(ctx, &v)
-//
 func (rq *RoomQuery) Select(fields ...string) *RoomSelect {
 	rq.fields = append(rq.fields, fields...)
 	selbuild := &RoomSelect{RoomQuery: rq}

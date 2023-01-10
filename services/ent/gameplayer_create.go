@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 
+	"entgo.io/ent/dialect"
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
@@ -21,6 +23,7 @@ type GamePlayerCreate struct {
 	config
 	mutation *GamePlayerMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // SetRate sets the "rate" field.
@@ -230,6 +233,7 @@ func (gpc *GamePlayerCreate) createSpec() (*GamePlayer, *sqlgraph.CreateSpec) {
 			},
 		}
 	)
+	_spec.OnConflict = gpc.conflict
 	if id, ok := gpc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
@@ -304,10 +308,175 @@ func (gpc *GamePlayerCreate) createSpec() (*GamePlayer, *sqlgraph.CreateSpec) {
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.GamePlayer.Create().
+//		SetRate(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.GamePlayerUpsert) {
+//			SetRate(v+v).
+//		}).
+//		Exec(ctx)
+func (gpc *GamePlayerCreate) OnConflict(opts ...sql.ConflictOption) *GamePlayerUpsertOne {
+	gpc.conflict = opts
+	return &GamePlayerUpsertOne{
+		create: gpc,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.GamePlayer.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (gpc *GamePlayerCreate) OnConflictColumns(columns ...string) *GamePlayerUpsertOne {
+	gpc.conflict = append(gpc.conflict, sql.ConflictColumns(columns...))
+	return &GamePlayerUpsertOne{
+		create: gpc,
+	}
+}
+
+type (
+	// GamePlayerUpsertOne is the builder for "upsert"-ing
+	//  one GamePlayer node.
+	GamePlayerUpsertOne struct {
+		create *GamePlayerCreate
+	}
+
+	// GamePlayerUpsert is the "OnConflict" setter.
+	GamePlayerUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// SetStartPosition sets the "start_position" field.
+func (u *GamePlayerUpsert) SetStartPosition(v string) *GamePlayerUpsert {
+	u.Set(gameplayer.FieldStartPosition, v)
+	return u
+}
+
+// UpdateStartPosition sets the "start_position" field to the value that was provided on create.
+func (u *GamePlayerUpsert) UpdateStartPosition() *GamePlayerUpsert {
+	u.SetExcluded(gameplayer.FieldStartPosition)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
+// Using this option is equivalent to using:
+//
+//	client.GamePlayer.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(gameplayer.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *GamePlayerUpsertOne) UpdateNewValues() *GamePlayerUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.ID(); exists {
+			s.SetIgnore(gameplayer.FieldID)
+		}
+		if _, exists := u.create.mutation.Rate(); exists {
+			s.SetIgnore(gameplayer.FieldRate)
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.GamePlayer.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *GamePlayerUpsertOne) Ignore() *GamePlayerUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *GamePlayerUpsertOne) DoNothing() *GamePlayerUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the GamePlayerCreate.OnConflict
+// documentation for more info.
+func (u *GamePlayerUpsertOne) Update(set func(*GamePlayerUpsert)) *GamePlayerUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&GamePlayerUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetStartPosition sets the "start_position" field.
+func (u *GamePlayerUpsertOne) SetStartPosition(v string) *GamePlayerUpsertOne {
+	return u.Update(func(s *GamePlayerUpsert) {
+		s.SetStartPosition(v)
+	})
+}
+
+// UpdateStartPosition sets the "start_position" field to the value that was provided on create.
+func (u *GamePlayerUpsertOne) UpdateStartPosition() *GamePlayerUpsertOne {
+	return u.Update(func(s *GamePlayerUpsert) {
+		s.UpdateStartPosition()
+	})
+}
+
+// Exec executes the query.
+func (u *GamePlayerUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for GamePlayerCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *GamePlayerUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *GamePlayerUpsertOne) ID(ctx context.Context) (id uuid.UUID, err error) {
+	if u.create.driver.Dialect() == dialect.MySQL {
+		// In case of "ON CONFLICT", there is no way to get back non-numeric ID
+		// fields from the database since MySQL does not support the RETURNING clause.
+		return id, errors.New("ent: GamePlayerUpsertOne.ID is not supported by MySQL driver. Use GamePlayerUpsertOne.Exec instead")
+	}
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *GamePlayerUpsertOne) IDX(ctx context.Context) uuid.UUID {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 // GamePlayerCreateBulk is the builder for creating many GamePlayer entities in bulk.
 type GamePlayerCreateBulk struct {
 	config
 	builders []*GamePlayerCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the GamePlayer entities in the database.
@@ -334,6 +503,7 @@ func (gpcb *GamePlayerCreateBulk) Save(ctx context.Context) ([]*GamePlayer, erro
 					_, err = mutators[i+1].Mutate(root, gpcb.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = gpcb.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, gpcb.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -380,6 +550,134 @@ func (gpcb *GamePlayerCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (gpcb *GamePlayerCreateBulk) ExecX(ctx context.Context) {
 	if err := gpcb.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.GamePlayer.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.GamePlayerUpsert) {
+//			SetRate(v+v).
+//		}).
+//		Exec(ctx)
+func (gpcb *GamePlayerCreateBulk) OnConflict(opts ...sql.ConflictOption) *GamePlayerUpsertBulk {
+	gpcb.conflict = opts
+	return &GamePlayerUpsertBulk{
+		create: gpcb,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.GamePlayer.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (gpcb *GamePlayerCreateBulk) OnConflictColumns(columns ...string) *GamePlayerUpsertBulk {
+	gpcb.conflict = append(gpcb.conflict, sql.ConflictColumns(columns...))
+	return &GamePlayerUpsertBulk{
+		create: gpcb,
+	}
+}
+
+// GamePlayerUpsertBulk is the builder for "upsert"-ing
+// a bulk of GamePlayer nodes.
+type GamePlayerUpsertBulk struct {
+	create *GamePlayerCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.GamePlayer.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(gameplayer.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *GamePlayerUpsertBulk) UpdateNewValues() *GamePlayerUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.ID(); exists {
+				s.SetIgnore(gameplayer.FieldID)
+			}
+			if _, exists := b.mutation.Rate(); exists {
+				s.SetIgnore(gameplayer.FieldRate)
+			}
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.GamePlayer.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *GamePlayerUpsertBulk) Ignore() *GamePlayerUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *GamePlayerUpsertBulk) DoNothing() *GamePlayerUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the GamePlayerCreateBulk.OnConflict
+// documentation for more info.
+func (u *GamePlayerUpsertBulk) Update(set func(*GamePlayerUpsert)) *GamePlayerUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&GamePlayerUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetStartPosition sets the "start_position" field.
+func (u *GamePlayerUpsertBulk) SetStartPosition(v string) *GamePlayerUpsertBulk {
+	return u.Update(func(s *GamePlayerUpsert) {
+		s.SetStartPosition(v)
+	})
+}
+
+// UpdateStartPosition sets the "start_position" field to the value that was provided on create.
+func (u *GamePlayerUpsertBulk) UpdateStartPosition() *GamePlayerUpsertBulk {
+	return u.Update(func(s *GamePlayerUpsert) {
+		s.UpdateStartPosition()
+	})
+}
+
+// Exec executes the query.
+func (u *GamePlayerUpsertBulk) Exec(ctx context.Context) error {
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the GamePlayerCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for GamePlayerCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *GamePlayerUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

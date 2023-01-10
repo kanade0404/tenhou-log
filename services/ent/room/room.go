@@ -10,7 +10,7 @@ const (
 	// Label holds the string label denoting the room type in the database.
 	Label = "room"
 	// FieldID holds the string denoting the id field in the database.
-	FieldID = "oid"
+	FieldID = "id"
 	// FieldName holds the string denoting the name field in the database.
 	FieldName = "name"
 	// EdgeGames holds the string denoting the games edge name in mutations.

@@ -299,7 +299,6 @@ func (dq *DanQuery) WithGamePlayers(opts ...func(*GamePlayerQuery)) *DanQuery {
 //		GroupBy(dan.FieldName).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (dq *DanQuery) GroupBy(field string, fields ...string) *DanGroupBy {
 	grbuild := &DanGroupBy{config: dq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -326,7 +325,6 @@ func (dq *DanQuery) GroupBy(field string, fields ...string) *DanGroupBy {
 //	client.Dan.Query().
 //		Select(dan.FieldName).
 //		Scan(ctx, &v)
-//
 func (dq *DanQuery) Select(fields ...string) *DanSelect {
 	dq.fields = append(dq.fields, fields...)
 	selbuild := &DanSelect{DanQuery: dq}

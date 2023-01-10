@@ -335,7 +335,6 @@ func (mlq *MJLogQuery) WithGames(opts ...func(*GameQuery)) *MJLogQuery {
 //		GroupBy(mjlog.FieldVersion).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (mlq *MJLogQuery) GroupBy(field string, fields ...string) *MJLogGroupBy {
 	grbuild := &MJLogGroupBy{config: mlq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -362,7 +361,6 @@ func (mlq *MJLogQuery) GroupBy(field string, fields ...string) *MJLogGroupBy {
 //	client.MJLog.Query().
 //		Select(mjlog.FieldVersion).
 //		Scan(ctx, &v)
-//
 func (mlq *MJLogQuery) Select(fields ...string) *MJLogSelect {
 	mlq.fields = append(mlq.fields, fields...)
 	selbuild := &MJLogSelect{MJLogQuery: mlq}

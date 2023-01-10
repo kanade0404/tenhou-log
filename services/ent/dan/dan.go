@@ -10,7 +10,7 @@ const (
 	// Label holds the string label denoting the dan type in the database.
 	Label = "dan"
 	// FieldID holds the string denoting the id field in the database.
-	FieldID = "oid"
+	FieldID = "id"
 	// FieldName holds the string denoting the name field in the database.
 	FieldName = "name"
 	// EdgeGamePlayers holds the string denoting the game_players edge name in mutations.

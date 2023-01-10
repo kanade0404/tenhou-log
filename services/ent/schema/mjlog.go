@@ -16,7 +16,7 @@ type MJLog struct {
 // Fields of the MJLog.
 func (MJLog) Fields() []ent.Field {
 	return []ent.Field{
-		field.UUID("id", uuid.UUID{}).Default(uuid.New).StorageKey("oid"),
+		field.UUID("id", uuid.UUID{}).Default(uuid.New),
 		field.Float("version").Immutable(),
 		field.String("seed").Immutable(),
 		field.Time("started_at").Immutable(),

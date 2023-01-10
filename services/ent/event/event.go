@@ -7,8 +7,26 @@ const (
 	Label = "event"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
+	// EdgeTurn holds the string denoting the turn edge name in mutations.
+	EdgeTurn = "turn"
+	// EdgeWin holds the string denoting the win edge name in mutations.
+	EdgeWin = "win"
 	// Table holds the table name of the event in the database.
 	Table = "events"
+	// TurnTable is the table that holds the turn relation/edge.
+	TurnTable = "events"
+	// TurnInverseTable is the table name for the Turn entity.
+	// It exists in this package in order to avoid circular dependency with the "turn" package.
+	TurnInverseTable = "turns"
+	// TurnColumn is the table column denoting the turn relation/edge.
+	TurnColumn = "turn_event"
+	// WinTable is the table that holds the win relation/edge.
+	WinTable = "wins"
+	// WinInverseTable is the table name for the Win entity.
+	// It exists in this package in order to avoid circular dependency with the "win" package.
+	WinInverseTable = "wins"
+	// WinColumn is the table column denoting the win relation/edge.
+	WinColumn = "event_win"
 )
 
 // Columns holds all SQL columns for event fields.
@@ -16,10 +34,21 @@ var Columns = []string{
 	FieldID,
 }
 
+// ForeignKeys holds the SQL foreign-keys that are owned by the "events"
+// table and are not defined as standalone fields in the schema.
+var ForeignKeys = []string{
+	"turn_event",
+}
+
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
+			return true
+		}
+	}
+	for i := range ForeignKeys {
+		if column == ForeignKeys[i] {
 			return true
 		}
 	}

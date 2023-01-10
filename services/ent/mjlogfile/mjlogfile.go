@@ -10,7 +10,7 @@ const (
 	// Label holds the string label denoting the mjlogfile type in the database.
 	Label = "mj_log_file"
 	// FieldID holds the string denoting the id field in the database.
-	FieldID = "oid"
+	FieldID = "id"
 	// FieldName holds the string denoting the name field in the database.
 	FieldName = "name"
 	// EdgeCompressedMjlogFiles holds the string denoting the compressed_mjlog_files edge name in mutations.

@@ -336,7 +336,6 @@ func (mlfq *MJLogFileQuery) WithMjlogs(opts ...func(*MJLogQuery)) *MJLogFileQuer
 //		GroupBy(mjlogfile.FieldName).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (mlfq *MJLogFileQuery) GroupBy(field string, fields ...string) *MJLogFileGroupBy {
 	grbuild := &MJLogFileGroupBy{config: mlfq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -363,7 +362,6 @@ func (mlfq *MJLogFileQuery) GroupBy(field string, fields ...string) *MJLogFileGr
 //	client.MJLogFile.Query().
 //		Select(mjlogfile.FieldName).
 //		Scan(ctx, &v)
-//
 func (mlfq *MJLogFileQuery) Select(fields ...string) *MJLogFileSelect {
 	mlfq.fields = append(mlfq.fields, fields...)
 	selbuild := &MJLogFileSelect{MJLogFileQuery: mlfq}

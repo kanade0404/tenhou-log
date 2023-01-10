@@ -10,7 +10,7 @@ const (
 	// Label holds the string label denoting the hand type in the database.
 	Label = "hand"
 	// FieldID holds the string denoting the id field in the database.
-	FieldID = "oid"
+	FieldID = "id"
 	// FieldNum holds the string denoting the num field in the database.
 	FieldNum = "num"
 	// FieldContinuePoint holds the string denoting the continue_point field in the database.

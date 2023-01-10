@@ -16,7 +16,7 @@ type GamePlayer struct {
 // Fields of the GamePlayer.
 func (GamePlayer) Fields() []ent.Field {
 	return []ent.Field{
-		field.UUID("id", uuid.UUID{}).Default(uuid.New).StorageKey("oid"),
+		field.UUID("id", uuid.UUID{}).Default(uuid.New),
 		field.Float("rate").Immutable(),
 		field.String("start_position").Match(regexp.MustCompile("^[ESWN]$")),
 	}

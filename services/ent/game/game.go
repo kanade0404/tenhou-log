@@ -10,7 +10,7 @@ const (
 	// Label holds the string label denoting the game type in the database.
 	Label = "game"
 	// FieldID holds the string denoting the id field in the database.
-	FieldID = "oid"
+	FieldID = "id"
 	// FieldName holds the string denoting the name field in the database.
 	FieldName = "name"
 	// FieldStartedAt holds the string denoting the started_at field in the database.

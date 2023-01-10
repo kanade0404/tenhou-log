@@ -7,7 +7,9 @@ import (
 	"strings"
 
 	"entgo.io/ent/dialect/sql"
+	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/event"
+	"github.com/kanade0404/tenhou-log/services/ent/turn"
 )
 
 // Event is the model entity for the Event schema.
@@ -15,6 +17,43 @@ type Event struct {
 	config
 	// ID of the ent.
 	ID int `json:"id,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the EventQuery when eager-loading is set.
+	Edges      EventEdges `json:"edges"`
+	turn_event *uuid.UUID
+}
+
+// EventEdges holds the relations/edges for other nodes in the graph.
+type EventEdges struct {
+	// Turn holds the value of the turn edge.
+	Turn *Turn `json:"turn,omitempty"`
+	// Win holds the value of the win edge.
+	Win []*Win `json:"win,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [2]bool
+}
+
+// TurnOrErr returns the Turn value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e EventEdges) TurnOrErr() (*Turn, error) {
+	if e.loadedTypes[0] {
+		if e.Turn == nil {
+			// Edge was loaded but was not found.
+			return nil, &NotFoundError{label: turn.Label}
+		}
+		return e.Turn, nil
+	}
+	return nil, &NotLoadedError{edge: "turn"}
+}
+
+// WinOrErr returns the Win value or an error if the edge
+// was not loaded in eager-loading.
+func (e EventEdges) WinOrErr() ([]*Win, error) {
+	if e.loadedTypes[1] {
+		return e.Win, nil
+	}
+	return nil, &NotLoadedError{edge: "win"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -24,6 +63,8 @@ func (*Event) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case event.FieldID:
 			values[i] = new(sql.NullInt64)
+		case event.ForeignKeys[0]: // turn_event
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Event", columns[i])
 		}
@@ -45,9 +86,26 @@ func (e *Event) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
 			e.ID = int(value.Int64)
+		case event.ForeignKeys[0]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field turn_event", values[i])
+			} else if value.Valid {
+				e.turn_event = new(uuid.UUID)
+				*e.turn_event = *value.S.(*uuid.UUID)
+			}
 		}
 	}
 	return nil
+}
+
+// QueryTurn queries the "turn" edge of the Event entity.
+func (e *Event) QueryTurn() *TurnQuery {
+	return (&EventClient{config: e.config}).QueryTurn(e)
+}
+
+// QueryWin queries the "win" edge of the Event entity.
+func (e *Event) QueryWin() *WinQuery {
+	return (&EventClient{config: e.config}).QueryWin(e)
 }
 
 // Update returns a builder for updating this Event.

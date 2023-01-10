@@ -5,6 +5,7 @@ import (
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"time"
 )
 
 // CompressedMJLog holds the schema definition for the CompressedMJLog entity.
@@ -15,9 +16,10 @@ type CompressedMJLog struct {
 // Fields of the CompressedMJLog.
 func (CompressedMJLog) Fields() []ent.Field {
 	return []ent.Field{
-		field.UUID("id", uuid.UUID{}).Default(uuid.New).StorageKey("oid"),
-		field.String("name").Unique().Immutable(),
+		field.UUID("id", uuid.UUID{}).Default(uuid.New),
+		field.String("name").Immutable(),
 		field.Uint("size"),
+		field.Time("inserted_at").Immutable().Default(time.Now),
 	}
 }
 

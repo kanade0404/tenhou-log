@@ -299,7 +299,6 @@ func (cmlq *CompressedMJLogQuery) WithMjlogFiles(opts ...func(*MJLogFileQuery)) 
 //		GroupBy(compressedmjlog.FieldName).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (cmlq *CompressedMJLogQuery) GroupBy(field string, fields ...string) *CompressedMJLogGroupBy {
 	grbuild := &CompressedMJLogGroupBy{config: cmlq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -326,7 +325,6 @@ func (cmlq *CompressedMJLogQuery) GroupBy(field string, fields ...string) *Compr
 //	client.CompressedMJLog.Query().
 //		Select(compressedmjlog.FieldName).
 //		Scan(ctx, &v)
-//
 func (cmlq *CompressedMJLogQuery) Select(fields ...string) *CompressedMJLogSelect {
 	cmlq.fields = append(cmlq.fields, fields...)
 	selbuild := &CompressedMJLogSelect{CompressedMJLogQuery: cmlq}

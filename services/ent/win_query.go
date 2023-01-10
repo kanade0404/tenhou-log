@@ -10,6 +10,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/kanade0404/tenhou-log/services/ent/event"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 	"github.com/kanade0404/tenhou-log/services/ent/win"
 )
@@ -23,6 +24,8 @@ type WinQuery struct {
 	order      []OrderFunc
 	fields     []string
 	predicates []predicate.Win
+	withEvent  *EventQuery
+	withFKs    bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -57,6 +60,28 @@ func (wq *WinQuery) Unique(unique bool) *WinQuery {
 func (wq *WinQuery) Order(o ...OrderFunc) *WinQuery {
 	wq.order = append(wq.order, o...)
 	return wq
+}
+
+// QueryEvent chains the current query on the "event" edge.
+func (wq *WinQuery) QueryEvent() *EventQuery {
+	query := &EventQuery{config: wq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := wq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := wq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(win.Table, win.FieldID, selector),
+			sqlgraph.To(event.Table, event.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, win.EventTable, win.EventColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(wq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first Win entity from the query.
@@ -240,11 +265,23 @@ func (wq *WinQuery) Clone() *WinQuery {
 		offset:     wq.offset,
 		order:      append([]OrderFunc{}, wq.order...),
 		predicates: append([]predicate.Win{}, wq.predicates...),
+		withEvent:  wq.withEvent.Clone(),
 		// clone intermediate query.
 		sql:    wq.sql.Clone(),
 		path:   wq.path,
 		unique: wq.unique,
 	}
+}
+
+// WithEvent tells the query-builder to eager-load the nodes that are connected to
+// the "event" edge. The optional arguments are used to configure the query builder of the edge.
+func (wq *WinQuery) WithEvent(opts ...func(*EventQuery)) *WinQuery {
+	query := &EventQuery{config: wq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	wq.withEvent = query
+	return wq
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -296,15 +333,26 @@ func (wq *WinQuery) prepareQuery(ctx context.Context) error {
 
 func (wq *WinQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Win, error) {
 	var (
-		nodes = []*Win{}
-		_spec = wq.querySpec()
+		nodes       = []*Win{}
+		withFKs     = wq.withFKs
+		_spec       = wq.querySpec()
+		loadedTypes = [1]bool{
+			wq.withEvent != nil,
+		}
 	)
+	if wq.withEvent != nil {
+		withFKs = true
+	}
+	if withFKs {
+		_spec.Node.Columns = append(_spec.Node.Columns, win.ForeignKeys...)
+	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Win).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &Win{config: wq.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -316,7 +364,43 @@ func (wq *WinQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Win, err
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := wq.withEvent; query != nil {
+		if err := wq.loadEvent(ctx, query, nodes, nil,
+			func(n *Win, e *Event) { n.Edges.Event = e }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (wq *WinQuery) loadEvent(ctx context.Context, query *EventQuery, nodes []*Win, init func(*Win), assign func(*Win, *Event)) error {
+	ids := make([]int, 0, len(nodes))
+	nodeids := make(map[int][]*Win)
+	for i := range nodes {
+		if nodes[i].event_win == nil {
+			continue
+		}
+		fk := *nodes[i].event_win
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	query.Where(event.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "event_win" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
 }
 
 func (wq *WinQuery) sqlCount(ctx context.Context) (int, error) {

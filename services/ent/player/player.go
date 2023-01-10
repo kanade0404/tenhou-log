@@ -10,7 +10,7 @@ const (
 	// Label holds the string label denoting the player type in the database.
 	Label = "player"
 	// FieldID holds the string denoting the id field in the database.
-	FieldID = "oid"
+	FieldID = "id"
 	// FieldName holds the string denoting the name field in the database.
 	FieldName = "name"
 	// FieldSex holds the string denoting the sex field in the database.

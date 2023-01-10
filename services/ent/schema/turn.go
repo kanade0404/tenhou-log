@@ -15,7 +15,7 @@ type Turn struct {
 // Fields of the Turn.
 func (Turn) Fields() []ent.Field {
 	return []ent.Field{
-		field.UUID("id", uuid.UUID{}).Default(uuid.New).StorageKey("oid"),
+		field.UUID("id", uuid.UUID{}).Default(uuid.New),
 		field.Uint("num").Immutable(),
 	}
 }
@@ -25,6 +25,6 @@ func (Turn) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("hands", Hand.Type).Ref("turns"),
 		edge.To("game_player_points", GamePlayerPoint.Type),
-		edge.To("events", Event.Type),
+		edge.To("event", Event.Type),
 	}
 }

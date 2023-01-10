@@ -336,7 +336,6 @@ func (hq *HandQuery) WithTurns(opts ...func(*TurnQuery)) *HandQuery {
 //		GroupBy(hand.FieldNum).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (hq *HandQuery) GroupBy(field string, fields ...string) *HandGroupBy {
 	grbuild := &HandGroupBy{config: hq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -363,7 +362,6 @@ func (hq *HandQuery) GroupBy(field string, fields ...string) *HandGroupBy {
 //	client.Hand.Query().
 //		Select(hand.FieldNum).
 //		Scan(ctx, &v)
-//
 func (hq *HandQuery) Select(fields ...string) *HandSelect {
 	hq.fields = append(hq.fields, fields...)
 	selbuild := &HandSelect{HandQuery: hq}

@@ -10,6 +10,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/kanade0404/tenhou-log/services/ent/event"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 	"github.com/kanade0404/tenhou-log/services/ent/win"
 )
@@ -27,9 +28,26 @@ func (wu *WinUpdate) Where(ps ...predicate.Win) *WinUpdate {
 	return wu
 }
 
+// SetEventID sets the "event" edge to the Event entity by ID.
+func (wu *WinUpdate) SetEventID(id int) *WinUpdate {
+	wu.mutation.SetEventID(id)
+	return wu
+}
+
+// SetEvent sets the "event" edge to the Event entity.
+func (wu *WinUpdate) SetEvent(e *Event) *WinUpdate {
+	return wu.SetEventID(e.ID)
+}
+
 // Mutation returns the WinMutation object of the builder.
 func (wu *WinUpdate) Mutation() *WinMutation {
 	return wu.mutation
+}
+
+// ClearEvent clears the "event" edge to the Event entity.
+func (wu *WinUpdate) ClearEvent() *WinUpdate {
+	wu.mutation.ClearEvent()
+	return wu
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -39,12 +57,18 @@ func (wu *WinUpdate) Save(ctx context.Context) (int, error) {
 		affected int
 	)
 	if len(wu.hooks) == 0 {
+		if err = wu.check(); err != nil {
+			return 0, err
+		}
 		affected, err = wu.sqlSave(ctx)
 	} else {
 		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 			mutation, ok := m.(*WinMutation)
 			if !ok {
 				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			if err = wu.check(); err != nil {
+				return 0, err
 			}
 			wu.mutation = mutation
 			affected, err = wu.sqlSave(ctx)
@@ -86,6 +110,14 @@ func (wu *WinUpdate) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (wu *WinUpdate) check() error {
+	if _, ok := wu.mutation.EventID(); wu.mutation.EventCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "Win.event"`)
+	}
+	return nil
+}
+
 func (wu *WinUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	_spec := &sqlgraph.UpdateSpec{
 		Node: &sqlgraph.NodeSpec{
@@ -103,6 +135,41 @@ func (wu *WinUpdate) sqlSave(ctx context.Context) (n int, err error) {
 				ps[i](selector)
 			}
 		}
+	}
+	if wu.mutation.EventCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   win.EventTable,
+			Columns: []string{win.EventColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeInt,
+					Column: event.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := wu.mutation.EventIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   win.EventTable,
+			Columns: []string{win.EventColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeInt,
+					Column: event.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, wu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -123,9 +190,26 @@ type WinUpdateOne struct {
 	mutation *WinMutation
 }
 
+// SetEventID sets the "event" edge to the Event entity by ID.
+func (wuo *WinUpdateOne) SetEventID(id int) *WinUpdateOne {
+	wuo.mutation.SetEventID(id)
+	return wuo
+}
+
+// SetEvent sets the "event" edge to the Event entity.
+func (wuo *WinUpdateOne) SetEvent(e *Event) *WinUpdateOne {
+	return wuo.SetEventID(e.ID)
+}
+
 // Mutation returns the WinMutation object of the builder.
 func (wuo *WinUpdateOne) Mutation() *WinMutation {
 	return wuo.mutation
+}
+
+// ClearEvent clears the "event" edge to the Event entity.
+func (wuo *WinUpdateOne) ClearEvent() *WinUpdateOne {
+	wuo.mutation.ClearEvent()
+	return wuo
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -142,12 +226,18 @@ func (wuo *WinUpdateOne) Save(ctx context.Context) (*Win, error) {
 		node *Win
 	)
 	if len(wuo.hooks) == 0 {
+		if err = wuo.check(); err != nil {
+			return nil, err
+		}
 		node, err = wuo.sqlSave(ctx)
 	} else {
 		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 			mutation, ok := m.(*WinMutation)
 			if !ok {
 				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			if err = wuo.check(); err != nil {
+				return nil, err
 			}
 			wuo.mutation = mutation
 			node, err = wuo.sqlSave(ctx)
@@ -195,6 +285,14 @@ func (wuo *WinUpdateOne) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (wuo *WinUpdateOne) check() error {
+	if _, ok := wuo.mutation.EventID(); wuo.mutation.EventCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "Win.event"`)
+	}
+	return nil
+}
+
 func (wuo *WinUpdateOne) sqlSave(ctx context.Context) (_node *Win, err error) {
 	_spec := &sqlgraph.UpdateSpec{
 		Node: &sqlgraph.NodeSpec{
@@ -229,6 +327,41 @@ func (wuo *WinUpdateOne) sqlSave(ctx context.Context) (_node *Win, err error) {
 				ps[i](selector)
 			}
 		}
+	}
+	if wuo.mutation.EventCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   win.EventTable,
+			Columns: []string{win.EventColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeInt,
+					Column: event.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := wuo.mutation.EventIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   win.EventTable,
+			Columns: []string{win.EventColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeInt,
+					Column: event.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &Win{config: wuo.config}
 	_spec.Assign = _node.assignValues

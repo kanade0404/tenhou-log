@@ -16,7 +16,7 @@ type Player struct {
 // Fields of the Player.
 func (Player) Fields() []ent.Field {
 	return []ent.Field{
-		field.UUID("id", uuid.UUID{}).Default(uuid.New).StorageKey("oid"),
+		field.UUID("id", uuid.UUID{}).Default(uuid.New),
 		field.String("name").Unique().Immutable(),
 		field.String("sex").Match(regexp.MustCompile("^[F|M]$")).Immutable(),
 	}

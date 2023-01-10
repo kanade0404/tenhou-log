@@ -16,7 +16,7 @@ type Hand struct {
 // Fields of the Hand.
 func (Hand) Fields() []ent.Field {
 	return []ent.Field{
-		field.UUID("id", uuid.UUID{}).Default(uuid.New).StorageKey("oid"),
+		field.UUID("id", uuid.UUID{}).Default(uuid.New),
 		field.Uint("num").Immutable(),
 		field.Uint("continue_point").Immutable().Validate(func(u uint) error {
 			if u%100 == 0 {

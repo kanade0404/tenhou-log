@@ -4,8 +4,10 @@ package ent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/kanade0404/tenhou-log/services/ent/concealedkan"
@@ -16,6 +18,7 @@ type ConcealedKanCreate struct {
 	config
 	mutation *ConcealedKanMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // Mutation returns the ConcealedKanMutation object of the builder.
@@ -121,13 +124,131 @@ func (ckc *ConcealedKanCreate) createSpec() (*ConcealedKan, *sqlgraph.CreateSpec
 			},
 		}
 	)
+	_spec.OnConflict = ckc.conflict
 	return _node, _spec
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.ConcealedKan.Create().
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (ckc *ConcealedKanCreate) OnConflict(opts ...sql.ConflictOption) *ConcealedKanUpsertOne {
+	ckc.conflict = opts
+	return &ConcealedKanUpsertOne{
+		create: ckc,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.ConcealedKan.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (ckc *ConcealedKanCreate) OnConflictColumns(columns ...string) *ConcealedKanUpsertOne {
+	ckc.conflict = append(ckc.conflict, sql.ConflictColumns(columns...))
+	return &ConcealedKanUpsertOne{
+		create: ckc,
+	}
+}
+
+type (
+	// ConcealedKanUpsertOne is the builder for "upsert"-ing
+	//  one ConcealedKan node.
+	ConcealedKanUpsertOne struct {
+		create *ConcealedKanCreate
+	}
+
+	// ConcealedKanUpsert is the "OnConflict" setter.
+	ConcealedKanUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create.
+// Using this option is equivalent to using:
+//
+//	client.ConcealedKan.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (u *ConcealedKanUpsertOne) UpdateNewValues() *ConcealedKanUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.ConcealedKan.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *ConcealedKanUpsertOne) Ignore() *ConcealedKanUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *ConcealedKanUpsertOne) DoNothing() *ConcealedKanUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the ConcealedKanCreate.OnConflict
+// documentation for more info.
+func (u *ConcealedKanUpsertOne) Update(set func(*ConcealedKanUpsert)) *ConcealedKanUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&ConcealedKanUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// Exec executes the query.
+func (u *ConcealedKanUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for ConcealedKanCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *ConcealedKanUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *ConcealedKanUpsertOne) ID(ctx context.Context) (id int, err error) {
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *ConcealedKanUpsertOne) IDX(ctx context.Context) int {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
 }
 
 // ConcealedKanCreateBulk is the builder for creating many ConcealedKan entities in bulk.
 type ConcealedKanCreateBulk struct {
 	config
 	builders []*ConcealedKanCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the ConcealedKan entities in the database.
@@ -153,6 +274,7 @@ func (ckcb *ConcealedKanCreateBulk) Save(ctx context.Context) ([]*ConcealedKan, 
 					_, err = mutators[i+1].Mutate(root, ckcb.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = ckcb.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, ckcb.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -203,6 +325,102 @@ func (ckcb *ConcealedKanCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (ckcb *ConcealedKanCreateBulk) ExecX(ctx context.Context) {
 	if err := ckcb.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.ConcealedKan.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (ckcb *ConcealedKanCreateBulk) OnConflict(opts ...sql.ConflictOption) *ConcealedKanUpsertBulk {
+	ckcb.conflict = opts
+	return &ConcealedKanUpsertBulk{
+		create: ckcb,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.ConcealedKan.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (ckcb *ConcealedKanCreateBulk) OnConflictColumns(columns ...string) *ConcealedKanUpsertBulk {
+	ckcb.conflict = append(ckcb.conflict, sql.ConflictColumns(columns...))
+	return &ConcealedKanUpsertBulk{
+		create: ckcb,
+	}
+}
+
+// ConcealedKanUpsertBulk is the builder for "upsert"-ing
+// a bulk of ConcealedKan nodes.
+type ConcealedKanUpsertBulk struct {
+	create *ConcealedKanCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.ConcealedKan.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (u *ConcealedKanUpsertBulk) UpdateNewValues() *ConcealedKanUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.ConcealedKan.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *ConcealedKanUpsertBulk) Ignore() *ConcealedKanUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *ConcealedKanUpsertBulk) DoNothing() *ConcealedKanUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the ConcealedKanCreateBulk.OnConflict
+// documentation for more info.
+func (u *ConcealedKanUpsertBulk) Update(set func(*ConcealedKanUpsert)) *ConcealedKanUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&ConcealedKanUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// Exec executes the query.
+func (u *ConcealedKanUpsertBulk) Exec(ctx context.Context) error {
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the ConcealedKanCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for ConcealedKanCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *ConcealedKanUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

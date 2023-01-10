@@ -10,7 +10,7 @@ const (
 	// Label holds the string label denoting the gameplayerpoint type in the database.
 	Label = "game_player_point"
 	// FieldID holds the string denoting the id field in the database.
-	FieldID = "oid"
+	FieldID = "id"
 	// FieldPoint holds the string denoting the point field in the database.
 	FieldPoint = "point"
 	// EdgeTurns holds the string denoting the turns edge name in mutations.

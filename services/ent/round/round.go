@@ -10,7 +10,7 @@ const (
 	// Label holds the string label denoting the round type in the database.
 	Label = "round"
 	// FieldID holds the string denoting the id field in the database.
-	FieldID = "oid"
+	FieldID = "id"
 	// FieldWind holds the string denoting the wind field in the database.
 	FieldWind = "wind"
 	// EdgeGames holds the string denoting the games edge name in mutations.

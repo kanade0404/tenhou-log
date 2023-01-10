@@ -228,7 +228,6 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 //		Call.
 //		Query().
 //		Count(ctx)
-//
 func (c *Client) Debug() *Client {
 	if c.debug {
 		return c
@@ -1017,6 +1016,38 @@ func (c *EventClient) GetX(ctx context.Context, id int) *Event {
 		panic(err)
 	}
 	return obj
+}
+
+// QueryTurn queries the turn edge of a Event.
+func (c *EventClient) QueryTurn(e *Event) *TurnQuery {
+	query := &TurnQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := e.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(event.Table, event.FieldID, id),
+			sqlgraph.To(turn.Table, turn.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, event.TurnTable, event.TurnColumn),
+		)
+		fromV = sqlgraph.Neighbors(e.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryWin queries the win edge of a Event.
+func (c *EventClient) QueryWin(e *Event) *WinQuery {
+	query := &WinQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := e.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(event.Table, event.FieldID, id),
+			sqlgraph.To(win.Table, win.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, event.WinTable, event.WinColumn),
+		)
+		fromV = sqlgraph.Neighbors(e.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.
@@ -2509,6 +2540,22 @@ func (c *TurnClient) QueryGamePlayerPoints(t *Turn) *GamePlayerPointQuery {
 	return query
 }
 
+// QueryEvent queries the event edge of a Turn.
+func (c *TurnClient) QueryEvent(t *Turn) *EventQuery {
+	query := &EventQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := t.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(turn.Table, turn.FieldID, id),
+			sqlgraph.To(event.Table, event.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, turn.EventTable, turn.EventColumn),
+		)
+		fromV = sqlgraph.Neighbors(t.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *TurnClient) Hooks() []Hook {
 	return c.hooks.Turn
@@ -2597,6 +2644,22 @@ func (c *WinClient) GetX(ctx context.Context, id int) *Win {
 		panic(err)
 	}
 	return obj
+}
+
+// QueryEvent queries the event edge of a Win.
+func (c *WinClient) QueryEvent(w *Win) *EventQuery {
+	query := &EventQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := w.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(win.Table, win.FieldID, id),
+			sqlgraph.To(event.Table, event.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, win.EventTable, win.EventColumn),
+		)
+		fromV = sqlgraph.Neighbors(w.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.

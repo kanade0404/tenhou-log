@@ -372,7 +372,6 @@ func (gpq *GamePlayerQuery) WithDans(opts ...func(*DanQuery)) *GamePlayerQuery {
 //		GroupBy(gameplayer.FieldRate).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (gpq *GamePlayerQuery) GroupBy(field string, fields ...string) *GamePlayerGroupBy {
 	grbuild := &GamePlayerGroupBy{config: gpq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -399,7 +398,6 @@ func (gpq *GamePlayerQuery) GroupBy(field string, fields ...string) *GamePlayerG
 //	client.GamePlayer.Query().
 //		Select(gameplayer.FieldRate).
 //		Scan(ctx, &v)
-//
 func (gpq *GamePlayerQuery) Select(fields ...string) *GamePlayerSelect {
 	gpq.fields = append(gpq.fields, fields...)
 	selbuild := &GamePlayerSelect{GamePlayerQuery: gpq}

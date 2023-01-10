@@ -18,6 +18,7 @@ func (Event) Fields() []ent.Field {
 // Edges of the Event.
 func (Event) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.From("turns", Turn.Type).Unique().Required(),
+		edge.From("turn", Turn.Type).Ref("event").Unique().Required(),
+		edge.To("win", Win.Type),
 	}
 }

@@ -15,7 +15,7 @@ type Game struct {
 // Fields of the Game.
 func (Game) Fields() []ent.Field {
 	return []ent.Field{
-		field.UUID("id", uuid.UUID{}).Default(uuid.New).StorageKey("oid"),
+		field.UUID("id", uuid.UUID{}).Default(uuid.New),
 		field.String("name").Unique().Immutable(),
 		field.Time("started_at").Immutable(),
 	}

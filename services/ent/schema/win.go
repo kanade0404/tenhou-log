@@ -1,6 +1,9 @@
 package schema
 
-import "entgo.io/ent"
+import (
+	"entgo.io/ent"
+	"entgo.io/ent/schema/edge"
+)
 
 // Win holds the schema definition for the Win entity.
 type Win struct {
@@ -14,5 +17,7 @@ func (Win) Fields() []ent.Field {
 
 // Edges of the Win.
 func (Win) Edges() []ent.Edge {
-	return nil
+	return []ent.Edge{
+		edge.From("event", Event.Type).Ref("win").Unique().Required(),
+	}
 }

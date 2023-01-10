@@ -336,7 +336,6 @@ func (rq *RoundQuery) WithHands(opts ...func(*HandQuery)) *RoundQuery {
 //		GroupBy(round.FieldWind).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (rq *RoundQuery) GroupBy(field string, fields ...string) *RoundGroupBy {
 	grbuild := &RoundGroupBy{config: rq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -363,7 +362,6 @@ func (rq *RoundQuery) GroupBy(field string, fields ...string) *RoundGroupBy {
 //	client.Round.Query().
 //		Select(round.FieldWind).
 //		Scan(ctx, &v)
-//
 func (rq *RoundQuery) Select(fields ...string) *RoundSelect {
 	rq.fields = append(rq.fields, fields...)
 	selbuild := &RoundSelect{RoundQuery: rq}

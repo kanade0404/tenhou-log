@@ -10,13 +10,15 @@ const (
 	// Label holds the string label denoting the turn type in the database.
 	Label = "turn"
 	// FieldID holds the string denoting the id field in the database.
-	FieldID = "oid"
+	FieldID = "id"
 	// FieldNum holds the string denoting the num field in the database.
 	FieldNum = "num"
 	// EdgeHands holds the string denoting the hands edge name in mutations.
 	EdgeHands = "hands"
 	// EdgeGamePlayerPoints holds the string denoting the game_player_points edge name in mutations.
 	EdgeGamePlayerPoints = "game_player_points"
+	// EdgeEvent holds the string denoting the event edge name in mutations.
+	EdgeEvent = "event"
 	// Table holds the table name of the turn in the database.
 	Table = "turns"
 	// HandsTable is the table that holds the hands relation/edge. The primary key declared below.
@@ -29,6 +31,13 @@ const (
 	// GamePlayerPointsInverseTable is the table name for the GamePlayerPoint entity.
 	// It exists in this package in order to avoid circular dependency with the "gameplayerpoint" package.
 	GamePlayerPointsInverseTable = "game_player_points"
+	// EventTable is the table that holds the event relation/edge.
+	EventTable = "events"
+	// EventInverseTable is the table name for the Event entity.
+	// It exists in this package in order to avoid circular dependency with the "event" package.
+	EventInverseTable = "events"
+	// EventColumn is the table column denoting the event relation/edge.
+	EventColumn = "turn_event"
 )
 
 // Columns holds all SQL columns for turn fields.

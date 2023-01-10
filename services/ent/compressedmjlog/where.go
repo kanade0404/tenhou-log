@@ -3,6 +3,8 @@
 package compressedmjlog
 
 import (
+	"time"
+
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
@@ -91,6 +93,13 @@ func Name(v string) predicate.CompressedMJLog {
 func Size(v uint) predicate.CompressedMJLog {
 	return predicate.CompressedMJLog(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldSize), v))
+	})
+}
+
+// InsertedAt applies equality check predicate on the "inserted_at" field. It's identical to InsertedAtEQ.
+func InsertedAt(v time.Time) predicate.CompressedMJLog {
+	return predicate.CompressedMJLog(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldInsertedAt), v))
 	})
 }
 
@@ -254,6 +263,70 @@ func SizeLT(v uint) predicate.CompressedMJLog {
 func SizeLTE(v uint) predicate.CompressedMJLog {
 	return predicate.CompressedMJLog(func(s *sql.Selector) {
 		s.Where(sql.LTE(s.C(FieldSize), v))
+	})
+}
+
+// InsertedAtEQ applies the EQ predicate on the "inserted_at" field.
+func InsertedAtEQ(v time.Time) predicate.CompressedMJLog {
+	return predicate.CompressedMJLog(func(s *sql.Selector) {
+		s.Where(sql.EQ(s.C(FieldInsertedAt), v))
+	})
+}
+
+// InsertedAtNEQ applies the NEQ predicate on the "inserted_at" field.
+func InsertedAtNEQ(v time.Time) predicate.CompressedMJLog {
+	return predicate.CompressedMJLog(func(s *sql.Selector) {
+		s.Where(sql.NEQ(s.C(FieldInsertedAt), v))
+	})
+}
+
+// InsertedAtIn applies the In predicate on the "inserted_at" field.
+func InsertedAtIn(vs ...time.Time) predicate.CompressedMJLog {
+	v := make([]any, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.CompressedMJLog(func(s *sql.Selector) {
+		s.Where(sql.In(s.C(FieldInsertedAt), v...))
+	})
+}
+
+// InsertedAtNotIn applies the NotIn predicate on the "inserted_at" field.
+func InsertedAtNotIn(vs ...time.Time) predicate.CompressedMJLog {
+	v := make([]any, len(vs))
+	for i := range v {
+		v[i] = vs[i]
+	}
+	return predicate.CompressedMJLog(func(s *sql.Selector) {
+		s.Where(sql.NotIn(s.C(FieldInsertedAt), v...))
+	})
+}
+
+// InsertedAtGT applies the GT predicate on the "inserted_at" field.
+func InsertedAtGT(v time.Time) predicate.CompressedMJLog {
+	return predicate.CompressedMJLog(func(s *sql.Selector) {
+		s.Where(sql.GT(s.C(FieldInsertedAt), v))
+	})
+}
+
+// InsertedAtGTE applies the GTE predicate on the "inserted_at" field.
+func InsertedAtGTE(v time.Time) predicate.CompressedMJLog {
+	return predicate.CompressedMJLog(func(s *sql.Selector) {
+		s.Where(sql.GTE(s.C(FieldInsertedAt), v))
+	})
+}
+
+// InsertedAtLT applies the LT predicate on the "inserted_at" field.
+func InsertedAtLT(v time.Time) predicate.CompressedMJLog {
+	return predicate.CompressedMJLog(func(s *sql.Selector) {
+		s.Where(sql.LT(s.C(FieldInsertedAt), v))
+	})
+}
+
+// InsertedAtLTE applies the LTE predicate on the "inserted_at" field.
+func InsertedAtLTE(v time.Time) predicate.CompressedMJLog {
+	return predicate.CompressedMJLog(func(s *sql.Selector) {
+		s.Where(sql.LTE(s.C(FieldInsertedAt), v))
 	})
 }
 

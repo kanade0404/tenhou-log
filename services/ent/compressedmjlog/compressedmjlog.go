@@ -3,6 +3,8 @@
 package compressedmjlog
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 )
 
@@ -10,11 +12,13 @@ const (
 	// Label holds the string label denoting the compressedmjlog type in the database.
 	Label = "compressed_mj_log"
 	// FieldID holds the string denoting the id field in the database.
-	FieldID = "oid"
+	FieldID = "id"
 	// FieldName holds the string denoting the name field in the database.
 	FieldName = "name"
 	// FieldSize holds the string denoting the size field in the database.
 	FieldSize = "size"
+	// FieldInsertedAt holds the string denoting the inserted_at field in the database.
+	FieldInsertedAt = "inserted_at"
 	// EdgeMjlogFiles holds the string denoting the mjlog_files edge name in mutations.
 	EdgeMjlogFiles = "mjlog_files"
 	// Table holds the table name of the compressedmjlog in the database.
@@ -33,6 +37,7 @@ var Columns = []string{
 	FieldID,
 	FieldName,
 	FieldSize,
+	FieldInsertedAt,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -46,6 +51,8 @@ func ValidColumn(column string) bool {
 }
 
 var (
+	// DefaultInsertedAt holds the default value on creation for the "inserted_at" field.
+	DefaultInsertedAt func() time.Time
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )

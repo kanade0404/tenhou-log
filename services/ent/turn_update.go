@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/event"
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayerpoint"
 	"github.com/kanade0404/tenhou-log/services/ent/hand"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
@@ -60,6 +61,21 @@ func (tu *TurnUpdate) AddGamePlayerPoints(g ...*GamePlayerPoint) *TurnUpdate {
 	return tu.AddGamePlayerPointIDs(ids...)
 }
 
+// AddEventIDs adds the "event" edge to the Event entity by IDs.
+func (tu *TurnUpdate) AddEventIDs(ids ...int) *TurnUpdate {
+	tu.mutation.AddEventIDs(ids...)
+	return tu
+}
+
+// AddEvent adds the "event" edges to the Event entity.
+func (tu *TurnUpdate) AddEvent(e ...*Event) *TurnUpdate {
+	ids := make([]int, len(e))
+	for i := range e {
+		ids[i] = e[i].ID
+	}
+	return tu.AddEventIDs(ids...)
+}
+
 // Mutation returns the TurnMutation object of the builder.
 func (tu *TurnUpdate) Mutation() *TurnMutation {
 	return tu.mutation
@@ -105,6 +121,27 @@ func (tu *TurnUpdate) RemoveGamePlayerPoints(g ...*GamePlayerPoint) *TurnUpdate 
 		ids[i] = g[i].ID
 	}
 	return tu.RemoveGamePlayerPointIDs(ids...)
+}
+
+// ClearEvent clears all "event" edges to the Event entity.
+func (tu *TurnUpdate) ClearEvent() *TurnUpdate {
+	tu.mutation.ClearEvent()
+	return tu
+}
+
+// RemoveEventIDs removes the "event" edge to Event entities by IDs.
+func (tu *TurnUpdate) RemoveEventIDs(ids ...int) *TurnUpdate {
+	tu.mutation.RemoveEventIDs(ids...)
+	return tu
+}
+
+// RemoveEvent removes "event" edges to Event entities.
+func (tu *TurnUpdate) RemoveEvent(e ...*Event) *TurnUpdate {
+	ids := make([]int, len(e))
+	for i := range e {
+		ids[i] = e[i].ID
+	}
+	return tu.RemoveEventIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -287,6 +324,60 @@ func (tu *TurnUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if tu.mutation.EventCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   turn.EventTable,
+			Columns: []string{turn.EventColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeInt,
+					Column: event.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := tu.mutation.RemovedEventIDs(); len(nodes) > 0 && !tu.mutation.EventCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   turn.EventTable,
+			Columns: []string{turn.EventColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeInt,
+					Column: event.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := tu.mutation.EventIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   turn.EventTable,
+			Columns: []string{turn.EventColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeInt,
+					Column: event.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, tu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{turn.Label}
@@ -336,6 +427,21 @@ func (tuo *TurnUpdateOne) AddGamePlayerPoints(g ...*GamePlayerPoint) *TurnUpdate
 	return tuo.AddGamePlayerPointIDs(ids...)
 }
 
+// AddEventIDs adds the "event" edge to the Event entity by IDs.
+func (tuo *TurnUpdateOne) AddEventIDs(ids ...int) *TurnUpdateOne {
+	tuo.mutation.AddEventIDs(ids...)
+	return tuo
+}
+
+// AddEvent adds the "event" edges to the Event entity.
+func (tuo *TurnUpdateOne) AddEvent(e ...*Event) *TurnUpdateOne {
+	ids := make([]int, len(e))
+	for i := range e {
+		ids[i] = e[i].ID
+	}
+	return tuo.AddEventIDs(ids...)
+}
+
 // Mutation returns the TurnMutation object of the builder.
 func (tuo *TurnUpdateOne) Mutation() *TurnMutation {
 	return tuo.mutation
@@ -381,6 +487,27 @@ func (tuo *TurnUpdateOne) RemoveGamePlayerPoints(g ...*GamePlayerPoint) *TurnUpd
 		ids[i] = g[i].ID
 	}
 	return tuo.RemoveGamePlayerPointIDs(ids...)
+}
+
+// ClearEvent clears all "event" edges to the Event entity.
+func (tuo *TurnUpdateOne) ClearEvent() *TurnUpdateOne {
+	tuo.mutation.ClearEvent()
+	return tuo
+}
+
+// RemoveEventIDs removes the "event" edge to Event entities by IDs.
+func (tuo *TurnUpdateOne) RemoveEventIDs(ids ...int) *TurnUpdateOne {
+	tuo.mutation.RemoveEventIDs(ids...)
+	return tuo
+}
+
+// RemoveEvent removes "event" edges to Event entities.
+func (tuo *TurnUpdateOne) RemoveEvent(e ...*Event) *TurnUpdateOne {
+	ids := make([]int, len(e))
+	for i := range e {
+		ids[i] = e[i].ID
+	}
+	return tuo.RemoveEventIDs(ids...)
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -585,6 +712,60 @@ func (tuo *TurnUpdateOne) sqlSave(ctx context.Context) (_node *Turn, err error) 
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeUUID,
 					Column: gameplayerpoint.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if tuo.mutation.EventCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   turn.EventTable,
+			Columns: []string{turn.EventColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeInt,
+					Column: event.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := tuo.mutation.RemovedEventIDs(); len(nodes) > 0 && !tuo.mutation.EventCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   turn.EventTable,
+			Columns: []string{turn.EventColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeInt,
+					Column: event.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := tuo.mutation.EventIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   turn.EventTable,
+			Columns: []string{turn.EventColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeInt,
+					Column: event.FieldID,
 				},
 			},
 		}

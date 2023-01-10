@@ -299,7 +299,6 @@ func (gppq *GamePlayerPointQuery) WithTurns(opts ...func(*TurnQuery)) *GamePlaye
 //		GroupBy(gameplayerpoint.FieldPoint).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (gppq *GamePlayerPointQuery) GroupBy(field string, fields ...string) *GamePlayerPointGroupBy {
 	grbuild := &GamePlayerPointGroupBy{config: gppq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -326,7 +325,6 @@ func (gppq *GamePlayerPointQuery) GroupBy(field string, fields ...string) *GameP
 //	client.GamePlayerPoint.Query().
 //		Select(gameplayerpoint.FieldPoint).
 //		Scan(ctx, &v)
-//
 func (gppq *GamePlayerPointQuery) Select(fields ...string) *GamePlayerPointSelect {
 	gppq.fields = append(gppq.fields, fields...)
 	selbuild := &GamePlayerPointSelect{GamePlayerPointQuery: gppq}

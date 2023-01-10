@@ -10,8 +10,11 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/event"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
+	"github.com/kanade0404/tenhou-log/services/ent/turn"
+	"github.com/kanade0404/tenhou-log/services/ent/win"
 )
 
 // EventUpdate is the builder for updating Event entities.
@@ -27,9 +30,62 @@ func (eu *EventUpdate) Where(ps ...predicate.Event) *EventUpdate {
 	return eu
 }
 
+// SetTurnID sets the "turn" edge to the Turn entity by ID.
+func (eu *EventUpdate) SetTurnID(id uuid.UUID) *EventUpdate {
+	eu.mutation.SetTurnID(id)
+	return eu
+}
+
+// SetTurn sets the "turn" edge to the Turn entity.
+func (eu *EventUpdate) SetTurn(t *Turn) *EventUpdate {
+	return eu.SetTurnID(t.ID)
+}
+
+// AddWinIDs adds the "win" edge to the Win entity by IDs.
+func (eu *EventUpdate) AddWinIDs(ids ...int) *EventUpdate {
+	eu.mutation.AddWinIDs(ids...)
+	return eu
+}
+
+// AddWin adds the "win" edges to the Win entity.
+func (eu *EventUpdate) AddWin(w ...*Win) *EventUpdate {
+	ids := make([]int, len(w))
+	for i := range w {
+		ids[i] = w[i].ID
+	}
+	return eu.AddWinIDs(ids...)
+}
+
 // Mutation returns the EventMutation object of the builder.
 func (eu *EventUpdate) Mutation() *EventMutation {
 	return eu.mutation
+}
+
+// ClearTurn clears the "turn" edge to the Turn entity.
+func (eu *EventUpdate) ClearTurn() *EventUpdate {
+	eu.mutation.ClearTurn()
+	return eu
+}
+
+// ClearWin clears all "win" edges to the Win entity.
+func (eu *EventUpdate) ClearWin() *EventUpdate {
+	eu.mutation.ClearWin()
+	return eu
+}
+
+// RemoveWinIDs removes the "win" edge to Win entities by IDs.
+func (eu *EventUpdate) RemoveWinIDs(ids ...int) *EventUpdate {
+	eu.mutation.RemoveWinIDs(ids...)
+	return eu
+}
+
+// RemoveWin removes "win" edges to Win entities.
+func (eu *EventUpdate) RemoveWin(w ...*Win) *EventUpdate {
+	ids := make([]int, len(w))
+	for i := range w {
+		ids[i] = w[i].ID
+	}
+	return eu.RemoveWinIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -39,12 +95,18 @@ func (eu *EventUpdate) Save(ctx context.Context) (int, error) {
 		affected int
 	)
 	if len(eu.hooks) == 0 {
+		if err = eu.check(); err != nil {
+			return 0, err
+		}
 		affected, err = eu.sqlSave(ctx)
 	} else {
 		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 			mutation, ok := m.(*EventMutation)
 			if !ok {
 				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			if err = eu.check(); err != nil {
+				return 0, err
 			}
 			eu.mutation = mutation
 			affected, err = eu.sqlSave(ctx)
@@ -86,6 +148,14 @@ func (eu *EventUpdate) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (eu *EventUpdate) check() error {
+	if _, ok := eu.mutation.TurnID(); eu.mutation.TurnCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "Event.turn"`)
+	}
+	return nil
+}
+
 func (eu *EventUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	_spec := &sqlgraph.UpdateSpec{
 		Node: &sqlgraph.NodeSpec{
@@ -103,6 +173,95 @@ func (eu *EventUpdate) sqlSave(ctx context.Context) (n int, err error) {
 				ps[i](selector)
 			}
 		}
+	}
+	if eu.mutation.TurnCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   event.TurnTable,
+			Columns: []string{event.TurnColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: turn.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := eu.mutation.TurnIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   event.TurnTable,
+			Columns: []string{event.TurnColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: turn.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if eu.mutation.WinCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   event.WinTable,
+			Columns: []string{event.WinColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeInt,
+					Column: win.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := eu.mutation.RemovedWinIDs(); len(nodes) > 0 && !eu.mutation.WinCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   event.WinTable,
+			Columns: []string{event.WinColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeInt,
+					Column: win.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := eu.mutation.WinIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   event.WinTable,
+			Columns: []string{event.WinColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeInt,
+					Column: win.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, eu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -123,9 +282,62 @@ type EventUpdateOne struct {
 	mutation *EventMutation
 }
 
+// SetTurnID sets the "turn" edge to the Turn entity by ID.
+func (euo *EventUpdateOne) SetTurnID(id uuid.UUID) *EventUpdateOne {
+	euo.mutation.SetTurnID(id)
+	return euo
+}
+
+// SetTurn sets the "turn" edge to the Turn entity.
+func (euo *EventUpdateOne) SetTurn(t *Turn) *EventUpdateOne {
+	return euo.SetTurnID(t.ID)
+}
+
+// AddWinIDs adds the "win" edge to the Win entity by IDs.
+func (euo *EventUpdateOne) AddWinIDs(ids ...int) *EventUpdateOne {
+	euo.mutation.AddWinIDs(ids...)
+	return euo
+}
+
+// AddWin adds the "win" edges to the Win entity.
+func (euo *EventUpdateOne) AddWin(w ...*Win) *EventUpdateOne {
+	ids := make([]int, len(w))
+	for i := range w {
+		ids[i] = w[i].ID
+	}
+	return euo.AddWinIDs(ids...)
+}
+
 // Mutation returns the EventMutation object of the builder.
 func (euo *EventUpdateOne) Mutation() *EventMutation {
 	return euo.mutation
+}
+
+// ClearTurn clears the "turn" edge to the Turn entity.
+func (euo *EventUpdateOne) ClearTurn() *EventUpdateOne {
+	euo.mutation.ClearTurn()
+	return euo
+}
+
+// ClearWin clears all "win" edges to the Win entity.
+func (euo *EventUpdateOne) ClearWin() *EventUpdateOne {
+	euo.mutation.ClearWin()
+	return euo
+}
+
+// RemoveWinIDs removes the "win" edge to Win entities by IDs.
+func (euo *EventUpdateOne) RemoveWinIDs(ids ...int) *EventUpdateOne {
+	euo.mutation.RemoveWinIDs(ids...)
+	return euo
+}
+
+// RemoveWin removes "win" edges to Win entities.
+func (euo *EventUpdateOne) RemoveWin(w ...*Win) *EventUpdateOne {
+	ids := make([]int, len(w))
+	for i := range w {
+		ids[i] = w[i].ID
+	}
+	return euo.RemoveWinIDs(ids...)
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -142,12 +354,18 @@ func (euo *EventUpdateOne) Save(ctx context.Context) (*Event, error) {
 		node *Event
 	)
 	if len(euo.hooks) == 0 {
+		if err = euo.check(); err != nil {
+			return nil, err
+		}
 		node, err = euo.sqlSave(ctx)
 	} else {
 		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 			mutation, ok := m.(*EventMutation)
 			if !ok {
 				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			if err = euo.check(); err != nil {
+				return nil, err
 			}
 			euo.mutation = mutation
 			node, err = euo.sqlSave(ctx)
@@ -195,6 +413,14 @@ func (euo *EventUpdateOne) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (euo *EventUpdateOne) check() error {
+	if _, ok := euo.mutation.TurnID(); euo.mutation.TurnCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "Event.turn"`)
+	}
+	return nil
+}
+
 func (euo *EventUpdateOne) sqlSave(ctx context.Context) (_node *Event, err error) {
 	_spec := &sqlgraph.UpdateSpec{
 		Node: &sqlgraph.NodeSpec{
@@ -229,6 +455,95 @@ func (euo *EventUpdateOne) sqlSave(ctx context.Context) (_node *Event, err error
 				ps[i](selector)
 			}
 		}
+	}
+	if euo.mutation.TurnCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   event.TurnTable,
+			Columns: []string{event.TurnColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: turn.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := euo.mutation.TurnIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   event.TurnTable,
+			Columns: []string{event.TurnColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: turn.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if euo.mutation.WinCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   event.WinTable,
+			Columns: []string{event.WinColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeInt,
+					Column: win.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := euo.mutation.RemovedWinIDs(); len(nodes) > 0 && !euo.mutation.WinCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   event.WinTable,
+			Columns: []string{event.WinColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeInt,
+					Column: win.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := euo.mutation.WinIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   event.WinTable,
+			Columns: []string{event.WinColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeInt,
+					Column: win.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &Event{config: euo.config}
 	_spec.Assign = _node.assignValues

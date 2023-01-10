@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/compressedmjlog"
 	"github.com/kanade0404/tenhou-log/services/ent/dan"
+	"github.com/kanade0404/tenhou-log/services/ent/event"
 	"github.com/kanade0404/tenhou-log/services/ent/game"
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayer"
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayerpoint"
@@ -23,6 +24,7 @@ import (
 	"github.com/kanade0404/tenhou-log/services/ent/room"
 	"github.com/kanade0404/tenhou-log/services/ent/round"
 	"github.com/kanade0404/tenhou-log/services/ent/turn"
+	"github.com/kanade0404/tenhou-log/services/ent/win"
 
 	"entgo.io/ent"
 )
@@ -816,6 +818,7 @@ type CompressedMJLogMutation struct {
 	name               *string
 	size               *uint
 	addsize            *int
+	inserted_at        *time.Time
 	clearedFields      map[string]struct{}
 	mjlog_files        *uuid.UUID
 	clearedmjlog_files bool
@@ -1020,6 +1023,42 @@ func (m *CompressedMJLogMutation) ResetSize() {
 	m.addsize = nil
 }
 
+// SetInsertedAt sets the "inserted_at" field.
+func (m *CompressedMJLogMutation) SetInsertedAt(t time.Time) {
+	m.inserted_at = &t
+}
+
+// InsertedAt returns the value of the "inserted_at" field in the mutation.
+func (m *CompressedMJLogMutation) InsertedAt() (r time.Time, exists bool) {
+	v := m.inserted_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldInsertedAt returns the old "inserted_at" field's value of the CompressedMJLog entity.
+// If the CompressedMJLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CompressedMJLogMutation) OldInsertedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldInsertedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldInsertedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldInsertedAt: %w", err)
+	}
+	return oldValue.InsertedAt, nil
+}
+
+// ResetInsertedAt resets all changes to the "inserted_at" field.
+func (m *CompressedMJLogMutation) ResetInsertedAt() {
+	m.inserted_at = nil
+}
+
 // SetMjlogFilesID sets the "mjlog_files" edge to the MJLogFile entity by id.
 func (m *CompressedMJLogMutation) SetMjlogFilesID(id uuid.UUID) {
 	m.mjlog_files = &id
@@ -1078,12 +1117,15 @@ func (m *CompressedMJLogMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *CompressedMJLogMutation) Fields() []string {
-	fields := make([]string, 0, 2)
+	fields := make([]string, 0, 3)
 	if m.name != nil {
 		fields = append(fields, compressedmjlog.FieldName)
 	}
 	if m.size != nil {
 		fields = append(fields, compressedmjlog.FieldSize)
+	}
+	if m.inserted_at != nil {
+		fields = append(fields, compressedmjlog.FieldInsertedAt)
 	}
 	return fields
 }
@@ -1097,6 +1139,8 @@ func (m *CompressedMJLogMutation) Field(name string) (ent.Value, bool) {
 		return m.Name()
 	case compressedmjlog.FieldSize:
 		return m.Size()
+	case compressedmjlog.FieldInsertedAt:
+		return m.InsertedAt()
 	}
 	return nil, false
 }
@@ -1110,6 +1154,8 @@ func (m *CompressedMJLogMutation) OldField(ctx context.Context, name string) (en
 		return m.OldName(ctx)
 	case compressedmjlog.FieldSize:
 		return m.OldSize(ctx)
+	case compressedmjlog.FieldInsertedAt:
+		return m.OldInsertedAt(ctx)
 	}
 	return nil, fmt.Errorf("unknown CompressedMJLog field %s", name)
 }
@@ -1132,6 +1178,13 @@ func (m *CompressedMJLogMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetSize(v)
+		return nil
+	case compressedmjlog.FieldInsertedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetInsertedAt(v)
 		return nil
 	}
 	return fmt.Errorf("unknown CompressedMJLog field %s", name)
@@ -1202,6 +1255,9 @@ func (m *CompressedMJLogMutation) ResetField(name string) error {
 		return nil
 	case compressedmjlog.FieldSize:
 		m.ResetSize()
+		return nil
+	case compressedmjlog.FieldInsertedAt:
+		m.ResetInsertedAt()
 		return nil
 	}
 	return fmt.Errorf("unknown CompressedMJLog field %s", name)
@@ -2196,6 +2252,11 @@ type EventMutation struct {
 	typ           string
 	id            *int
 	clearedFields map[string]struct{}
+	turn          *uuid.UUID
+	clearedturn   bool
+	win           map[int]struct{}
+	removedwin    map[int]struct{}
+	clearedwin    bool
 	done          bool
 	oldValue      func(context.Context) (*Event, error)
 	predicates    []predicate.Event
@@ -2299,6 +2360,99 @@ func (m *EventMutation) IDs(ctx context.Context) ([]int, error) {
 	}
 }
 
+// SetTurnID sets the "turn" edge to the Turn entity by id.
+func (m *EventMutation) SetTurnID(id uuid.UUID) {
+	m.turn = &id
+}
+
+// ClearTurn clears the "turn" edge to the Turn entity.
+func (m *EventMutation) ClearTurn() {
+	m.clearedturn = true
+}
+
+// TurnCleared reports if the "turn" edge to the Turn entity was cleared.
+func (m *EventMutation) TurnCleared() bool {
+	return m.clearedturn
+}
+
+// TurnID returns the "turn" edge ID in the mutation.
+func (m *EventMutation) TurnID() (id uuid.UUID, exists bool) {
+	if m.turn != nil {
+		return *m.turn, true
+	}
+	return
+}
+
+// TurnIDs returns the "turn" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// TurnID instead. It exists only for internal usage by the builders.
+func (m *EventMutation) TurnIDs() (ids []uuid.UUID) {
+	if id := m.turn; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetTurn resets all changes to the "turn" edge.
+func (m *EventMutation) ResetTurn() {
+	m.turn = nil
+	m.clearedturn = false
+}
+
+// AddWinIDs adds the "win" edge to the Win entity by ids.
+func (m *EventMutation) AddWinIDs(ids ...int) {
+	if m.win == nil {
+		m.win = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.win[ids[i]] = struct{}{}
+	}
+}
+
+// ClearWin clears the "win" edge to the Win entity.
+func (m *EventMutation) ClearWin() {
+	m.clearedwin = true
+}
+
+// WinCleared reports if the "win" edge to the Win entity was cleared.
+func (m *EventMutation) WinCleared() bool {
+	return m.clearedwin
+}
+
+// RemoveWinIDs removes the "win" edge to the Win entity by IDs.
+func (m *EventMutation) RemoveWinIDs(ids ...int) {
+	if m.removedwin == nil {
+		m.removedwin = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.win, ids[i])
+		m.removedwin[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedWin returns the removed IDs of the "win" edge to the Win entity.
+func (m *EventMutation) RemovedWinIDs() (ids []int) {
+	for id := range m.removedwin {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// WinIDs returns the "win" edge IDs in the mutation.
+func (m *EventMutation) WinIDs() (ids []int) {
+	for id := range m.win {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetWin resets all changes to the "win" edge.
+func (m *EventMutation) ResetWin() {
+	m.win = nil
+	m.clearedwin = false
+	m.removedwin = nil
+}
+
 // Where appends a list predicates to the EventMutation builder.
 func (m *EventMutation) Where(ps ...predicate.Event) {
 	m.predicates = append(m.predicates, ps...)
@@ -2392,49 +2546,103 @@ func (m *EventMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *EventMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 2)
+	if m.turn != nil {
+		edges = append(edges, event.EdgeTurn)
+	}
+	if m.win != nil {
+		edges = append(edges, event.EdgeWin)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *EventMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case event.EdgeTurn:
+		if id := m.turn; id != nil {
+			return []ent.Value{*id}
+		}
+	case event.EdgeWin:
+		ids := make([]ent.Value, 0, len(m.win))
+		for id := range m.win {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *EventMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 2)
+	if m.removedwin != nil {
+		edges = append(edges, event.EdgeWin)
+	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *EventMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case event.EdgeWin:
+		ids := make([]ent.Value, 0, len(m.removedwin))
+		for id := range m.removedwin {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *EventMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 2)
+	if m.clearedturn {
+		edges = append(edges, event.EdgeTurn)
+	}
+	if m.clearedwin {
+		edges = append(edges, event.EdgeWin)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *EventMutation) EdgeCleared(name string) bool {
+	switch name {
+	case event.EdgeTurn:
+		return m.clearedturn
+	case event.EdgeWin:
+		return m.clearedwin
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *EventMutation) ClearEdge(name string) error {
+	switch name {
+	case event.EdgeTurn:
+		m.ClearTurn()
+		return nil
+	}
 	return fmt.Errorf("unknown Event unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *EventMutation) ResetEdge(name string) error {
+	switch name {
+	case event.EdgeTurn:
+		m.ResetTurn()
+		return nil
+	case event.EdgeWin:
+		m.ResetWin()
+		return nil
+	}
 	return fmt.Errorf("unknown Event edge %s", name)
 }
 
@@ -8035,6 +8243,9 @@ type TurnMutation struct {
 	game_player_points        map[uuid.UUID]struct{}
 	removedgame_player_points map[uuid.UUID]struct{}
 	clearedgame_player_points bool
+	event                     map[int]struct{}
+	removedevent              map[int]struct{}
+	clearedevent              bool
 	done                      bool
 	oldValue                  func(context.Context) (*Turn, error)
 	predicates                []predicate.Turn
@@ -8308,6 +8519,60 @@ func (m *TurnMutation) ResetGamePlayerPoints() {
 	m.removedgame_player_points = nil
 }
 
+// AddEventIDs adds the "event" edge to the Event entity by ids.
+func (m *TurnMutation) AddEventIDs(ids ...int) {
+	if m.event == nil {
+		m.event = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.event[ids[i]] = struct{}{}
+	}
+}
+
+// ClearEvent clears the "event" edge to the Event entity.
+func (m *TurnMutation) ClearEvent() {
+	m.clearedevent = true
+}
+
+// EventCleared reports if the "event" edge to the Event entity was cleared.
+func (m *TurnMutation) EventCleared() bool {
+	return m.clearedevent
+}
+
+// RemoveEventIDs removes the "event" edge to the Event entity by IDs.
+func (m *TurnMutation) RemoveEventIDs(ids ...int) {
+	if m.removedevent == nil {
+		m.removedevent = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.event, ids[i])
+		m.removedevent[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedEvent returns the removed IDs of the "event" edge to the Event entity.
+func (m *TurnMutation) RemovedEventIDs() (ids []int) {
+	for id := range m.removedevent {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// EventIDs returns the "event" edge IDs in the mutation.
+func (m *TurnMutation) EventIDs() (ids []int) {
+	for id := range m.event {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetEvent resets all changes to the "event" edge.
+func (m *TurnMutation) ResetEvent() {
+	m.event = nil
+	m.clearedevent = false
+	m.removedevent = nil
+}
+
 // Where appends a list predicates to the TurnMutation builder.
 func (m *TurnMutation) Where(ps ...predicate.Turn) {
 	m.predicates = append(m.predicates, ps...)
@@ -8441,12 +8706,15 @@ func (m *TurnMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *TurnMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.hands != nil {
 		edges = append(edges, turn.EdgeHands)
 	}
 	if m.game_player_points != nil {
 		edges = append(edges, turn.EdgeGamePlayerPoints)
+	}
+	if m.event != nil {
+		edges = append(edges, turn.EdgeEvent)
 	}
 	return edges
 }
@@ -8467,18 +8735,27 @@ func (m *TurnMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case turn.EdgeEvent:
+		ids := make([]ent.Value, 0, len(m.event))
+		for id := range m.event {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *TurnMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.removedhands != nil {
 		edges = append(edges, turn.EdgeHands)
 	}
 	if m.removedgame_player_points != nil {
 		edges = append(edges, turn.EdgeGamePlayerPoints)
+	}
+	if m.removedevent != nil {
+		edges = append(edges, turn.EdgeEvent)
 	}
 	return edges
 }
@@ -8499,18 +8776,27 @@ func (m *TurnMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case turn.EdgeEvent:
+		ids := make([]ent.Value, 0, len(m.removedevent))
+		for id := range m.removedevent {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *TurnMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.clearedhands {
 		edges = append(edges, turn.EdgeHands)
 	}
 	if m.clearedgame_player_points {
 		edges = append(edges, turn.EdgeGamePlayerPoints)
+	}
+	if m.clearedevent {
+		edges = append(edges, turn.EdgeEvent)
 	}
 	return edges
 }
@@ -8523,6 +8809,8 @@ func (m *TurnMutation) EdgeCleared(name string) bool {
 		return m.clearedhands
 	case turn.EdgeGamePlayerPoints:
 		return m.clearedgame_player_points
+	case turn.EdgeEvent:
+		return m.clearedevent
 	}
 	return false
 }
@@ -8545,6 +8833,9 @@ func (m *TurnMutation) ResetEdge(name string) error {
 	case turn.EdgeGamePlayerPoints:
 		m.ResetGamePlayerPoints()
 		return nil
+	case turn.EdgeEvent:
+		m.ResetEvent()
+		return nil
 	}
 	return fmt.Errorf("unknown Turn edge %s", name)
 }
@@ -8556,6 +8847,8 @@ type WinMutation struct {
 	typ           string
 	id            *int
 	clearedFields map[string]struct{}
+	event         *int
+	clearedevent  bool
 	done          bool
 	oldValue      func(context.Context) (*Win, error)
 	predicates    []predicate.Win
@@ -8659,6 +8952,45 @@ func (m *WinMutation) IDs(ctx context.Context) ([]int, error) {
 	}
 }
 
+// SetEventID sets the "event" edge to the Event entity by id.
+func (m *WinMutation) SetEventID(id int) {
+	m.event = &id
+}
+
+// ClearEvent clears the "event" edge to the Event entity.
+func (m *WinMutation) ClearEvent() {
+	m.clearedevent = true
+}
+
+// EventCleared reports if the "event" edge to the Event entity was cleared.
+func (m *WinMutation) EventCleared() bool {
+	return m.clearedevent
+}
+
+// EventID returns the "event" edge ID in the mutation.
+func (m *WinMutation) EventID() (id int, exists bool) {
+	if m.event != nil {
+		return *m.event, true
+	}
+	return
+}
+
+// EventIDs returns the "event" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// EventID instead. It exists only for internal usage by the builders.
+func (m *WinMutation) EventIDs() (ids []int) {
+	if id := m.event; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetEvent resets all changes to the "event" edge.
+func (m *WinMutation) ResetEvent() {
+	m.event = nil
+	m.clearedevent = false
+}
+
 // Where appends a list predicates to the WinMutation builder.
 func (m *WinMutation) Where(ps ...predicate.Win) {
 	m.predicates = append(m.predicates, ps...)
@@ -8752,19 +9084,28 @@ func (m *WinMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *WinMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.event != nil {
+		edges = append(edges, win.EdgeEvent)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *WinMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case win.EdgeEvent:
+		if id := m.event; id != nil {
+			return []ent.Value{*id}
+		}
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *WinMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
 	return edges
 }
 
@@ -8776,24 +9117,41 @@ func (m *WinMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *WinMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.clearedevent {
+		edges = append(edges, win.EdgeEvent)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *WinMutation) EdgeCleared(name string) bool {
+	switch name {
+	case win.EdgeEvent:
+		return m.clearedevent
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *WinMutation) ClearEdge(name string) error {
+	switch name {
+	case win.EdgeEvent:
+		m.ClearEvent()
+		return nil
+	}
 	return fmt.Errorf("unknown Win unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *WinMutation) ResetEdge(name string) error {
+	switch name {
+	case win.EdgeEvent:
+		m.ResetEvent()
+		return nil
+	}
 	return fmt.Errorf("unknown Win edge %s", name)
 }

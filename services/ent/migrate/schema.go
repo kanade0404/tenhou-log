@@ -40,9 +40,10 @@ var (
 	}
 	// CompressedMjLogsColumns holds the columns for the "compressed_mj_logs" table.
 	CompressedMjLogsColumns = []*schema.Column{
-		{Name: "oid", Type: field.TypeUUID},
-		{Name: "name", Type: field.TypeString, Unique: true},
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "name", Type: field.TypeString},
 		{Name: "size", Type: field.TypeUint},
+		{Name: "inserted_at", Type: field.TypeTime},
 	}
 	// CompressedMjLogsTable holds the schema information for the "compressed_mj_logs" table.
 	CompressedMjLogsTable = &schema.Table{
@@ -62,7 +63,7 @@ var (
 	}
 	// DansColumns holds the columns for the "dans" table.
 	DansColumns = []*schema.Column{
-		{Name: "oid", Type: field.TypeUUID},
+		{Name: "id", Type: field.TypeUUID},
 		{Name: "name", Type: field.TypeString, Unique: true},
 	}
 	// DansTable holds the schema information for the "dans" table.
@@ -84,16 +85,25 @@ var (
 	// EventsColumns holds the columns for the "events" table.
 	EventsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "turn_event", Type: field.TypeUUID},
 	}
 	// EventsTable holds the schema information for the "events" table.
 	EventsTable = &schema.Table{
 		Name:       "events",
 		Columns:    EventsColumns,
 		PrimaryKey: []*schema.Column{EventsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "events_turns_event",
+				Columns:    []*schema.Column{EventsColumns[1]},
+				RefColumns: []*schema.Column{TurnsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
 	}
 	// GamesColumns holds the columns for the "games" table.
 	GamesColumns = []*schema.Column{
-		{Name: "oid", Type: field.TypeUUID},
+		{Name: "id", Type: field.TypeUUID},
 		{Name: "name", Type: field.TypeString, Unique: true},
 		{Name: "started_at", Type: field.TypeTime},
 		{Name: "room_games", Type: field.TypeUUID, Nullable: true},
@@ -114,7 +124,7 @@ var (
 	}
 	// GamePlayersColumns holds the columns for the "game_players" table.
 	GamePlayersColumns = []*schema.Column{
-		{Name: "oid", Type: field.TypeUUID},
+		{Name: "id", Type: field.TypeUUID},
 		{Name: "rate", Type: field.TypeFloat64},
 		{Name: "start_position", Type: field.TypeString},
 		{Name: "dan_game_players", Type: field.TypeUUID, Nullable: true},
@@ -152,7 +162,7 @@ var (
 	}
 	// GamePlayerPointsColumns holds the columns for the "game_player_points" table.
 	GamePlayerPointsColumns = []*schema.Column{
-		{Name: "oid", Type: field.TypeUUID},
+		{Name: "id", Type: field.TypeUUID},
 		{Name: "point", Type: field.TypeUint},
 	}
 	// GamePlayerPointsTable holds the schema information for the "game_player_points" table.
@@ -163,7 +173,7 @@ var (
 	}
 	// HandsColumns holds the columns for the "hands" table.
 	HandsColumns = []*schema.Column{
-		{Name: "oid", Type: field.TypeUUID},
+		{Name: "id", Type: field.TypeUUID},
 		{Name: "num", Type: field.TypeUint},
 		{Name: "continue_point", Type: field.TypeUint},
 		{Name: "reach_point", Type: field.TypeUint},
@@ -185,7 +195,7 @@ var (
 	}
 	// MjLogsColumns holds the columns for the "mj_logs" table.
 	MjLogsColumns = []*schema.Column{
-		{Name: "oid", Type: field.TypeUUID},
+		{Name: "id", Type: field.TypeUUID},
 		{Name: "version", Type: field.TypeFloat64},
 		{Name: "seed", Type: field.TypeString},
 		{Name: "started_at", Type: field.TypeTime},
@@ -215,7 +225,7 @@ var (
 	}
 	// MjLogFilesColumns holds the columns for the "mj_log_files" table.
 	MjLogFilesColumns = []*schema.Column{
-		{Name: "oid", Type: field.TypeUUID},
+		{Name: "id", Type: field.TypeUUID},
 		{Name: "name", Type: field.TypeString, Unique: true},
 		{Name: "compressed_mj_log_mjlog_files", Type: field.TypeUUID, Unique: true},
 	}
@@ -245,7 +255,7 @@ var (
 	}
 	// PlayersColumns holds the columns for the "players" table.
 	PlayersColumns = []*schema.Column{
-		{Name: "oid", Type: field.TypeUUID},
+		{Name: "id", Type: field.TypeUUID},
 		{Name: "name", Type: field.TypeString, Unique: true},
 		{Name: "sex", Type: field.TypeString},
 	}
@@ -267,7 +277,7 @@ var (
 	}
 	// RoomsColumns holds the columns for the "rooms" table.
 	RoomsColumns = []*schema.Column{
-		{Name: "oid", Type: field.TypeUUID},
+		{Name: "id", Type: field.TypeUUID},
 		{Name: "name", Type: field.TypeString, Unique: true},
 	}
 	// RoomsTable holds the schema information for the "rooms" table.
@@ -278,7 +288,7 @@ var (
 	}
 	// RoundsColumns holds the columns for the "rounds" table.
 	RoundsColumns = []*schema.Column{
-		{Name: "oid", Type: field.TypeUUID},
+		{Name: "id", Type: field.TypeUUID},
 		{Name: "wind", Type: field.TypeString},
 		{Name: "game_rounds", Type: field.TypeUUID, Nullable: true},
 	}
@@ -298,7 +308,7 @@ var (
 	}
 	// TurnsColumns holds the columns for the "turns" table.
 	TurnsColumns = []*schema.Column{
-		{Name: "oid", Type: field.TypeUUID},
+		{Name: "id", Type: field.TypeUUID},
 		{Name: "num", Type: field.TypeUint},
 	}
 	// TurnsTable holds the schema information for the "turns" table.
@@ -310,12 +320,21 @@ var (
 	// WinsColumns holds the columns for the "wins" table.
 	WinsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "event_win", Type: field.TypeInt},
 	}
 	// WinsTable holds the schema information for the "wins" table.
 	WinsTable = &schema.Table{
 		Name:       "wins",
 		Columns:    WinsColumns,
 		PrimaryKey: []*schema.Column{WinsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "wins_events_win",
+				Columns:    []*schema.Column{WinsColumns[1]},
+				RefColumns: []*schema.Column{EventsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
 	}
 	// GameGamePlayersColumns holds the columns for the "game_game_players" table.
 	GameGamePlayersColumns = []*schema.Column{
@@ -423,6 +442,7 @@ var (
 )
 
 func init() {
+	EventsTable.ForeignKeys[0].RefTable = TurnsTable
 	GamesTable.ForeignKeys[0].RefTable = RoomsTable
 	GamePlayersTable.ForeignKeys[0].RefTable = DansTable
 	GamePlayersTable.ForeignKeys[1].RefTable = PlayersTable
@@ -431,6 +451,7 @@ func init() {
 	MjLogsTable.ForeignKeys[1].RefTable = MjLogFilesTable
 	MjLogFilesTable.ForeignKeys[0].RefTable = CompressedMjLogsTable
 	RoundsTable.ForeignKeys[0].RefTable = GamesTable
+	WinsTable.ForeignKeys[0].RefTable = EventsTable
 	GameGamePlayersTable.ForeignKeys[0].RefTable = GamesTable
 	GameGamePlayersTable.ForeignKeys[1].RefTable = GamePlayersTable
 	HandTurnsTable.ForeignKeys[0].RefTable = HandsTable

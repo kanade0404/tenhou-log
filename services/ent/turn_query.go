@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/event"
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayerpoint"
 	"github.com/kanade0404/tenhou-log/services/ent/hand"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
@@ -29,6 +30,7 @@ type TurnQuery struct {
 	predicates           []predicate.Turn
 	withHands            *HandQuery
 	withGamePlayerPoints *GamePlayerPointQuery
+	withEvent            *EventQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -102,6 +104,28 @@ func (tq *TurnQuery) QueryGamePlayerPoints() *GamePlayerPointQuery {
 			sqlgraph.From(turn.Table, turn.FieldID, selector),
 			sqlgraph.To(gameplayerpoint.Table, gameplayerpoint.FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, false, turn.GamePlayerPointsTable, turn.GamePlayerPointsPrimaryKey...),
+		)
+		fromU = sqlgraph.SetNeighbors(tq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryEvent chains the current query on the "event" edge.
+func (tq *TurnQuery) QueryEvent() *EventQuery {
+	query := &EventQuery{config: tq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := tq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := tq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(turn.Table, turn.FieldID, selector),
+			sqlgraph.To(event.Table, event.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, turn.EventTable, turn.EventColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(tq.driver.Dialect(), step)
 		return fromU, nil
@@ -292,6 +316,7 @@ func (tq *TurnQuery) Clone() *TurnQuery {
 		predicates:           append([]predicate.Turn{}, tq.predicates...),
 		withHands:            tq.withHands.Clone(),
 		withGamePlayerPoints: tq.withGamePlayerPoints.Clone(),
+		withEvent:            tq.withEvent.Clone(),
 		// clone intermediate query.
 		sql:    tq.sql.Clone(),
 		path:   tq.path,
@@ -321,6 +346,17 @@ func (tq *TurnQuery) WithGamePlayerPoints(opts ...func(*GamePlayerPointQuery)) *
 	return tq
 }
 
+// WithEvent tells the query-builder to eager-load the nodes that are connected to
+// the "event" edge. The optional arguments are used to configure the query builder of the edge.
+func (tq *TurnQuery) WithEvent(opts ...func(*EventQuery)) *TurnQuery {
+	query := &EventQuery{config: tq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	tq.withEvent = query
+	return tq
+}
+
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
 //
@@ -335,7 +371,6 @@ func (tq *TurnQuery) WithGamePlayerPoints(opts ...func(*GamePlayerPointQuery)) *
 //		GroupBy(turn.FieldNum).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (tq *TurnQuery) GroupBy(field string, fields ...string) *TurnGroupBy {
 	grbuild := &TurnGroupBy{config: tq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -362,7 +397,6 @@ func (tq *TurnQuery) GroupBy(field string, fields ...string) *TurnGroupBy {
 //	client.Turn.Query().
 //		Select(turn.FieldNum).
 //		Scan(ctx, &v)
-//
 func (tq *TurnQuery) Select(fields ...string) *TurnSelect {
 	tq.fields = append(tq.fields, fields...)
 	selbuild := &TurnSelect{TurnQuery: tq}
@@ -396,9 +430,10 @@ func (tq *TurnQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Turn, e
 	var (
 		nodes       = []*Turn{}
 		_spec       = tq.querySpec()
-		loadedTypes = [2]bool{
+		loadedTypes = [3]bool{
 			tq.withHands != nil,
 			tq.withGamePlayerPoints != nil,
+			tq.withEvent != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -430,6 +465,13 @@ func (tq *TurnQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Turn, e
 		if err := tq.loadGamePlayerPoints(ctx, query, nodes,
 			func(n *Turn) { n.Edges.GamePlayerPoints = []*GamePlayerPoint{} },
 			func(n *Turn, e *GamePlayerPoint) { n.Edges.GamePlayerPoints = append(n.Edges.GamePlayerPoints, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := tq.withEvent; query != nil {
+		if err := tq.loadEvent(ctx, query, nodes,
+			func(n *Turn) { n.Edges.Event = []*Event{} },
+			func(n *Turn, e *Event) { n.Edges.Event = append(n.Edges.Event, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -549,6 +591,37 @@ func (tq *TurnQuery) loadGamePlayerPoints(ctx context.Context, query *GamePlayer
 		for kn := range nodes {
 			assign(kn, n)
 		}
+	}
+	return nil
+}
+func (tq *TurnQuery) loadEvent(ctx context.Context, query *EventQuery, nodes []*Turn, init func(*Turn), assign func(*Turn, *Event)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Turn)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.Event(func(s *sql.Selector) {
+		s.Where(sql.InValues(turn.EventColumn, fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.turn_event
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "turn_event" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "turn_event" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
 	}
 	return nil
 }

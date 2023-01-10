@@ -16,7 +16,7 @@ type GamePlayerPoint struct {
 // Fields of the GamePlayerPoint.
 func (GamePlayerPoint) Fields() []ent.Field {
 	return []ent.Field{
-		field.UUID("id", uuid.UUID{}).Default(uuid.New).StorageKey("oid"),
+		field.UUID("id", uuid.UUID{}).Default(uuid.New),
 		field.Uint("point").Immutable().Validate(func(u uint) error {
 			if u%100 == 0 {
 				return nil

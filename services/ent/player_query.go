@@ -299,7 +299,6 @@ func (pq *PlayerQuery) WithGamePlayers(opts ...func(*GamePlayerQuery)) *PlayerQu
 //		GroupBy(player.FieldName).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
-//
 func (pq *PlayerQuery) GroupBy(field string, fields ...string) *PlayerGroupBy {
 	grbuild := &PlayerGroupBy{config: pq.config}
 	grbuild.fields = append([]string{field}, fields...)
@@ -326,7 +325,6 @@ func (pq *PlayerQuery) GroupBy(field string, fields ...string) *PlayerGroupBy {
 //	client.Player.Query().
 //		Select(player.FieldName).
 //		Scan(ctx, &v)
-//
 func (pq *PlayerQuery) Select(fields ...string) *PlayerSelect {
 	pq.fields = append(pq.fields, fields...)
 	selbuild := &PlayerSelect{PlayerQuery: pq}

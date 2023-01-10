@@ -5,6 +5,7 @@ package ent
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
@@ -21,6 +22,8 @@ type CompressedMJLog struct {
 	Name string `json:"name,omitempty"`
 	// Size holds the value of the "size" field.
 	Size uint `json:"size,omitempty"`
+	// InsertedAt holds the value of the "inserted_at" field.
+	InsertedAt time.Time `json:"inserted_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the CompressedMJLogQuery when eager-loading is set.
 	Edges CompressedMJLogEdges `json:"edges"`
@@ -57,6 +60,8 @@ func (*CompressedMJLog) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case compressedmjlog.FieldName:
 			values[i] = new(sql.NullString)
+		case compressedmjlog.FieldInsertedAt:
+			values[i] = new(sql.NullTime)
 		case compressedmjlog.FieldID:
 			values[i] = new(uuid.UUID)
 		default:
@@ -91,6 +96,12 @@ func (cml *CompressedMJLog) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field size", values[i])
 			} else if value.Valid {
 				cml.Size = uint(value.Int64)
+			}
+		case compressedmjlog.FieldInsertedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field inserted_at", values[i])
+			} else if value.Valid {
+				cml.InsertedAt = value.Time
 			}
 		}
 	}
@@ -130,6 +141,9 @@ func (cml *CompressedMJLog) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("size=")
 	builder.WriteString(fmt.Sprintf("%v", cml.Size))
+	builder.WriteString(", ")
+	builder.WriteString("inserted_at=")
+	builder.WriteString(cml.InsertedAt.Format(time.ANSIC))
 	builder.WriteByte(')')
 	return builder.String()
 }

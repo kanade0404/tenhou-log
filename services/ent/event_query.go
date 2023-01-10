@@ -4,14 +4,18 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/event"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
+	"github.com/kanade0404/tenhou-log/services/ent/turn"
+	"github.com/kanade0404/tenhou-log/services/ent/win"
 )
 
 // EventQuery is the builder for querying Event entities.
@@ -23,6 +27,9 @@ type EventQuery struct {
 	order      []OrderFunc
 	fields     []string
 	predicates []predicate.Event
+	withTurn   *TurnQuery
+	withWin    *WinQuery
+	withFKs    bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -57,6 +64,50 @@ func (eq *EventQuery) Unique(unique bool) *EventQuery {
 func (eq *EventQuery) Order(o ...OrderFunc) *EventQuery {
 	eq.order = append(eq.order, o...)
 	return eq
+}
+
+// QueryTurn chains the current query on the "turn" edge.
+func (eq *EventQuery) QueryTurn() *TurnQuery {
+	query := &TurnQuery{config: eq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := eq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := eq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(event.Table, event.FieldID, selector),
+			sqlgraph.To(turn.Table, turn.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, event.TurnTable, event.TurnColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(eq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryWin chains the current query on the "win" edge.
+func (eq *EventQuery) QueryWin() *WinQuery {
+	query := &WinQuery{config: eq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := eq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := eq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(event.Table, event.FieldID, selector),
+			sqlgraph.To(win.Table, win.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, event.WinTable, event.WinColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(eq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first Event entity from the query.
@@ -240,11 +291,35 @@ func (eq *EventQuery) Clone() *EventQuery {
 		offset:     eq.offset,
 		order:      append([]OrderFunc{}, eq.order...),
 		predicates: append([]predicate.Event{}, eq.predicates...),
+		withTurn:   eq.withTurn.Clone(),
+		withWin:    eq.withWin.Clone(),
 		// clone intermediate query.
 		sql:    eq.sql.Clone(),
 		path:   eq.path,
 		unique: eq.unique,
 	}
+}
+
+// WithTurn tells the query-builder to eager-load the nodes that are connected to
+// the "turn" edge. The optional arguments are used to configure the query builder of the edge.
+func (eq *EventQuery) WithTurn(opts ...func(*TurnQuery)) *EventQuery {
+	query := &TurnQuery{config: eq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	eq.withTurn = query
+	return eq
+}
+
+// WithWin tells the query-builder to eager-load the nodes that are connected to
+// the "win" edge. The optional arguments are used to configure the query builder of the edge.
+func (eq *EventQuery) WithWin(opts ...func(*WinQuery)) *EventQuery {
+	query := &WinQuery{config: eq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	eq.withWin = query
+	return eq
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -296,15 +371,27 @@ func (eq *EventQuery) prepareQuery(ctx context.Context) error {
 
 func (eq *EventQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Event, error) {
 	var (
-		nodes = []*Event{}
-		_spec = eq.querySpec()
+		nodes       = []*Event{}
+		withFKs     = eq.withFKs
+		_spec       = eq.querySpec()
+		loadedTypes = [2]bool{
+			eq.withTurn != nil,
+			eq.withWin != nil,
+		}
 	)
+	if eq.withTurn != nil {
+		withFKs = true
+	}
+	if withFKs {
+		_spec.Node.Columns = append(_spec.Node.Columns, event.ForeignKeys...)
+	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Event).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &Event{config: eq.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -316,7 +403,81 @@ func (eq *EventQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Event,
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := eq.withTurn; query != nil {
+		if err := eq.loadTurn(ctx, query, nodes, nil,
+			func(n *Event, e *Turn) { n.Edges.Turn = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := eq.withWin; query != nil {
+		if err := eq.loadWin(ctx, query, nodes,
+			func(n *Event) { n.Edges.Win = []*Win{} },
+			func(n *Event, e *Win) { n.Edges.Win = append(n.Edges.Win, e) }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (eq *EventQuery) loadTurn(ctx context.Context, query *TurnQuery, nodes []*Event, init func(*Event), assign func(*Event, *Turn)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Event)
+	for i := range nodes {
+		if nodes[i].turn_event == nil {
+			continue
+		}
+		fk := *nodes[i].turn_event
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	query.Where(turn.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "turn_event" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (eq *EventQuery) loadWin(ctx context.Context, query *WinQuery, nodes []*Event, init func(*Event), assign func(*Event, *Win)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*Event)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.Win(func(s *sql.Selector) {
+		s.Where(sql.InValues(event.WinColumn, fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.event_win
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "event_win" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "event_win" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
 }
 
 func (eq *EventQuery) sqlCount(ctx context.Context) (int, error) {
