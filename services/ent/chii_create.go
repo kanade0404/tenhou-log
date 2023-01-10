@@ -7,9 +7,12 @@ import (
 	"errors"
 	"fmt"
 
+	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/call"
 	"github.com/kanade0404/tenhou-log/services/ent/chii"
 )
 
@@ -19,6 +22,39 @@ type ChiiCreate struct {
 	mutation *ChiiMutation
 	hooks    []Hook
 	conflict []sql.ConflictOption
+}
+
+// SetID sets the "id" field.
+func (cc *ChiiCreate) SetID(u uuid.UUID) *ChiiCreate {
+	cc.mutation.SetID(u)
+	return cc
+}
+
+// SetNillableID sets the "id" field if the given value is not nil.
+func (cc *ChiiCreate) SetNillableID(u *uuid.UUID) *ChiiCreate {
+	if u != nil {
+		cc.SetID(*u)
+	}
+	return cc
+}
+
+// SetCallID sets the "call" edge to the Call entity by ID.
+func (cc *ChiiCreate) SetCallID(id uuid.UUID) *ChiiCreate {
+	cc.mutation.SetCallID(id)
+	return cc
+}
+
+// SetNillableCallID sets the "call" edge to the Call entity by ID if the given value is not nil.
+func (cc *ChiiCreate) SetNillableCallID(id *uuid.UUID) *ChiiCreate {
+	if id != nil {
+		cc = cc.SetCallID(*id)
+	}
+	return cc
+}
+
+// SetCall sets the "call" edge to the Call entity.
+func (cc *ChiiCreate) SetCall(c *Call) *ChiiCreate {
+	return cc.SetCallID(c.ID)
 }
 
 // Mutation returns the ChiiMutation object of the builder.
@@ -32,6 +68,7 @@ func (cc *ChiiCreate) Save(ctx context.Context) (*Chii, error) {
 		err  error
 		node *Chii
 	)
+	cc.defaults()
 	if len(cc.hooks) == 0 {
 		if err = cc.check(); err != nil {
 			return nil, err
@@ -95,6 +132,14 @@ func (cc *ChiiCreate) ExecX(ctx context.Context) {
 	}
 }
 
+// defaults sets the default values of the builder before save.
+func (cc *ChiiCreate) defaults() {
+	if _, ok := cc.mutation.ID(); !ok {
+		v := chii.DefaultID()
+		cc.mutation.SetID(v)
+	}
+}
+
 // check runs all checks and user-defined validators on the builder.
 func (cc *ChiiCreate) check() error {
 	return nil
@@ -108,8 +153,13 @@ func (cc *ChiiCreate) sqlSave(ctx context.Context) (*Chii, error) {
 		}
 		return nil, err
 	}
-	id := _spec.ID.Value.(int64)
-	_node.ID = int(id)
+	if _spec.ID.Value != nil {
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
+	}
 	return _node, nil
 }
 
@@ -119,12 +169,35 @@ func (cc *ChiiCreate) createSpec() (*Chii, *sqlgraph.CreateSpec) {
 		_spec = &sqlgraph.CreateSpec{
 			Table: chii.Table,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: chii.FieldID,
 			},
 		}
 	)
 	_spec.OnConflict = cc.conflict
+	if id, ok := cc.mutation.ID(); ok {
+		_node.ID = id
+		_spec.ID.Value = &id
+	}
+	if nodes := cc.mutation.CallIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   chii.CallTable,
+			Columns: []string{chii.CallColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: call.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
 	return _node, _spec
 }
 
@@ -171,16 +244,24 @@ type (
 	}
 )
 
-// UpdateNewValues updates the mutable fields using the new values that were set on create.
+// UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
 // Using this option is equivalent to using:
 //
 //	client.Chii.Create().
 //		OnConflict(
 //			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(chii.FieldID)
+//			}),
 //		).
 //		Exec(ctx)
 func (u *ChiiUpsertOne) UpdateNewValues() *ChiiUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.ID(); exists {
+			s.SetIgnore(chii.FieldID)
+		}
+	}))
 	return u
 }
 
@@ -227,7 +308,12 @@ func (u *ChiiUpsertOne) ExecX(ctx context.Context) {
 }
 
 // Exec executes the UPSERT query and returns the inserted/updated ID.
-func (u *ChiiUpsertOne) ID(ctx context.Context) (id int, err error) {
+func (u *ChiiUpsertOne) ID(ctx context.Context) (id uuid.UUID, err error) {
+	if u.create.driver.Dialect() == dialect.MySQL {
+		// In case of "ON CONFLICT", there is no way to get back non-numeric ID
+		// fields from the database since MySQL does not support the RETURNING clause.
+		return id, errors.New("ent: ChiiUpsertOne.ID is not supported by MySQL driver. Use ChiiUpsertOne.Exec instead")
+	}
 	node, err := u.create.Save(ctx)
 	if err != nil {
 		return id, err
@@ -236,7 +322,7 @@ func (u *ChiiUpsertOne) ID(ctx context.Context) (id int, err error) {
 }
 
 // IDX is like ID, but panics if an error occurs.
-func (u *ChiiUpsertOne) IDX(ctx context.Context) int {
+func (u *ChiiUpsertOne) IDX(ctx context.Context) uuid.UUID {
 	id, err := u.ID(ctx)
 	if err != nil {
 		panic(err)
@@ -259,6 +345,7 @@ func (ccb *ChiiCreateBulk) Save(ctx context.Context) ([]*Chii, error) {
 	for i := range ccb.builders {
 		func(i int, root context.Context) {
 			builder := ccb.builders[i]
+			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*ChiiMutation)
 				if !ok {
@@ -286,10 +373,6 @@ func (ccb *ChiiCreateBulk) Save(ctx context.Context) ([]*Chii, error) {
 					return nil, err
 				}
 				mutation.id = &nodes[i].ID
-				if specs[i].ID.Value != nil {
-					id := specs[i].ID.Value.(int64)
-					nodes[i].ID = int(id)
-				}
 				mutation.done = true
 				return nodes[i], nil
 			})
@@ -371,10 +454,20 @@ type ChiiUpsertBulk struct {
 //	client.Chii.Create().
 //		OnConflict(
 //			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(chii.FieldID)
+//			}),
 //		).
 //		Exec(ctx)
 func (u *ChiiUpsertBulk) UpdateNewValues() *ChiiUpsertBulk {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.ID(); exists {
+				s.SetIgnore(chii.FieldID)
+			}
+		}
+	}))
 	return u
 }
 

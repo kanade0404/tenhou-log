@@ -7,11 +7,15 @@ import (
 	"errors"
 	"fmt"
 
+	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/call"
+	"github.com/kanade0404/tenhou-log/services/ent/drawn"
 	"github.com/kanade0404/tenhou-log/services/ent/event"
+	"github.com/kanade0404/tenhou-log/services/ent/reach"
 	"github.com/kanade0404/tenhou-log/services/ent/turn"
 	"github.com/kanade0404/tenhou-log/services/ent/win"
 )
@@ -22,6 +26,20 @@ type EventCreate struct {
 	mutation *EventMutation
 	hooks    []Hook
 	conflict []sql.ConflictOption
+}
+
+// SetID sets the "id" field.
+func (ec *EventCreate) SetID(u uuid.UUID) *EventCreate {
+	ec.mutation.SetID(u)
+	return ec
+}
+
+// SetNillableID sets the "id" field if the given value is not nil.
+func (ec *EventCreate) SetNillableID(u *uuid.UUID) *EventCreate {
+	if u != nil {
+		ec.SetID(*u)
+	}
+	return ec
 }
 
 // SetTurnID sets the "turn" edge to the Turn entity by ID.
@@ -36,18 +54,63 @@ func (ec *EventCreate) SetTurn(t *Turn) *EventCreate {
 }
 
 // AddWinIDs adds the "win" edge to the Win entity by IDs.
-func (ec *EventCreate) AddWinIDs(ids ...int) *EventCreate {
+func (ec *EventCreate) AddWinIDs(ids ...uuid.UUID) *EventCreate {
 	ec.mutation.AddWinIDs(ids...)
 	return ec
 }
 
 // AddWin adds the "win" edges to the Win entity.
 func (ec *EventCreate) AddWin(w ...*Win) *EventCreate {
-	ids := make([]int, len(w))
+	ids := make([]uuid.UUID, len(w))
 	for i := range w {
 		ids[i] = w[i].ID
 	}
 	return ec.AddWinIDs(ids...)
+}
+
+// AddCallIDs adds the "call" edge to the Call entity by IDs.
+func (ec *EventCreate) AddCallIDs(ids ...uuid.UUID) *EventCreate {
+	ec.mutation.AddCallIDs(ids...)
+	return ec
+}
+
+// AddCall adds the "call" edges to the Call entity.
+func (ec *EventCreate) AddCall(c ...*Call) *EventCreate {
+	ids := make([]uuid.UUID, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return ec.AddCallIDs(ids...)
+}
+
+// AddDrawIDs adds the "draw" edge to the Drawn entity by IDs.
+func (ec *EventCreate) AddDrawIDs(ids ...uuid.UUID) *EventCreate {
+	ec.mutation.AddDrawIDs(ids...)
+	return ec
+}
+
+// AddDraw adds the "draw" edges to the Drawn entity.
+func (ec *EventCreate) AddDraw(d ...*Drawn) *EventCreate {
+	ids := make([]uuid.UUID, len(d))
+	for i := range d {
+		ids[i] = d[i].ID
+	}
+	return ec.AddDrawIDs(ids...)
+}
+
+// AddReachIDs adds the "reach" edge to the Reach entity by IDs.
+func (ec *EventCreate) AddReachIDs(ids ...uuid.UUID) *EventCreate {
+	ec.mutation.AddReachIDs(ids...)
+	return ec
+}
+
+// AddReach adds the "reach" edges to the Reach entity.
+func (ec *EventCreate) AddReach(r ...*Reach) *EventCreate {
+	ids := make([]uuid.UUID, len(r))
+	for i := range r {
+		ids[i] = r[i].ID
+	}
+	return ec.AddReachIDs(ids...)
 }
 
 // Mutation returns the EventMutation object of the builder.
@@ -61,6 +124,7 @@ func (ec *EventCreate) Save(ctx context.Context) (*Event, error) {
 		err  error
 		node *Event
 	)
+	ec.defaults()
 	if len(ec.hooks) == 0 {
 		if err = ec.check(); err != nil {
 			return nil, err
@@ -124,6 +188,14 @@ func (ec *EventCreate) ExecX(ctx context.Context) {
 	}
 }
 
+// defaults sets the default values of the builder before save.
+func (ec *EventCreate) defaults() {
+	if _, ok := ec.mutation.ID(); !ok {
+		v := event.DefaultID()
+		ec.mutation.SetID(v)
+	}
+}
+
 // check runs all checks and user-defined validators on the builder.
 func (ec *EventCreate) check() error {
 	if _, ok := ec.mutation.TurnID(); !ok {
@@ -140,8 +212,13 @@ func (ec *EventCreate) sqlSave(ctx context.Context) (*Event, error) {
 		}
 		return nil, err
 	}
-	id := _spec.ID.Value.(int64)
-	_node.ID = int(id)
+	if _spec.ID.Value != nil {
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
+	}
 	return _node, nil
 }
 
@@ -151,15 +228,19 @@ func (ec *EventCreate) createSpec() (*Event, *sqlgraph.CreateSpec) {
 		_spec = &sqlgraph.CreateSpec{
 			Table: event.Table,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: event.FieldID,
 			},
 		}
 	)
 	_spec.OnConflict = ec.conflict
+	if id, ok := ec.mutation.ID(); ok {
+		_node.ID = id
+		_spec.ID.Value = &id
+	}
 	if nodes := ec.mutation.TurnIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.O2O,
 			Inverse: true,
 			Table:   event.TurnTable,
 			Columns: []string{event.TurnColumn},
@@ -186,8 +267,65 @@ func (ec *EventCreate) createSpec() (*Event, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
+					Type:   field.TypeUUID,
 					Column: win.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := ec.mutation.CallIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   event.CallTable,
+			Columns: []string{event.CallColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: call.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := ec.mutation.DrawIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   event.DrawTable,
+			Columns: []string{event.DrawColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: drawn.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := ec.mutation.ReachIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   event.ReachTable,
+			Columns: []string{event.ReachColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: reach.FieldID,
 				},
 			},
 		}
@@ -242,16 +380,24 @@ type (
 	}
 )
 
-// UpdateNewValues updates the mutable fields using the new values that were set on create.
+// UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
 // Using this option is equivalent to using:
 //
 //	client.Event.Create().
 //		OnConflict(
 //			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(event.FieldID)
+//			}),
 //		).
 //		Exec(ctx)
 func (u *EventUpsertOne) UpdateNewValues() *EventUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.ID(); exists {
+			s.SetIgnore(event.FieldID)
+		}
+	}))
 	return u
 }
 
@@ -298,7 +444,12 @@ func (u *EventUpsertOne) ExecX(ctx context.Context) {
 }
 
 // Exec executes the UPSERT query and returns the inserted/updated ID.
-func (u *EventUpsertOne) ID(ctx context.Context) (id int, err error) {
+func (u *EventUpsertOne) ID(ctx context.Context) (id uuid.UUID, err error) {
+	if u.create.driver.Dialect() == dialect.MySQL {
+		// In case of "ON CONFLICT", there is no way to get back non-numeric ID
+		// fields from the database since MySQL does not support the RETURNING clause.
+		return id, errors.New("ent: EventUpsertOne.ID is not supported by MySQL driver. Use EventUpsertOne.Exec instead")
+	}
 	node, err := u.create.Save(ctx)
 	if err != nil {
 		return id, err
@@ -307,7 +458,7 @@ func (u *EventUpsertOne) ID(ctx context.Context) (id int, err error) {
 }
 
 // IDX is like ID, but panics if an error occurs.
-func (u *EventUpsertOne) IDX(ctx context.Context) int {
+func (u *EventUpsertOne) IDX(ctx context.Context) uuid.UUID {
 	id, err := u.ID(ctx)
 	if err != nil {
 		panic(err)
@@ -330,6 +481,7 @@ func (ecb *EventCreateBulk) Save(ctx context.Context) ([]*Event, error) {
 	for i := range ecb.builders {
 		func(i int, root context.Context) {
 			builder := ecb.builders[i]
+			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*EventMutation)
 				if !ok {
@@ -357,10 +509,6 @@ func (ecb *EventCreateBulk) Save(ctx context.Context) ([]*Event, error) {
 					return nil, err
 				}
 				mutation.id = &nodes[i].ID
-				if specs[i].ID.Value != nil {
-					id := specs[i].ID.Value.(int64)
-					nodes[i].ID = int(id)
-				}
 				mutation.done = true
 				return nodes[i], nil
 			})
@@ -442,10 +590,20 @@ type EventUpsertBulk struct {
 //	client.Event.Create().
 //		OnConflict(
 //			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(event.FieldID)
+//			}),
 //		).
 //		Exec(ctx)
 func (u *EventUpsertBulk) UpdateNewValues() *EventUpsertBulk {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.ID(); exists {
+				s.SetIgnore(event.FieldID)
+			}
+		}
+	}))
 	return u
 }
 

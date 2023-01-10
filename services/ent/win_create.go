@@ -7,9 +7,11 @@ import (
 	"errors"
 	"fmt"
 
+	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/event"
 	"github.com/kanade0404/tenhou-log/services/ent/win"
 )
@@ -22,8 +24,22 @@ type WinCreate struct {
 	conflict []sql.ConflictOption
 }
 
+// SetID sets the "id" field.
+func (wc *WinCreate) SetID(u uuid.UUID) *WinCreate {
+	wc.mutation.SetID(u)
+	return wc
+}
+
+// SetNillableID sets the "id" field if the given value is not nil.
+func (wc *WinCreate) SetNillableID(u *uuid.UUID) *WinCreate {
+	if u != nil {
+		wc.SetID(*u)
+	}
+	return wc
+}
+
 // SetEventID sets the "event" edge to the Event entity by ID.
-func (wc *WinCreate) SetEventID(id int) *WinCreate {
+func (wc *WinCreate) SetEventID(id uuid.UUID) *WinCreate {
 	wc.mutation.SetEventID(id)
 	return wc
 }
@@ -44,6 +60,7 @@ func (wc *WinCreate) Save(ctx context.Context) (*Win, error) {
 		err  error
 		node *Win
 	)
+	wc.defaults()
 	if len(wc.hooks) == 0 {
 		if err = wc.check(); err != nil {
 			return nil, err
@@ -107,6 +124,14 @@ func (wc *WinCreate) ExecX(ctx context.Context) {
 	}
 }
 
+// defaults sets the default values of the builder before save.
+func (wc *WinCreate) defaults() {
+	if _, ok := wc.mutation.ID(); !ok {
+		v := win.DefaultID()
+		wc.mutation.SetID(v)
+	}
+}
+
 // check runs all checks and user-defined validators on the builder.
 func (wc *WinCreate) check() error {
 	if _, ok := wc.mutation.EventID(); !ok {
@@ -123,8 +148,13 @@ func (wc *WinCreate) sqlSave(ctx context.Context) (*Win, error) {
 		}
 		return nil, err
 	}
-	id := _spec.ID.Value.(int64)
-	_node.ID = int(id)
+	if _spec.ID.Value != nil {
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
+	}
 	return _node, nil
 }
 
@@ -134,12 +164,16 @@ func (wc *WinCreate) createSpec() (*Win, *sqlgraph.CreateSpec) {
 		_spec = &sqlgraph.CreateSpec{
 			Table: win.Table,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: win.FieldID,
 			},
 		}
 	)
 	_spec.OnConflict = wc.conflict
+	if id, ok := wc.mutation.ID(); ok {
+		_node.ID = id
+		_spec.ID.Value = &id
+	}
 	if nodes := wc.mutation.EventIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -149,7 +183,7 @@ func (wc *WinCreate) createSpec() (*Win, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
+					Type:   field.TypeUUID,
 					Column: event.FieldID,
 				},
 			},
@@ -206,16 +240,24 @@ type (
 	}
 )
 
-// UpdateNewValues updates the mutable fields using the new values that were set on create.
+// UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
 // Using this option is equivalent to using:
 //
 //	client.Win.Create().
 //		OnConflict(
 //			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(win.FieldID)
+//			}),
 //		).
 //		Exec(ctx)
 func (u *WinUpsertOne) UpdateNewValues() *WinUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.ID(); exists {
+			s.SetIgnore(win.FieldID)
+		}
+	}))
 	return u
 }
 
@@ -262,7 +304,12 @@ func (u *WinUpsertOne) ExecX(ctx context.Context) {
 }
 
 // Exec executes the UPSERT query and returns the inserted/updated ID.
-func (u *WinUpsertOne) ID(ctx context.Context) (id int, err error) {
+func (u *WinUpsertOne) ID(ctx context.Context) (id uuid.UUID, err error) {
+	if u.create.driver.Dialect() == dialect.MySQL {
+		// In case of "ON CONFLICT", there is no way to get back non-numeric ID
+		// fields from the database since MySQL does not support the RETURNING clause.
+		return id, errors.New("ent: WinUpsertOne.ID is not supported by MySQL driver. Use WinUpsertOne.Exec instead")
+	}
 	node, err := u.create.Save(ctx)
 	if err != nil {
 		return id, err
@@ -271,7 +318,7 @@ func (u *WinUpsertOne) ID(ctx context.Context) (id int, err error) {
 }
 
 // IDX is like ID, but panics if an error occurs.
-func (u *WinUpsertOne) IDX(ctx context.Context) int {
+func (u *WinUpsertOne) IDX(ctx context.Context) uuid.UUID {
 	id, err := u.ID(ctx)
 	if err != nil {
 		panic(err)
@@ -294,6 +341,7 @@ func (wcb *WinCreateBulk) Save(ctx context.Context) ([]*Win, error) {
 	for i := range wcb.builders {
 		func(i int, root context.Context) {
 			builder := wcb.builders[i]
+			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*WinMutation)
 				if !ok {
@@ -321,10 +369,6 @@ func (wcb *WinCreateBulk) Save(ctx context.Context) ([]*Win, error) {
 					return nil, err
 				}
 				mutation.id = &nodes[i].ID
-				if specs[i].ID.Value != nil {
-					id := specs[i].ID.Value.(int64)
-					nodes[i].ID = int(id)
-				}
 				mutation.done = true
 				return nodes[i], nil
 			})
@@ -406,10 +450,20 @@ type WinUpsertBulk struct {
 //	client.Win.Create().
 //		OnConflict(
 //			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(win.FieldID)
+//			}),
 //		).
 //		Exec(ctx)
 func (u *WinUpsertBulk) UpdateNewValues() *WinUpsertBulk {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.ID(); exists {
+				s.SetIgnore(win.FieldID)
+			}
+		}
+	}))
 	return u
 }
 

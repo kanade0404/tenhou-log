@@ -10,6 +10,8 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/call"
 	"github.com/kanade0404/tenhou-log/services/ent/meldedkan"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 )
@@ -27,9 +29,34 @@ func (mku *MeldedKanUpdate) Where(ps ...predicate.MeldedKan) *MeldedKanUpdate {
 	return mku
 }
 
+// SetCallID sets the "call" edge to the Call entity by ID.
+func (mku *MeldedKanUpdate) SetCallID(id uuid.UUID) *MeldedKanUpdate {
+	mku.mutation.SetCallID(id)
+	return mku
+}
+
+// SetNillableCallID sets the "call" edge to the Call entity by ID if the given value is not nil.
+func (mku *MeldedKanUpdate) SetNillableCallID(id *uuid.UUID) *MeldedKanUpdate {
+	if id != nil {
+		mku = mku.SetCallID(*id)
+	}
+	return mku
+}
+
+// SetCall sets the "call" edge to the Call entity.
+func (mku *MeldedKanUpdate) SetCall(c *Call) *MeldedKanUpdate {
+	return mku.SetCallID(c.ID)
+}
+
 // Mutation returns the MeldedKanMutation object of the builder.
 func (mku *MeldedKanUpdate) Mutation() *MeldedKanMutation {
 	return mku.mutation
+}
+
+// ClearCall clears the "call" edge to the Call entity.
+func (mku *MeldedKanUpdate) ClearCall() *MeldedKanUpdate {
+	mku.mutation.ClearCall()
+	return mku
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -92,7 +119,7 @@ func (mku *MeldedKanUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Table:   meldedkan.Table,
 			Columns: meldedkan.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: meldedkan.FieldID,
 			},
 		},
@@ -103,6 +130,41 @@ func (mku *MeldedKanUpdate) sqlSave(ctx context.Context) (n int, err error) {
 				ps[i](selector)
 			}
 		}
+	}
+	if mku.mutation.CallCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   meldedkan.CallTable,
+			Columns: []string{meldedkan.CallColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: call.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := mku.mutation.CallIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   meldedkan.CallTable,
+			Columns: []string{meldedkan.CallColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: call.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, mku.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -123,9 +185,34 @@ type MeldedKanUpdateOne struct {
 	mutation *MeldedKanMutation
 }
 
+// SetCallID sets the "call" edge to the Call entity by ID.
+func (mkuo *MeldedKanUpdateOne) SetCallID(id uuid.UUID) *MeldedKanUpdateOne {
+	mkuo.mutation.SetCallID(id)
+	return mkuo
+}
+
+// SetNillableCallID sets the "call" edge to the Call entity by ID if the given value is not nil.
+func (mkuo *MeldedKanUpdateOne) SetNillableCallID(id *uuid.UUID) *MeldedKanUpdateOne {
+	if id != nil {
+		mkuo = mkuo.SetCallID(*id)
+	}
+	return mkuo
+}
+
+// SetCall sets the "call" edge to the Call entity.
+func (mkuo *MeldedKanUpdateOne) SetCall(c *Call) *MeldedKanUpdateOne {
+	return mkuo.SetCallID(c.ID)
+}
+
 // Mutation returns the MeldedKanMutation object of the builder.
 func (mkuo *MeldedKanUpdateOne) Mutation() *MeldedKanMutation {
 	return mkuo.mutation
+}
+
+// ClearCall clears the "call" edge to the Call entity.
+func (mkuo *MeldedKanUpdateOne) ClearCall() *MeldedKanUpdateOne {
+	mkuo.mutation.ClearCall()
+	return mkuo
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -201,7 +288,7 @@ func (mkuo *MeldedKanUpdateOne) sqlSave(ctx context.Context) (_node *MeldedKan, 
 			Table:   meldedkan.Table,
 			Columns: meldedkan.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: meldedkan.FieldID,
 			},
 		},
@@ -229,6 +316,41 @@ func (mkuo *MeldedKanUpdateOne) sqlSave(ctx context.Context) (_node *MeldedKan, 
 				ps[i](selector)
 			}
 		}
+	}
+	if mkuo.mutation.CallCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   meldedkan.CallTable,
+			Columns: []string{meldedkan.CallColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: call.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := mkuo.mutation.CallIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   meldedkan.CallTable,
+			Columns: []string{meldedkan.CallColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: call.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &MeldedKan{config: mkuo.config}
 	_spec.Assign = _node.assignValues

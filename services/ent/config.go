@@ -30,6 +30,7 @@ type hooks struct {
 	CompressedMJLog   []ent.Hook
 	ConcealedKan      []ent.Hook
 	Dan               []ent.Hook
+	Discard           []ent.Hook
 	Drawn             []ent.Hook
 	Event             []ent.Hook
 	Game              []ent.Hook
@@ -42,6 +43,7 @@ type hooks struct {
 	MeldedKan         []ent.Hook
 	Player            []ent.Hook
 	Pon               []ent.Hook
+	Reach             []ent.Hook
 	Room              []ent.Hook
 	Round             []ent.Hook
 	Turn              []ent.Hook

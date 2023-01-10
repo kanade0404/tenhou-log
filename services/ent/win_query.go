@@ -10,6 +10,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/event"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 	"github.com/kanade0404/tenhou-log/services/ent/win"
@@ -108,8 +109,8 @@ func (wq *WinQuery) FirstX(ctx context.Context) *Win {
 
 // FirstID returns the first Win ID from the query.
 // Returns a *NotFoundError when no Win ID was found.
-func (wq *WinQuery) FirstID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (wq *WinQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = wq.Limit(1).IDs(ctx); err != nil {
 		return
 	}
@@ -121,7 +122,7 @@ func (wq *WinQuery) FirstID(ctx context.Context) (id int, err error) {
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (wq *WinQuery) FirstIDX(ctx context.Context) int {
+func (wq *WinQuery) FirstIDX(ctx context.Context) uuid.UUID {
 	id, err := wq.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -159,8 +160,8 @@ func (wq *WinQuery) OnlyX(ctx context.Context) *Win {
 // OnlyID is like Only, but returns the only Win ID in the query.
 // Returns a *NotSingularError when more than one Win ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (wq *WinQuery) OnlyID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (wq *WinQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = wq.Limit(2).IDs(ctx); err != nil {
 		return
 	}
@@ -176,7 +177,7 @@ func (wq *WinQuery) OnlyID(ctx context.Context) (id int, err error) {
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (wq *WinQuery) OnlyIDX(ctx context.Context) int {
+func (wq *WinQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 	id, err := wq.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -202,8 +203,8 @@ func (wq *WinQuery) AllX(ctx context.Context) []*Win {
 }
 
 // IDs executes the query and returns a list of Win IDs.
-func (wq *WinQuery) IDs(ctx context.Context) ([]int, error) {
-	var ids []int
+func (wq *WinQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	var ids []uuid.UUID
 	if err := wq.Select(win.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
@@ -211,7 +212,7 @@ func (wq *WinQuery) IDs(ctx context.Context) ([]int, error) {
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (wq *WinQuery) IDsX(ctx context.Context) []int {
+func (wq *WinQuery) IDsX(ctx context.Context) []uuid.UUID {
 	ids, err := wq.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -374,8 +375,8 @@ func (wq *WinQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Win, err
 }
 
 func (wq *WinQuery) loadEvent(ctx context.Context, query *EventQuery, nodes []*Win, init func(*Win), assign func(*Win, *Event)) error {
-	ids := make([]int, 0, len(nodes))
-	nodeids := make(map[int][]*Win)
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Win)
 	for i := range nodes {
 		if nodes[i].event_win == nil {
 			continue
@@ -429,7 +430,7 @@ func (wq *WinQuery) querySpec() *sqlgraph.QuerySpec {
 			Table:   win.Table,
 			Columns: win.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: win.FieldID,
 			},
 		},

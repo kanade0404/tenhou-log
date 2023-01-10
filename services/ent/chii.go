@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"entgo.io/ent/dialect/sql"
+	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/call"
 	"github.com/kanade0404/tenhou-log/services/ent/chii"
 )
 
@@ -14,7 +15,32 @@ import (
 type Chii struct {
 	config
 	// ID of the ent.
-	ID int `json:"id,omitempty"`
+	ID uuid.UUID `json:"id,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the ChiiQuery when eager-loading is set.
+	Edges ChiiEdges `json:"edges"`
+}
+
+// ChiiEdges holds the relations/edges for other nodes in the graph.
+type ChiiEdges struct {
+	// Call holds the value of the call edge.
+	Call *Call `json:"call,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// CallOrErr returns the Call value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ChiiEdges) CallOrErr() (*Call, error) {
+	if e.loadedTypes[0] {
+		if e.Call == nil {
+			// Edge was loaded but was not found.
+			return nil, &NotFoundError{label: call.Label}
+		}
+		return e.Call, nil
+	}
+	return nil, &NotLoadedError{edge: "call"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -23,7 +49,7 @@ func (*Chii) scanValues(columns []string) ([]any, error) {
 	for i := range columns {
 		switch columns[i] {
 		case chii.FieldID:
-			values[i] = new(sql.NullInt64)
+			values[i] = new(uuid.UUID)
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Chii", columns[i])
 		}
@@ -40,14 +66,19 @@ func (c *Chii) assignValues(columns []string, values []any) error {
 	for i := range columns {
 		switch columns[i] {
 		case chii.FieldID:
-			value, ok := values[i].(*sql.NullInt64)
-			if !ok {
-				return fmt.Errorf("unexpected type %T for field id", value)
+			if value, ok := values[i].(*uuid.UUID); !ok {
+				return fmt.Errorf("unexpected type %T for field id", values[i])
+			} else if value != nil {
+				c.ID = *value
 			}
-			c.ID = int(value.Int64)
 		}
 	}
 	return nil
+}
+
+// QueryCall queries the "call" edge of the Chii entity.
+func (c *Chii) QueryCall() *CallQuery {
+	return (&ChiiClient{config: c.config}).QueryCall(c)
 }
 
 // Update returns a builder for updating this Chii.

@@ -7,9 +7,12 @@ import (
 	"errors"
 	"fmt"
 
+	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/call"
 	"github.com/kanade0404/tenhou-log/services/ent/concealedkan"
 )
 
@@ -19,6 +22,39 @@ type ConcealedKanCreate struct {
 	mutation *ConcealedKanMutation
 	hooks    []Hook
 	conflict []sql.ConflictOption
+}
+
+// SetID sets the "id" field.
+func (ckc *ConcealedKanCreate) SetID(u uuid.UUID) *ConcealedKanCreate {
+	ckc.mutation.SetID(u)
+	return ckc
+}
+
+// SetNillableID sets the "id" field if the given value is not nil.
+func (ckc *ConcealedKanCreate) SetNillableID(u *uuid.UUID) *ConcealedKanCreate {
+	if u != nil {
+		ckc.SetID(*u)
+	}
+	return ckc
+}
+
+// SetCallID sets the "call" edge to the Call entity by ID.
+func (ckc *ConcealedKanCreate) SetCallID(id uuid.UUID) *ConcealedKanCreate {
+	ckc.mutation.SetCallID(id)
+	return ckc
+}
+
+// SetNillableCallID sets the "call" edge to the Call entity by ID if the given value is not nil.
+func (ckc *ConcealedKanCreate) SetNillableCallID(id *uuid.UUID) *ConcealedKanCreate {
+	if id != nil {
+		ckc = ckc.SetCallID(*id)
+	}
+	return ckc
+}
+
+// SetCall sets the "call" edge to the Call entity.
+func (ckc *ConcealedKanCreate) SetCall(c *Call) *ConcealedKanCreate {
+	return ckc.SetCallID(c.ID)
 }
 
 // Mutation returns the ConcealedKanMutation object of the builder.
@@ -32,6 +68,7 @@ func (ckc *ConcealedKanCreate) Save(ctx context.Context) (*ConcealedKan, error) 
 		err  error
 		node *ConcealedKan
 	)
+	ckc.defaults()
 	if len(ckc.hooks) == 0 {
 		if err = ckc.check(); err != nil {
 			return nil, err
@@ -95,6 +132,14 @@ func (ckc *ConcealedKanCreate) ExecX(ctx context.Context) {
 	}
 }
 
+// defaults sets the default values of the builder before save.
+func (ckc *ConcealedKanCreate) defaults() {
+	if _, ok := ckc.mutation.ID(); !ok {
+		v := concealedkan.DefaultID()
+		ckc.mutation.SetID(v)
+	}
+}
+
 // check runs all checks and user-defined validators on the builder.
 func (ckc *ConcealedKanCreate) check() error {
 	return nil
@@ -108,8 +153,13 @@ func (ckc *ConcealedKanCreate) sqlSave(ctx context.Context) (*ConcealedKan, erro
 		}
 		return nil, err
 	}
-	id := _spec.ID.Value.(int64)
-	_node.ID = int(id)
+	if _spec.ID.Value != nil {
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
+	}
 	return _node, nil
 }
 
@@ -119,12 +169,35 @@ func (ckc *ConcealedKanCreate) createSpec() (*ConcealedKan, *sqlgraph.CreateSpec
 		_spec = &sqlgraph.CreateSpec{
 			Table: concealedkan.Table,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: concealedkan.FieldID,
 			},
 		}
 	)
 	_spec.OnConflict = ckc.conflict
+	if id, ok := ckc.mutation.ID(); ok {
+		_node.ID = id
+		_spec.ID.Value = &id
+	}
+	if nodes := ckc.mutation.CallIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   concealedkan.CallTable,
+			Columns: []string{concealedkan.CallColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: call.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
 	return _node, _spec
 }
 
@@ -171,16 +244,24 @@ type (
 	}
 )
 
-// UpdateNewValues updates the mutable fields using the new values that were set on create.
+// UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
 // Using this option is equivalent to using:
 //
 //	client.ConcealedKan.Create().
 //		OnConflict(
 //			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(concealedkan.FieldID)
+//			}),
 //		).
 //		Exec(ctx)
 func (u *ConcealedKanUpsertOne) UpdateNewValues() *ConcealedKanUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.ID(); exists {
+			s.SetIgnore(concealedkan.FieldID)
+		}
+	}))
 	return u
 }
 
@@ -227,7 +308,12 @@ func (u *ConcealedKanUpsertOne) ExecX(ctx context.Context) {
 }
 
 // Exec executes the UPSERT query and returns the inserted/updated ID.
-func (u *ConcealedKanUpsertOne) ID(ctx context.Context) (id int, err error) {
+func (u *ConcealedKanUpsertOne) ID(ctx context.Context) (id uuid.UUID, err error) {
+	if u.create.driver.Dialect() == dialect.MySQL {
+		// In case of "ON CONFLICT", there is no way to get back non-numeric ID
+		// fields from the database since MySQL does not support the RETURNING clause.
+		return id, errors.New("ent: ConcealedKanUpsertOne.ID is not supported by MySQL driver. Use ConcealedKanUpsertOne.Exec instead")
+	}
 	node, err := u.create.Save(ctx)
 	if err != nil {
 		return id, err
@@ -236,7 +322,7 @@ func (u *ConcealedKanUpsertOne) ID(ctx context.Context) (id int, err error) {
 }
 
 // IDX is like ID, but panics if an error occurs.
-func (u *ConcealedKanUpsertOne) IDX(ctx context.Context) int {
+func (u *ConcealedKanUpsertOne) IDX(ctx context.Context) uuid.UUID {
 	id, err := u.ID(ctx)
 	if err != nil {
 		panic(err)
@@ -259,6 +345,7 @@ func (ckcb *ConcealedKanCreateBulk) Save(ctx context.Context) ([]*ConcealedKan, 
 	for i := range ckcb.builders {
 		func(i int, root context.Context) {
 			builder := ckcb.builders[i]
+			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*ConcealedKanMutation)
 				if !ok {
@@ -286,10 +373,6 @@ func (ckcb *ConcealedKanCreateBulk) Save(ctx context.Context) ([]*ConcealedKan, 
 					return nil, err
 				}
 				mutation.id = &nodes[i].ID
-				if specs[i].ID.Value != nil {
-					id := specs[i].ID.Value.(int64)
-					nodes[i].ID = int(id)
-				}
 				mutation.done = true
 				return nodes[i], nil
 			})
@@ -371,10 +454,20 @@ type ConcealedKanUpsertBulk struct {
 //	client.ConcealedKan.Create().
 //		OnConflict(
 //			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(concealedkan.FieldID)
+//			}),
 //		).
 //		Exec(ctx)
 func (u *ConcealedKanUpsertBulk) UpdateNewValues() *ConcealedKanUpsertBulk {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.ID(); exists {
+				s.SetIgnore(concealedkan.FieldID)
+			}
+		}
+	}))
 	return u
 }
 

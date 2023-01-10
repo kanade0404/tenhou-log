@@ -11,8 +11,11 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/call"
+	"github.com/kanade0404/tenhou-log/services/ent/drawn"
 	"github.com/kanade0404/tenhou-log/services/ent/event"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
+	"github.com/kanade0404/tenhou-log/services/ent/reach"
 	"github.com/kanade0404/tenhou-log/services/ent/turn"
 	"github.com/kanade0404/tenhou-log/services/ent/win"
 )
@@ -42,18 +45,63 @@ func (eu *EventUpdate) SetTurn(t *Turn) *EventUpdate {
 }
 
 // AddWinIDs adds the "win" edge to the Win entity by IDs.
-func (eu *EventUpdate) AddWinIDs(ids ...int) *EventUpdate {
+func (eu *EventUpdate) AddWinIDs(ids ...uuid.UUID) *EventUpdate {
 	eu.mutation.AddWinIDs(ids...)
 	return eu
 }
 
 // AddWin adds the "win" edges to the Win entity.
 func (eu *EventUpdate) AddWin(w ...*Win) *EventUpdate {
-	ids := make([]int, len(w))
+	ids := make([]uuid.UUID, len(w))
 	for i := range w {
 		ids[i] = w[i].ID
 	}
 	return eu.AddWinIDs(ids...)
+}
+
+// AddCallIDs adds the "call" edge to the Call entity by IDs.
+func (eu *EventUpdate) AddCallIDs(ids ...uuid.UUID) *EventUpdate {
+	eu.mutation.AddCallIDs(ids...)
+	return eu
+}
+
+// AddCall adds the "call" edges to the Call entity.
+func (eu *EventUpdate) AddCall(c ...*Call) *EventUpdate {
+	ids := make([]uuid.UUID, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return eu.AddCallIDs(ids...)
+}
+
+// AddDrawIDs adds the "draw" edge to the Drawn entity by IDs.
+func (eu *EventUpdate) AddDrawIDs(ids ...uuid.UUID) *EventUpdate {
+	eu.mutation.AddDrawIDs(ids...)
+	return eu
+}
+
+// AddDraw adds the "draw" edges to the Drawn entity.
+func (eu *EventUpdate) AddDraw(d ...*Drawn) *EventUpdate {
+	ids := make([]uuid.UUID, len(d))
+	for i := range d {
+		ids[i] = d[i].ID
+	}
+	return eu.AddDrawIDs(ids...)
+}
+
+// AddReachIDs adds the "reach" edge to the Reach entity by IDs.
+func (eu *EventUpdate) AddReachIDs(ids ...uuid.UUID) *EventUpdate {
+	eu.mutation.AddReachIDs(ids...)
+	return eu
+}
+
+// AddReach adds the "reach" edges to the Reach entity.
+func (eu *EventUpdate) AddReach(r ...*Reach) *EventUpdate {
+	ids := make([]uuid.UUID, len(r))
+	for i := range r {
+		ids[i] = r[i].ID
+	}
+	return eu.AddReachIDs(ids...)
 }
 
 // Mutation returns the EventMutation object of the builder.
@@ -74,18 +122,81 @@ func (eu *EventUpdate) ClearWin() *EventUpdate {
 }
 
 // RemoveWinIDs removes the "win" edge to Win entities by IDs.
-func (eu *EventUpdate) RemoveWinIDs(ids ...int) *EventUpdate {
+func (eu *EventUpdate) RemoveWinIDs(ids ...uuid.UUID) *EventUpdate {
 	eu.mutation.RemoveWinIDs(ids...)
 	return eu
 }
 
 // RemoveWin removes "win" edges to Win entities.
 func (eu *EventUpdate) RemoveWin(w ...*Win) *EventUpdate {
-	ids := make([]int, len(w))
+	ids := make([]uuid.UUID, len(w))
 	for i := range w {
 		ids[i] = w[i].ID
 	}
 	return eu.RemoveWinIDs(ids...)
+}
+
+// ClearCall clears all "call" edges to the Call entity.
+func (eu *EventUpdate) ClearCall() *EventUpdate {
+	eu.mutation.ClearCall()
+	return eu
+}
+
+// RemoveCallIDs removes the "call" edge to Call entities by IDs.
+func (eu *EventUpdate) RemoveCallIDs(ids ...uuid.UUID) *EventUpdate {
+	eu.mutation.RemoveCallIDs(ids...)
+	return eu
+}
+
+// RemoveCall removes "call" edges to Call entities.
+func (eu *EventUpdate) RemoveCall(c ...*Call) *EventUpdate {
+	ids := make([]uuid.UUID, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return eu.RemoveCallIDs(ids...)
+}
+
+// ClearDraw clears all "draw" edges to the Drawn entity.
+func (eu *EventUpdate) ClearDraw() *EventUpdate {
+	eu.mutation.ClearDraw()
+	return eu
+}
+
+// RemoveDrawIDs removes the "draw" edge to Drawn entities by IDs.
+func (eu *EventUpdate) RemoveDrawIDs(ids ...uuid.UUID) *EventUpdate {
+	eu.mutation.RemoveDrawIDs(ids...)
+	return eu
+}
+
+// RemoveDraw removes "draw" edges to Drawn entities.
+func (eu *EventUpdate) RemoveDraw(d ...*Drawn) *EventUpdate {
+	ids := make([]uuid.UUID, len(d))
+	for i := range d {
+		ids[i] = d[i].ID
+	}
+	return eu.RemoveDrawIDs(ids...)
+}
+
+// ClearReach clears all "reach" edges to the Reach entity.
+func (eu *EventUpdate) ClearReach() *EventUpdate {
+	eu.mutation.ClearReach()
+	return eu
+}
+
+// RemoveReachIDs removes the "reach" edge to Reach entities by IDs.
+func (eu *EventUpdate) RemoveReachIDs(ids ...uuid.UUID) *EventUpdate {
+	eu.mutation.RemoveReachIDs(ids...)
+	return eu
+}
+
+// RemoveReach removes "reach" edges to Reach entities.
+func (eu *EventUpdate) RemoveReach(r ...*Reach) *EventUpdate {
+	ids := make([]uuid.UUID, len(r))
+	for i := range r {
+		ids[i] = r[i].ID
+	}
+	return eu.RemoveReachIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -162,7 +273,7 @@ func (eu *EventUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Table:   event.Table,
 			Columns: event.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: event.FieldID,
 			},
 		},
@@ -176,7 +287,7 @@ func (eu *EventUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if eu.mutation.TurnCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.O2O,
 			Inverse: true,
 			Table:   event.TurnTable,
 			Columns: []string{event.TurnColumn},
@@ -192,7 +303,7 @@ func (eu *EventUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if nodes := eu.mutation.TurnIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.O2O,
 			Inverse: true,
 			Table:   event.TurnTable,
 			Columns: []string{event.TurnColumn},
@@ -218,7 +329,7 @@ func (eu *EventUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
+					Type:   field.TypeUUID,
 					Column: win.FieldID,
 				},
 			},
@@ -234,7 +345,7 @@ func (eu *EventUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
+					Type:   field.TypeUUID,
 					Column: win.FieldID,
 				},
 			},
@@ -253,8 +364,170 @@ func (eu *EventUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
+					Type:   field.TypeUUID,
 					Column: win.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if eu.mutation.CallCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   event.CallTable,
+			Columns: []string{event.CallColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: call.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := eu.mutation.RemovedCallIDs(); len(nodes) > 0 && !eu.mutation.CallCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   event.CallTable,
+			Columns: []string{event.CallColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: call.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := eu.mutation.CallIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   event.CallTable,
+			Columns: []string{event.CallColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: call.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if eu.mutation.DrawCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   event.DrawTable,
+			Columns: []string{event.DrawColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: drawn.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := eu.mutation.RemovedDrawIDs(); len(nodes) > 0 && !eu.mutation.DrawCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   event.DrawTable,
+			Columns: []string{event.DrawColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: drawn.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := eu.mutation.DrawIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   event.DrawTable,
+			Columns: []string{event.DrawColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: drawn.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if eu.mutation.ReachCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   event.ReachTable,
+			Columns: []string{event.ReachColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: reach.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := eu.mutation.RemovedReachIDs(); len(nodes) > 0 && !eu.mutation.ReachCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   event.ReachTable,
+			Columns: []string{event.ReachColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: reach.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := eu.mutation.ReachIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   event.ReachTable,
+			Columns: []string{event.ReachColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: reach.FieldID,
 				},
 			},
 		}
@@ -294,18 +567,63 @@ func (euo *EventUpdateOne) SetTurn(t *Turn) *EventUpdateOne {
 }
 
 // AddWinIDs adds the "win" edge to the Win entity by IDs.
-func (euo *EventUpdateOne) AddWinIDs(ids ...int) *EventUpdateOne {
+func (euo *EventUpdateOne) AddWinIDs(ids ...uuid.UUID) *EventUpdateOne {
 	euo.mutation.AddWinIDs(ids...)
 	return euo
 }
 
 // AddWin adds the "win" edges to the Win entity.
 func (euo *EventUpdateOne) AddWin(w ...*Win) *EventUpdateOne {
-	ids := make([]int, len(w))
+	ids := make([]uuid.UUID, len(w))
 	for i := range w {
 		ids[i] = w[i].ID
 	}
 	return euo.AddWinIDs(ids...)
+}
+
+// AddCallIDs adds the "call" edge to the Call entity by IDs.
+func (euo *EventUpdateOne) AddCallIDs(ids ...uuid.UUID) *EventUpdateOne {
+	euo.mutation.AddCallIDs(ids...)
+	return euo
+}
+
+// AddCall adds the "call" edges to the Call entity.
+func (euo *EventUpdateOne) AddCall(c ...*Call) *EventUpdateOne {
+	ids := make([]uuid.UUID, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return euo.AddCallIDs(ids...)
+}
+
+// AddDrawIDs adds the "draw" edge to the Drawn entity by IDs.
+func (euo *EventUpdateOne) AddDrawIDs(ids ...uuid.UUID) *EventUpdateOne {
+	euo.mutation.AddDrawIDs(ids...)
+	return euo
+}
+
+// AddDraw adds the "draw" edges to the Drawn entity.
+func (euo *EventUpdateOne) AddDraw(d ...*Drawn) *EventUpdateOne {
+	ids := make([]uuid.UUID, len(d))
+	for i := range d {
+		ids[i] = d[i].ID
+	}
+	return euo.AddDrawIDs(ids...)
+}
+
+// AddReachIDs adds the "reach" edge to the Reach entity by IDs.
+func (euo *EventUpdateOne) AddReachIDs(ids ...uuid.UUID) *EventUpdateOne {
+	euo.mutation.AddReachIDs(ids...)
+	return euo
+}
+
+// AddReach adds the "reach" edges to the Reach entity.
+func (euo *EventUpdateOne) AddReach(r ...*Reach) *EventUpdateOne {
+	ids := make([]uuid.UUID, len(r))
+	for i := range r {
+		ids[i] = r[i].ID
+	}
+	return euo.AddReachIDs(ids...)
 }
 
 // Mutation returns the EventMutation object of the builder.
@@ -326,18 +644,81 @@ func (euo *EventUpdateOne) ClearWin() *EventUpdateOne {
 }
 
 // RemoveWinIDs removes the "win" edge to Win entities by IDs.
-func (euo *EventUpdateOne) RemoveWinIDs(ids ...int) *EventUpdateOne {
+func (euo *EventUpdateOne) RemoveWinIDs(ids ...uuid.UUID) *EventUpdateOne {
 	euo.mutation.RemoveWinIDs(ids...)
 	return euo
 }
 
 // RemoveWin removes "win" edges to Win entities.
 func (euo *EventUpdateOne) RemoveWin(w ...*Win) *EventUpdateOne {
-	ids := make([]int, len(w))
+	ids := make([]uuid.UUID, len(w))
 	for i := range w {
 		ids[i] = w[i].ID
 	}
 	return euo.RemoveWinIDs(ids...)
+}
+
+// ClearCall clears all "call" edges to the Call entity.
+func (euo *EventUpdateOne) ClearCall() *EventUpdateOne {
+	euo.mutation.ClearCall()
+	return euo
+}
+
+// RemoveCallIDs removes the "call" edge to Call entities by IDs.
+func (euo *EventUpdateOne) RemoveCallIDs(ids ...uuid.UUID) *EventUpdateOne {
+	euo.mutation.RemoveCallIDs(ids...)
+	return euo
+}
+
+// RemoveCall removes "call" edges to Call entities.
+func (euo *EventUpdateOne) RemoveCall(c ...*Call) *EventUpdateOne {
+	ids := make([]uuid.UUID, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return euo.RemoveCallIDs(ids...)
+}
+
+// ClearDraw clears all "draw" edges to the Drawn entity.
+func (euo *EventUpdateOne) ClearDraw() *EventUpdateOne {
+	euo.mutation.ClearDraw()
+	return euo
+}
+
+// RemoveDrawIDs removes the "draw" edge to Drawn entities by IDs.
+func (euo *EventUpdateOne) RemoveDrawIDs(ids ...uuid.UUID) *EventUpdateOne {
+	euo.mutation.RemoveDrawIDs(ids...)
+	return euo
+}
+
+// RemoveDraw removes "draw" edges to Drawn entities.
+func (euo *EventUpdateOne) RemoveDraw(d ...*Drawn) *EventUpdateOne {
+	ids := make([]uuid.UUID, len(d))
+	for i := range d {
+		ids[i] = d[i].ID
+	}
+	return euo.RemoveDrawIDs(ids...)
+}
+
+// ClearReach clears all "reach" edges to the Reach entity.
+func (euo *EventUpdateOne) ClearReach() *EventUpdateOne {
+	euo.mutation.ClearReach()
+	return euo
+}
+
+// RemoveReachIDs removes the "reach" edge to Reach entities by IDs.
+func (euo *EventUpdateOne) RemoveReachIDs(ids ...uuid.UUID) *EventUpdateOne {
+	euo.mutation.RemoveReachIDs(ids...)
+	return euo
+}
+
+// RemoveReach removes "reach" edges to Reach entities.
+func (euo *EventUpdateOne) RemoveReach(r ...*Reach) *EventUpdateOne {
+	ids := make([]uuid.UUID, len(r))
+	for i := range r {
+		ids[i] = r[i].ID
+	}
+	return euo.RemoveReachIDs(ids...)
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -427,7 +808,7 @@ func (euo *EventUpdateOne) sqlSave(ctx context.Context) (_node *Event, err error
 			Table:   event.Table,
 			Columns: event.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: event.FieldID,
 			},
 		},
@@ -458,7 +839,7 @@ func (euo *EventUpdateOne) sqlSave(ctx context.Context) (_node *Event, err error
 	}
 	if euo.mutation.TurnCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.O2O,
 			Inverse: true,
 			Table:   event.TurnTable,
 			Columns: []string{event.TurnColumn},
@@ -474,7 +855,7 @@ func (euo *EventUpdateOne) sqlSave(ctx context.Context) (_node *Event, err error
 	}
 	if nodes := euo.mutation.TurnIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.O2O,
 			Inverse: true,
 			Table:   event.TurnTable,
 			Columns: []string{event.TurnColumn},
@@ -500,7 +881,7 @@ func (euo *EventUpdateOne) sqlSave(ctx context.Context) (_node *Event, err error
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
+					Type:   field.TypeUUID,
 					Column: win.FieldID,
 				},
 			},
@@ -516,7 +897,7 @@ func (euo *EventUpdateOne) sqlSave(ctx context.Context) (_node *Event, err error
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
+					Type:   field.TypeUUID,
 					Column: win.FieldID,
 				},
 			},
@@ -535,8 +916,170 @@ func (euo *EventUpdateOne) sqlSave(ctx context.Context) (_node *Event, err error
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
+					Type:   field.TypeUUID,
 					Column: win.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if euo.mutation.CallCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   event.CallTable,
+			Columns: []string{event.CallColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: call.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := euo.mutation.RemovedCallIDs(); len(nodes) > 0 && !euo.mutation.CallCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   event.CallTable,
+			Columns: []string{event.CallColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: call.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := euo.mutation.CallIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   event.CallTable,
+			Columns: []string{event.CallColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: call.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if euo.mutation.DrawCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   event.DrawTable,
+			Columns: []string{event.DrawColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: drawn.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := euo.mutation.RemovedDrawIDs(); len(nodes) > 0 && !euo.mutation.DrawCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   event.DrawTable,
+			Columns: []string{event.DrawColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: drawn.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := euo.mutation.DrawIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   event.DrawTable,
+			Columns: []string{event.DrawColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: drawn.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if euo.mutation.ReachCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   event.ReachTable,
+			Columns: []string{event.ReachColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: reach.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := euo.mutation.RemovedReachIDs(); len(nodes) > 0 && !euo.mutation.ReachCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   event.ReachTable,
+			Columns: []string{event.ReachColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: reach.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := euo.mutation.ReachIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   event.ReachTable,
+			Columns: []string{event.ReachColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: reach.FieldID,
 				},
 			},
 		}

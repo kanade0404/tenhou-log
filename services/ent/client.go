@@ -17,6 +17,7 @@ import (
 	"github.com/kanade0404/tenhou-log/services/ent/compressedmjlog"
 	"github.com/kanade0404/tenhou-log/services/ent/concealedkan"
 	"github.com/kanade0404/tenhou-log/services/ent/dan"
+	"github.com/kanade0404/tenhou-log/services/ent/discard"
 	"github.com/kanade0404/tenhou-log/services/ent/drawn"
 	"github.com/kanade0404/tenhou-log/services/ent/event"
 	"github.com/kanade0404/tenhou-log/services/ent/game"
@@ -29,6 +30,7 @@ import (
 	"github.com/kanade0404/tenhou-log/services/ent/mjlogfile"
 	"github.com/kanade0404/tenhou-log/services/ent/player"
 	"github.com/kanade0404/tenhou-log/services/ent/pon"
+	"github.com/kanade0404/tenhou-log/services/ent/reach"
 	"github.com/kanade0404/tenhou-log/services/ent/room"
 	"github.com/kanade0404/tenhou-log/services/ent/round"
 	"github.com/kanade0404/tenhou-log/services/ent/turn"
@@ -56,6 +58,8 @@ type Client struct {
 	ConcealedKan *ConcealedKanClient
 	// Dan is the client for interacting with the Dan builders.
 	Dan *DanClient
+	// Discard is the client for interacting with the Discard builders.
+	Discard *DiscardClient
 	// Drawn is the client for interacting with the Drawn builders.
 	Drawn *DrawnClient
 	// Event is the client for interacting with the Event builders.
@@ -80,6 +84,8 @@ type Client struct {
 	Player *PlayerClient
 	// Pon is the client for interacting with the Pon builders.
 	Pon *PonClient
+	// Reach is the client for interacting with the Reach builders.
+	Reach *ReachClient
 	// Room is the client for interacting with the Room builders.
 	Room *RoomClient
 	// Round is the client for interacting with the Round builders.
@@ -107,6 +113,7 @@ func (c *Client) init() {
 	c.CompressedMJLog = NewCompressedMJLogClient(c.config)
 	c.ConcealedKan = NewConcealedKanClient(c.config)
 	c.Dan = NewDanClient(c.config)
+	c.Discard = NewDiscardClient(c.config)
 	c.Drawn = NewDrawnClient(c.config)
 	c.Event = NewEventClient(c.config)
 	c.Game = NewGameClient(c.config)
@@ -119,6 +126,7 @@ func (c *Client) init() {
 	c.MeldedKan = NewMeldedKanClient(c.config)
 	c.Player = NewPlayerClient(c.config)
 	c.Pon = NewPonClient(c.config)
+	c.Reach = NewReachClient(c.config)
 	c.Room = NewRoomClient(c.config)
 	c.Round = NewRoundClient(c.config)
 	c.Turn = NewTurnClient(c.config)
@@ -162,6 +170,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		CompressedMJLog:   NewCompressedMJLogClient(cfg),
 		ConcealedKan:      NewConcealedKanClient(cfg),
 		Dan:               NewDanClient(cfg),
+		Discard:           NewDiscardClient(cfg),
 		Drawn:             NewDrawnClient(cfg),
 		Event:             NewEventClient(cfg),
 		Game:              NewGameClient(cfg),
@@ -174,6 +183,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		MeldedKan:         NewMeldedKanClient(cfg),
 		Player:            NewPlayerClient(cfg),
 		Pon:               NewPonClient(cfg),
+		Reach:             NewReachClient(cfg),
 		Room:              NewRoomClient(cfg),
 		Round:             NewRoundClient(cfg),
 		Turn:              NewTurnClient(cfg),
@@ -203,6 +213,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		CompressedMJLog:   NewCompressedMJLogClient(cfg),
 		ConcealedKan:      NewConcealedKanClient(cfg),
 		Dan:               NewDanClient(cfg),
+		Discard:           NewDiscardClient(cfg),
 		Drawn:             NewDrawnClient(cfg),
 		Event:             NewEventClient(cfg),
 		Game:              NewGameClient(cfg),
@@ -215,6 +226,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		MeldedKan:         NewMeldedKanClient(cfg),
 		Player:            NewPlayerClient(cfg),
 		Pon:               NewPonClient(cfg),
+		Reach:             NewReachClient(cfg),
 		Room:              NewRoomClient(cfg),
 		Round:             NewRoundClient(cfg),
 		Turn:              NewTurnClient(cfg),
@@ -253,6 +265,7 @@ func (c *Client) Use(hooks ...Hook) {
 	c.CompressedMJLog.Use(hooks...)
 	c.ConcealedKan.Use(hooks...)
 	c.Dan.Use(hooks...)
+	c.Discard.Use(hooks...)
 	c.Drawn.Use(hooks...)
 	c.Event.Use(hooks...)
 	c.Game.Use(hooks...)
@@ -265,6 +278,7 @@ func (c *Client) Use(hooks ...Hook) {
 	c.MeldedKan.Use(hooks...)
 	c.Player.Use(hooks...)
 	c.Pon.Use(hooks...)
+	c.Reach.Use(hooks...)
 	c.Room.Use(hooks...)
 	c.Round.Use(hooks...)
 	c.Turn.Use(hooks...)
@@ -311,7 +325,7 @@ func (c *CallClient) UpdateOne(ca *Call) *CallUpdateOne {
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *CallClient) UpdateOneID(id int) *CallUpdateOne {
+func (c *CallClient) UpdateOneID(id uuid.UUID) *CallUpdateOne {
 	mutation := newCallMutation(c.config, OpUpdateOne, withCallID(id))
 	return &CallUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
@@ -328,7 +342,7 @@ func (c *CallClient) DeleteOne(ca *Call) *CallDeleteOne {
 }
 
 // DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *CallClient) DeleteOneID(id int) *CallDeleteOne {
+func (c *CallClient) DeleteOneID(id uuid.UUID) *CallDeleteOne {
 	builder := c.Delete().Where(call.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
@@ -343,17 +357,129 @@ func (c *CallClient) Query() *CallQuery {
 }
 
 // Get returns a Call entity by its id.
-func (c *CallClient) Get(ctx context.Context, id int) (*Call, error) {
+func (c *CallClient) Get(ctx context.Context, id uuid.UUID) (*Call, error) {
 	return c.Query().Where(call.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *CallClient) GetX(ctx context.Context, id int) *Call {
+func (c *CallClient) GetX(ctx context.Context, id uuid.UUID) *Call {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)
 	}
 	return obj
+}
+
+// QueryEvent queries the event edge of a Call.
+func (c *CallClient) QueryEvent(ca *Call) *EventQuery {
+	query := &EventQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := ca.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(call.Table, call.FieldID, id),
+			sqlgraph.To(event.Table, event.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, call.EventTable, call.EventColumn),
+		)
+		fromV = sqlgraph.Neighbors(ca.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryDiscard queries the discard edge of a Call.
+func (c *CallClient) QueryDiscard(ca *Call) *DiscardQuery {
+	query := &DiscardQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := ca.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(call.Table, call.FieldID, id),
+			sqlgraph.To(discard.Table, discard.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, call.DiscardTable, call.DiscardColumn),
+		)
+		fromV = sqlgraph.Neighbors(ca.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryChii queries the chii edge of a Call.
+func (c *CallClient) QueryChii(ca *Call) *ChiiQuery {
+	query := &ChiiQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := ca.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(call.Table, call.FieldID, id),
+			sqlgraph.To(chii.Table, chii.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, call.ChiiTable, call.ChiiColumn),
+		)
+		fromV = sqlgraph.Neighbors(ca.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryChakan queries the chakan edge of a Call.
+func (c *CallClient) QueryChakan(ca *Call) *ChakanQuery {
+	query := &ChakanQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := ca.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(call.Table, call.FieldID, id),
+			sqlgraph.To(chakan.Table, chakan.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, call.ChakanTable, call.ChakanColumn),
+		)
+		fromV = sqlgraph.Neighbors(ca.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryConcealedkan queries the concealedkan edge of a Call.
+func (c *CallClient) QueryConcealedkan(ca *Call) *ConcealedKanQuery {
+	query := &ConcealedKanQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := ca.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(call.Table, call.FieldID, id),
+			sqlgraph.To(concealedkan.Table, concealedkan.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, call.ConcealedkanTable, call.ConcealedkanColumn),
+		)
+		fromV = sqlgraph.Neighbors(ca.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryMeldedkan queries the meldedkan edge of a Call.
+func (c *CallClient) QueryMeldedkan(ca *Call) *MeldedKanQuery {
+	query := &MeldedKanQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := ca.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(call.Table, call.FieldID, id),
+			sqlgraph.To(meldedkan.Table, meldedkan.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, call.MeldedkanTable, call.MeldedkanColumn),
+		)
+		fromV = sqlgraph.Neighbors(ca.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryPon queries the pon edge of a Call.
+func (c *CallClient) QueryPon(ca *Call) *PonQuery {
+	query := &PonQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := ca.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(call.Table, call.FieldID, id),
+			sqlgraph.To(pon.Table, pon.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, call.PonTable, call.PonColumn),
+		)
+		fromV = sqlgraph.Neighbors(ca.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.
@@ -401,7 +527,7 @@ func (c *ChakanClient) UpdateOne(ch *Chakan) *ChakanUpdateOne {
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *ChakanClient) UpdateOneID(id int) *ChakanUpdateOne {
+func (c *ChakanClient) UpdateOneID(id uuid.UUID) *ChakanUpdateOne {
 	mutation := newChakanMutation(c.config, OpUpdateOne, withChakanID(id))
 	return &ChakanUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
@@ -418,7 +544,7 @@ func (c *ChakanClient) DeleteOne(ch *Chakan) *ChakanDeleteOne {
 }
 
 // DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *ChakanClient) DeleteOneID(id int) *ChakanDeleteOne {
+func (c *ChakanClient) DeleteOneID(id uuid.UUID) *ChakanDeleteOne {
 	builder := c.Delete().Where(chakan.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
@@ -433,17 +559,33 @@ func (c *ChakanClient) Query() *ChakanQuery {
 }
 
 // Get returns a Chakan entity by its id.
-func (c *ChakanClient) Get(ctx context.Context, id int) (*Chakan, error) {
+func (c *ChakanClient) Get(ctx context.Context, id uuid.UUID) (*Chakan, error) {
 	return c.Query().Where(chakan.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *ChakanClient) GetX(ctx context.Context, id int) *Chakan {
+func (c *ChakanClient) GetX(ctx context.Context, id uuid.UUID) *Chakan {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)
 	}
 	return obj
+}
+
+// QueryCall queries the call edge of a Chakan.
+func (c *ChakanClient) QueryCall(ch *Chakan) *CallQuery {
+	query := &CallQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := ch.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(chakan.Table, chakan.FieldID, id),
+			sqlgraph.To(call.Table, call.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, chakan.CallTable, chakan.CallColumn),
+		)
+		fromV = sqlgraph.Neighbors(ch.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.
@@ -491,7 +633,7 @@ func (c *ChiiClient) UpdateOne(ch *Chii) *ChiiUpdateOne {
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *ChiiClient) UpdateOneID(id int) *ChiiUpdateOne {
+func (c *ChiiClient) UpdateOneID(id uuid.UUID) *ChiiUpdateOne {
 	mutation := newChiiMutation(c.config, OpUpdateOne, withChiiID(id))
 	return &ChiiUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
@@ -508,7 +650,7 @@ func (c *ChiiClient) DeleteOne(ch *Chii) *ChiiDeleteOne {
 }
 
 // DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *ChiiClient) DeleteOneID(id int) *ChiiDeleteOne {
+func (c *ChiiClient) DeleteOneID(id uuid.UUID) *ChiiDeleteOne {
 	builder := c.Delete().Where(chii.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
@@ -523,17 +665,33 @@ func (c *ChiiClient) Query() *ChiiQuery {
 }
 
 // Get returns a Chii entity by its id.
-func (c *ChiiClient) Get(ctx context.Context, id int) (*Chii, error) {
+func (c *ChiiClient) Get(ctx context.Context, id uuid.UUID) (*Chii, error) {
 	return c.Query().Where(chii.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *ChiiClient) GetX(ctx context.Context, id int) *Chii {
+func (c *ChiiClient) GetX(ctx context.Context, id uuid.UUID) *Chii {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)
 	}
 	return obj
+}
+
+// QueryCall queries the call edge of a Chii.
+func (c *ChiiClient) QueryCall(ch *Chii) *CallQuery {
+	query := &CallQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := ch.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(chii.Table, chii.FieldID, id),
+			sqlgraph.To(call.Table, call.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, chii.CallTable, chii.CallColumn),
+		)
+		fromV = sqlgraph.Neighbors(ch.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.
@@ -687,7 +845,7 @@ func (c *ConcealedKanClient) UpdateOne(ck *ConcealedKan) *ConcealedKanUpdateOne 
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *ConcealedKanClient) UpdateOneID(id int) *ConcealedKanUpdateOne {
+func (c *ConcealedKanClient) UpdateOneID(id uuid.UUID) *ConcealedKanUpdateOne {
 	mutation := newConcealedKanMutation(c.config, OpUpdateOne, withConcealedKanID(id))
 	return &ConcealedKanUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
@@ -704,7 +862,7 @@ func (c *ConcealedKanClient) DeleteOne(ck *ConcealedKan) *ConcealedKanDeleteOne 
 }
 
 // DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *ConcealedKanClient) DeleteOneID(id int) *ConcealedKanDeleteOne {
+func (c *ConcealedKanClient) DeleteOneID(id uuid.UUID) *ConcealedKanDeleteOne {
 	builder := c.Delete().Where(concealedkan.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
@@ -719,17 +877,33 @@ func (c *ConcealedKanClient) Query() *ConcealedKanQuery {
 }
 
 // Get returns a ConcealedKan entity by its id.
-func (c *ConcealedKanClient) Get(ctx context.Context, id int) (*ConcealedKan, error) {
+func (c *ConcealedKanClient) Get(ctx context.Context, id uuid.UUID) (*ConcealedKan, error) {
 	return c.Query().Where(concealedkan.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *ConcealedKanClient) GetX(ctx context.Context, id int) *ConcealedKan {
+func (c *ConcealedKanClient) GetX(ctx context.Context, id uuid.UUID) *ConcealedKan {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)
 	}
 	return obj
+}
+
+// QueryCall queries the call edge of a ConcealedKan.
+func (c *ConcealedKanClient) QueryCall(ck *ConcealedKan) *CallQuery {
+	query := &CallQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := ck.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(concealedkan.Table, concealedkan.FieldID, id),
+			sqlgraph.To(call.Table, call.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, concealedkan.CallTable, concealedkan.CallColumn),
+		)
+		fromV = sqlgraph.Neighbors(ck.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.
@@ -843,6 +1017,144 @@ func (c *DanClient) Hooks() []Hook {
 	return c.hooks.Dan
 }
 
+// DiscardClient is a client for the Discard schema.
+type DiscardClient struct {
+	config
+}
+
+// NewDiscardClient returns a client for the Discard from the given config.
+func NewDiscardClient(c config) *DiscardClient {
+	return &DiscardClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `discard.Hooks(f(g(h())))`.
+func (c *DiscardClient) Use(hooks ...Hook) {
+	c.hooks.Discard = append(c.hooks.Discard, hooks...)
+}
+
+// Create returns a builder for creating a Discard entity.
+func (c *DiscardClient) Create() *DiscardCreate {
+	mutation := newDiscardMutation(c.config, OpCreate)
+	return &DiscardCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Discard entities.
+func (c *DiscardClient) CreateBulk(builders ...*DiscardCreate) *DiscardCreateBulk {
+	return &DiscardCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Discard.
+func (c *DiscardClient) Update() *DiscardUpdate {
+	mutation := newDiscardMutation(c.config, OpUpdate)
+	return &DiscardUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *DiscardClient) UpdateOne(d *Discard) *DiscardUpdateOne {
+	mutation := newDiscardMutation(c.config, OpUpdateOne, withDiscard(d))
+	return &DiscardUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *DiscardClient) UpdateOneID(id uuid.UUID) *DiscardUpdateOne {
+	mutation := newDiscardMutation(c.config, OpUpdateOne, withDiscardID(id))
+	return &DiscardUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Discard.
+func (c *DiscardClient) Delete() *DiscardDelete {
+	mutation := newDiscardMutation(c.config, OpDelete)
+	return &DiscardDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *DiscardClient) DeleteOne(d *Discard) *DiscardDeleteOne {
+	return c.DeleteOneID(d.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *DiscardClient) DeleteOneID(id uuid.UUID) *DiscardDeleteOne {
+	builder := c.Delete().Where(discard.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &DiscardDeleteOne{builder}
+}
+
+// Query returns a query builder for Discard.
+func (c *DiscardClient) Query() *DiscardQuery {
+	return &DiscardQuery{
+		config: c.config,
+	}
+}
+
+// Get returns a Discard entity by its id.
+func (c *DiscardClient) Get(ctx context.Context, id uuid.UUID) (*Discard, error) {
+	return c.Query().Where(discard.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *DiscardClient) GetX(ctx context.Context, id uuid.UUID) *Discard {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryReach queries the reach edge of a Discard.
+func (c *DiscardClient) QueryReach(d *Discard) *ReachQuery {
+	query := &ReachQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := d.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(discard.Table, discard.FieldID, id),
+			sqlgraph.To(reach.Table, reach.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, discard.ReachTable, discard.ReachColumn),
+		)
+		fromV = sqlgraph.Neighbors(d.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryCall queries the call edge of a Discard.
+func (c *DiscardClient) QueryCall(d *Discard) *CallQuery {
+	query := &CallQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := d.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(discard.Table, discard.FieldID, id),
+			sqlgraph.To(call.Table, call.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, discard.CallTable, discard.CallColumn),
+		)
+		fromV = sqlgraph.Neighbors(d.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryDraw queries the draw edge of a Discard.
+func (c *DiscardClient) QueryDraw(d *Discard) *DrawnQuery {
+	query := &DrawnQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := d.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(discard.Table, discard.FieldID, id),
+			sqlgraph.To(drawn.Table, drawn.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, discard.DrawTable, discard.DrawColumn),
+		)
+		fromV = sqlgraph.Neighbors(d.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *DiscardClient) Hooks() []Hook {
+	return c.hooks.Discard
+}
+
 // DrawnClient is a client for the Drawn schema.
 type DrawnClient struct {
 	config
@@ -883,7 +1195,7 @@ func (c *DrawnClient) UpdateOne(d *Drawn) *DrawnUpdateOne {
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *DrawnClient) UpdateOneID(id int) *DrawnUpdateOne {
+func (c *DrawnClient) UpdateOneID(id uuid.UUID) *DrawnUpdateOne {
 	mutation := newDrawnMutation(c.config, OpUpdateOne, withDrawnID(id))
 	return &DrawnUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
@@ -900,7 +1212,7 @@ func (c *DrawnClient) DeleteOne(d *Drawn) *DrawnDeleteOne {
 }
 
 // DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *DrawnClient) DeleteOneID(id int) *DrawnDeleteOne {
+func (c *DrawnClient) DeleteOneID(id uuid.UUID) *DrawnDeleteOne {
 	builder := c.Delete().Where(drawn.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
@@ -915,17 +1227,49 @@ func (c *DrawnClient) Query() *DrawnQuery {
 }
 
 // Get returns a Drawn entity by its id.
-func (c *DrawnClient) Get(ctx context.Context, id int) (*Drawn, error) {
+func (c *DrawnClient) Get(ctx context.Context, id uuid.UUID) (*Drawn, error) {
 	return c.Query().Where(drawn.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *DrawnClient) GetX(ctx context.Context, id int) *Drawn {
+func (c *DrawnClient) GetX(ctx context.Context, id uuid.UUID) *Drawn {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)
 	}
 	return obj
+}
+
+// QueryEvent queries the event edge of a Drawn.
+func (c *DrawnClient) QueryEvent(d *Drawn) *EventQuery {
+	query := &EventQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := d.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(drawn.Table, drawn.FieldID, id),
+			sqlgraph.To(event.Table, event.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, drawn.EventTable, drawn.EventColumn),
+		)
+		fromV = sqlgraph.Neighbors(d.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryDiscard queries the discard edge of a Drawn.
+func (c *DrawnClient) QueryDiscard(d *Drawn) *DiscardQuery {
+	query := &DiscardQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := d.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(drawn.Table, drawn.FieldID, id),
+			sqlgraph.To(discard.Table, discard.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, drawn.DiscardTable, drawn.DiscardColumn),
+		)
+		fromV = sqlgraph.Neighbors(d.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.
@@ -973,7 +1317,7 @@ func (c *EventClient) UpdateOne(e *Event) *EventUpdateOne {
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *EventClient) UpdateOneID(id int) *EventUpdateOne {
+func (c *EventClient) UpdateOneID(id uuid.UUID) *EventUpdateOne {
 	mutation := newEventMutation(c.config, OpUpdateOne, withEventID(id))
 	return &EventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
@@ -990,7 +1334,7 @@ func (c *EventClient) DeleteOne(e *Event) *EventDeleteOne {
 }
 
 // DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *EventClient) DeleteOneID(id int) *EventDeleteOne {
+func (c *EventClient) DeleteOneID(id uuid.UUID) *EventDeleteOne {
 	builder := c.Delete().Where(event.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
@@ -1005,12 +1349,12 @@ func (c *EventClient) Query() *EventQuery {
 }
 
 // Get returns a Event entity by its id.
-func (c *EventClient) Get(ctx context.Context, id int) (*Event, error) {
+func (c *EventClient) Get(ctx context.Context, id uuid.UUID) (*Event, error) {
 	return c.Query().Where(event.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *EventClient) GetX(ctx context.Context, id int) *Event {
+func (c *EventClient) GetX(ctx context.Context, id uuid.UUID) *Event {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)
@@ -1026,7 +1370,7 @@ func (c *EventClient) QueryTurn(e *Event) *TurnQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(event.Table, event.FieldID, id),
 			sqlgraph.To(turn.Table, turn.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, event.TurnTable, event.TurnColumn),
+			sqlgraph.Edge(sqlgraph.O2O, true, event.TurnTable, event.TurnColumn),
 		)
 		fromV = sqlgraph.Neighbors(e.driver.Dialect(), step)
 		return fromV, nil
@@ -1043,6 +1387,54 @@ func (c *EventClient) QueryWin(e *Event) *WinQuery {
 			sqlgraph.From(event.Table, event.FieldID, id),
 			sqlgraph.To(win.Table, win.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, event.WinTable, event.WinColumn),
+		)
+		fromV = sqlgraph.Neighbors(e.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryCall queries the call edge of a Event.
+func (c *EventClient) QueryCall(e *Event) *CallQuery {
+	query := &CallQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := e.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(event.Table, event.FieldID, id),
+			sqlgraph.To(call.Table, call.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, event.CallTable, event.CallColumn),
+		)
+		fromV = sqlgraph.Neighbors(e.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryDraw queries the draw edge of a Event.
+func (c *EventClient) QueryDraw(e *Event) *DrawnQuery {
+	query := &DrawnQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := e.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(event.Table, event.FieldID, id),
+			sqlgraph.To(drawn.Table, drawn.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, event.DrawTable, event.DrawColumn),
+		)
+		fromV = sqlgraph.Neighbors(e.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryReach queries the reach edge of a Event.
+func (c *EventClient) QueryReach(e *Event) *ReachQuery {
+	query := &ReachQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := e.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(event.Table, event.FieldID, id),
+			sqlgraph.To(reach.Table, reach.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, event.ReachTable, event.ReachColumn),
 		)
 		fromV = sqlgraph.Neighbors(e.driver.Dialect(), step)
 		return fromV, nil
@@ -1387,7 +1779,7 @@ func (c *GamePlayerHandHaiClient) UpdateOne(gphh *GamePlayerHandHai) *GamePlayer
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *GamePlayerHandHaiClient) UpdateOneID(id int) *GamePlayerHandHaiUpdateOne {
+func (c *GamePlayerHandHaiClient) UpdateOneID(id uuid.UUID) *GamePlayerHandHaiUpdateOne {
 	mutation := newGamePlayerHandHaiMutation(c.config, OpUpdateOne, withGamePlayerHandHaiID(id))
 	return &GamePlayerHandHaiUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
@@ -1404,7 +1796,7 @@ func (c *GamePlayerHandHaiClient) DeleteOne(gphh *GamePlayerHandHai) *GamePlayer
 }
 
 // DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *GamePlayerHandHaiClient) DeleteOneID(id int) *GamePlayerHandHaiDeleteOne {
+func (c *GamePlayerHandHaiClient) DeleteOneID(id uuid.UUID) *GamePlayerHandHaiDeleteOne {
 	builder := c.Delete().Where(gameplayerhandhai.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
@@ -1419,17 +1811,33 @@ func (c *GamePlayerHandHaiClient) Query() *GamePlayerHandHaiQuery {
 }
 
 // Get returns a GamePlayerHandHai entity by its id.
-func (c *GamePlayerHandHaiClient) Get(ctx context.Context, id int) (*GamePlayerHandHai, error) {
+func (c *GamePlayerHandHaiClient) Get(ctx context.Context, id uuid.UUID) (*GamePlayerHandHai, error) {
 	return c.Query().Where(gameplayerhandhai.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *GamePlayerHandHaiClient) GetX(ctx context.Context, id int) *GamePlayerHandHai {
+func (c *GamePlayerHandHaiClient) GetX(ctx context.Context, id uuid.UUID) *GamePlayerHandHai {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)
 	}
 	return obj
+}
+
+// QueryTurn queries the turn edge of a GamePlayerHandHai.
+func (c *GamePlayerHandHaiClient) QueryTurn(gphh *GamePlayerHandHai) *TurnQuery {
+	query := &TurnQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := gphh.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(gameplayerhandhai.Table, gameplayerhandhai.FieldID, id),
+			sqlgraph.To(turn.Table, turn.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, gameplayerhandhai.TurnTable, gameplayerhandhai.TurnColumn),
+		)
+		fromV = sqlgraph.Neighbors(gphh.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.
@@ -1949,7 +2357,7 @@ func (c *MeldedKanClient) UpdateOne(mk *MeldedKan) *MeldedKanUpdateOne {
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *MeldedKanClient) UpdateOneID(id int) *MeldedKanUpdateOne {
+func (c *MeldedKanClient) UpdateOneID(id uuid.UUID) *MeldedKanUpdateOne {
 	mutation := newMeldedKanMutation(c.config, OpUpdateOne, withMeldedKanID(id))
 	return &MeldedKanUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
@@ -1966,7 +2374,7 @@ func (c *MeldedKanClient) DeleteOne(mk *MeldedKan) *MeldedKanDeleteOne {
 }
 
 // DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *MeldedKanClient) DeleteOneID(id int) *MeldedKanDeleteOne {
+func (c *MeldedKanClient) DeleteOneID(id uuid.UUID) *MeldedKanDeleteOne {
 	builder := c.Delete().Where(meldedkan.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
@@ -1981,17 +2389,33 @@ func (c *MeldedKanClient) Query() *MeldedKanQuery {
 }
 
 // Get returns a MeldedKan entity by its id.
-func (c *MeldedKanClient) Get(ctx context.Context, id int) (*MeldedKan, error) {
+func (c *MeldedKanClient) Get(ctx context.Context, id uuid.UUID) (*MeldedKan, error) {
 	return c.Query().Where(meldedkan.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *MeldedKanClient) GetX(ctx context.Context, id int) *MeldedKan {
+func (c *MeldedKanClient) GetX(ctx context.Context, id uuid.UUID) *MeldedKan {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)
 	}
 	return obj
+}
+
+// QueryCall queries the call edge of a MeldedKan.
+func (c *MeldedKanClient) QueryCall(mk *MeldedKan) *CallQuery {
+	query := &CallQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := mk.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(meldedkan.Table, meldedkan.FieldID, id),
+			sqlgraph.To(call.Table, call.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, meldedkan.CallTable, meldedkan.CallColumn),
+		)
+		fromV = sqlgraph.Neighbors(mk.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.
@@ -2145,7 +2569,7 @@ func (c *PonClient) UpdateOne(po *Pon) *PonUpdateOne {
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *PonClient) UpdateOneID(id int) *PonUpdateOne {
+func (c *PonClient) UpdateOneID(id uuid.UUID) *PonUpdateOne {
 	mutation := newPonMutation(c.config, OpUpdateOne, withPonID(id))
 	return &PonUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
@@ -2162,7 +2586,7 @@ func (c *PonClient) DeleteOne(po *Pon) *PonDeleteOne {
 }
 
 // DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *PonClient) DeleteOneID(id int) *PonDeleteOne {
+func (c *PonClient) DeleteOneID(id uuid.UUID) *PonDeleteOne {
 	builder := c.Delete().Where(pon.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
@@ -2177,12 +2601,12 @@ func (c *PonClient) Query() *PonQuery {
 }
 
 // Get returns a Pon entity by its id.
-func (c *PonClient) Get(ctx context.Context, id int) (*Pon, error) {
+func (c *PonClient) Get(ctx context.Context, id uuid.UUID) (*Pon, error) {
 	return c.Query().Where(pon.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *PonClient) GetX(ctx context.Context, id int) *Pon {
+func (c *PonClient) GetX(ctx context.Context, id uuid.UUID) *Pon {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)
@@ -2190,9 +2614,147 @@ func (c *PonClient) GetX(ctx context.Context, id int) *Pon {
 	return obj
 }
 
+// QueryCall queries the call edge of a Pon.
+func (c *PonClient) QueryCall(po *Pon) *CallQuery {
+	query := &CallQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := po.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(pon.Table, pon.FieldID, id),
+			sqlgraph.To(call.Table, call.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, pon.CallTable, pon.CallColumn),
+		)
+		fromV = sqlgraph.Neighbors(po.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *PonClient) Hooks() []Hook {
 	return c.hooks.Pon
+}
+
+// ReachClient is a client for the Reach schema.
+type ReachClient struct {
+	config
+}
+
+// NewReachClient returns a client for the Reach from the given config.
+func NewReachClient(c config) *ReachClient {
+	return &ReachClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `reach.Hooks(f(g(h())))`.
+func (c *ReachClient) Use(hooks ...Hook) {
+	c.hooks.Reach = append(c.hooks.Reach, hooks...)
+}
+
+// Create returns a builder for creating a Reach entity.
+func (c *ReachClient) Create() *ReachCreate {
+	mutation := newReachMutation(c.config, OpCreate)
+	return &ReachCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Reach entities.
+func (c *ReachClient) CreateBulk(builders ...*ReachCreate) *ReachCreateBulk {
+	return &ReachCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Reach.
+func (c *ReachClient) Update() *ReachUpdate {
+	mutation := newReachMutation(c.config, OpUpdate)
+	return &ReachUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ReachClient) UpdateOne(r *Reach) *ReachUpdateOne {
+	mutation := newReachMutation(c.config, OpUpdateOne, withReach(r))
+	return &ReachUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ReachClient) UpdateOneID(id uuid.UUID) *ReachUpdateOne {
+	mutation := newReachMutation(c.config, OpUpdateOne, withReachID(id))
+	return &ReachUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Reach.
+func (c *ReachClient) Delete() *ReachDelete {
+	mutation := newReachMutation(c.config, OpDelete)
+	return &ReachDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ReachClient) DeleteOne(r *Reach) *ReachDeleteOne {
+	return c.DeleteOneID(r.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ReachClient) DeleteOneID(id uuid.UUID) *ReachDeleteOne {
+	builder := c.Delete().Where(reach.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ReachDeleteOne{builder}
+}
+
+// Query returns a query builder for Reach.
+func (c *ReachClient) Query() *ReachQuery {
+	return &ReachQuery{
+		config: c.config,
+	}
+}
+
+// Get returns a Reach entity by its id.
+func (c *ReachClient) Get(ctx context.Context, id uuid.UUID) (*Reach, error) {
+	return c.Query().Where(reach.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ReachClient) GetX(ctx context.Context, id uuid.UUID) *Reach {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryEvent queries the event edge of a Reach.
+func (c *ReachClient) QueryEvent(r *Reach) *EventQuery {
+	query := &EventQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := r.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(reach.Table, reach.FieldID, id),
+			sqlgraph.To(event.Table, event.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, reach.EventTable, reach.EventColumn),
+		)
+		fromV = sqlgraph.Neighbors(r.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryDiscard queries the discard edge of a Reach.
+func (c *ReachClient) QueryDiscard(r *Reach) *DiscardQuery {
+	query := &DiscardQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := r.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(reach.Table, reach.FieldID, id),
+			sqlgraph.To(discard.Table, discard.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, reach.DiscardTable, reach.DiscardColumn),
+		)
+		fromV = sqlgraph.Neighbors(r.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *ReachClient) Hooks() []Hook {
+	return c.hooks.Reach
 }
 
 // RoomClient is a client for the Room schema.
@@ -2548,7 +3110,23 @@ func (c *TurnClient) QueryEvent(t *Turn) *EventQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(turn.Table, turn.FieldID, id),
 			sqlgraph.To(event.Table, event.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, turn.EventTable, turn.EventColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, turn.EventTable, turn.EventColumn),
+		)
+		fromV = sqlgraph.Neighbors(t.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryGameplayerhandhai queries the gameplayerhandhai edge of a Turn.
+func (c *TurnClient) QueryGameplayerhandhai(t *Turn) *GamePlayerHandHaiQuery {
+	query := &GamePlayerHandHaiQuery{config: c.config}
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := t.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(turn.Table, turn.FieldID, id),
+			sqlgraph.To(gameplayerhandhai.Table, gameplayerhandhai.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, turn.GameplayerhandhaiTable, turn.GameplayerhandhaiColumn),
 		)
 		fromV = sqlgraph.Neighbors(t.driver.Dialect(), step)
 		return fromV, nil
@@ -2601,7 +3179,7 @@ func (c *WinClient) UpdateOne(w *Win) *WinUpdateOne {
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *WinClient) UpdateOneID(id int) *WinUpdateOne {
+func (c *WinClient) UpdateOneID(id uuid.UUID) *WinUpdateOne {
 	mutation := newWinMutation(c.config, OpUpdateOne, withWinID(id))
 	return &WinUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
@@ -2618,7 +3196,7 @@ func (c *WinClient) DeleteOne(w *Win) *WinDeleteOne {
 }
 
 // DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *WinClient) DeleteOneID(id int) *WinDeleteOne {
+func (c *WinClient) DeleteOneID(id uuid.UUID) *WinDeleteOne {
 	builder := c.Delete().Where(win.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
@@ -2633,12 +3211,12 @@ func (c *WinClient) Query() *WinQuery {
 }
 
 // Get returns a Win entity by its id.
-func (c *WinClient) Get(ctx context.Context, id int) (*Win, error) {
+func (c *WinClient) Get(ctx context.Context, id uuid.UUID) (*Win, error) {
 	return c.Query().Where(win.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *WinClient) GetX(ctx context.Context, id int) *Win {
+func (c *WinClient) GetX(ctx context.Context, id uuid.UUID) *Win {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)

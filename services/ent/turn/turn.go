@@ -19,6 +19,8 @@ const (
 	EdgeGamePlayerPoints = "game_player_points"
 	// EdgeEvent holds the string denoting the event edge name in mutations.
 	EdgeEvent = "event"
+	// EdgeGameplayerhandhai holds the string denoting the gameplayerhandhai edge name in mutations.
+	EdgeGameplayerhandhai = "gameplayerhandhai"
 	// Table holds the table name of the turn in the database.
 	Table = "turns"
 	// HandsTable is the table that holds the hands relation/edge. The primary key declared below.
@@ -38,6 +40,13 @@ const (
 	EventInverseTable = "events"
 	// EventColumn is the table column denoting the event relation/edge.
 	EventColumn = "turn_event"
+	// GameplayerhandhaiTable is the table that holds the gameplayerhandhai relation/edge.
+	GameplayerhandhaiTable = "game_player_hand_hais"
+	// GameplayerhandhaiInverseTable is the table name for the GamePlayerHandHai entity.
+	// It exists in this package in order to avoid circular dependency with the "gameplayerhandhai" package.
+	GameplayerhandhaiInverseTable = "game_player_hand_hais"
+	// GameplayerhandhaiColumn is the table column denoting the gameplayerhandhai relation/edge.
+	GameplayerhandhaiColumn = "turn_gameplayerhandhai"
 )
 
 // Columns holds all SQL columns for turn fields.

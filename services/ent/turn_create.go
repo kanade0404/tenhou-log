@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/event"
+	"github.com/kanade0404/tenhou-log/services/ent/gameplayerhandhai"
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayerpoint"
 	"github.com/kanade0404/tenhou-log/services/ent/hand"
 	"github.com/kanade0404/tenhou-log/services/ent/turn"
@@ -76,19 +77,42 @@ func (tc *TurnCreate) AddGamePlayerPoints(g ...*GamePlayerPoint) *TurnCreate {
 	return tc.AddGamePlayerPointIDs(ids...)
 }
 
-// AddEventIDs adds the "event" edge to the Event entity by IDs.
-func (tc *TurnCreate) AddEventIDs(ids ...int) *TurnCreate {
-	tc.mutation.AddEventIDs(ids...)
+// SetEventID sets the "event" edge to the Event entity by ID.
+func (tc *TurnCreate) SetEventID(id uuid.UUID) *TurnCreate {
+	tc.mutation.SetEventID(id)
 	return tc
 }
 
-// AddEvent adds the "event" edges to the Event entity.
-func (tc *TurnCreate) AddEvent(e ...*Event) *TurnCreate {
-	ids := make([]int, len(e))
-	for i := range e {
-		ids[i] = e[i].ID
+// SetNillableEventID sets the "event" edge to the Event entity by ID if the given value is not nil.
+func (tc *TurnCreate) SetNillableEventID(id *uuid.UUID) *TurnCreate {
+	if id != nil {
+		tc = tc.SetEventID(*id)
 	}
-	return tc.AddEventIDs(ids...)
+	return tc
+}
+
+// SetEvent sets the "event" edge to the Event entity.
+func (tc *TurnCreate) SetEvent(e *Event) *TurnCreate {
+	return tc.SetEventID(e.ID)
+}
+
+// SetGameplayerhandhaiID sets the "gameplayerhandhai" edge to the GamePlayerHandHai entity by ID.
+func (tc *TurnCreate) SetGameplayerhandhaiID(id uuid.UUID) *TurnCreate {
+	tc.mutation.SetGameplayerhandhaiID(id)
+	return tc
+}
+
+// SetNillableGameplayerhandhaiID sets the "gameplayerhandhai" edge to the GamePlayerHandHai entity by ID if the given value is not nil.
+func (tc *TurnCreate) SetNillableGameplayerhandhaiID(id *uuid.UUID) *TurnCreate {
+	if id != nil {
+		tc = tc.SetGameplayerhandhaiID(*id)
+	}
+	return tc
+}
+
+// SetGameplayerhandhai sets the "gameplayerhandhai" edge to the GamePlayerHandHai entity.
+func (tc *TurnCreate) SetGameplayerhandhai(g *GamePlayerHandHai) *TurnCreate {
+	return tc.SetGameplayerhandhaiID(g.ID)
 }
 
 // Mutation returns the TurnMutation object of the builder.
@@ -260,15 +284,34 @@ func (tc *TurnCreate) createSpec() (*Turn, *sqlgraph.CreateSpec) {
 	}
 	if nodes := tc.mutation.EventIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.O2O,
 			Inverse: false,
 			Table:   turn.EventTable,
 			Columns: []string{turn.EventColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
+					Type:   field.TypeUUID,
 					Column: event.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := tc.mutation.GameplayerhandhaiIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   turn.GameplayerhandhaiTable,
+			Columns: []string{turn.GameplayerhandhaiColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: gameplayerhandhai.FieldID,
 				},
 			},
 		}

@@ -8,6 +8,8 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/event"
+	"github.com/kanade0404/tenhou-log/services/ent/gameplayerhandhai"
 	"github.com/kanade0404/tenhou-log/services/ent/turn"
 )
 
@@ -30,10 +32,12 @@ type TurnEdges struct {
 	// GamePlayerPoints holds the value of the game_player_points edge.
 	GamePlayerPoints []*GamePlayerPoint `json:"game_player_points,omitempty"`
 	// Event holds the value of the event edge.
-	Event []*Event `json:"event,omitempty"`
+	Event *Event `json:"event,omitempty"`
+	// Gameplayerhandhai holds the value of the gameplayerhandhai edge.
+	Gameplayerhandhai *GamePlayerHandHai `json:"gameplayerhandhai,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [4]bool
 }
 
 // HandsOrErr returns the Hands value or an error if the edge
@@ -55,12 +59,29 @@ func (e TurnEdges) GamePlayerPointsOrErr() ([]*GamePlayerPoint, error) {
 }
 
 // EventOrErr returns the Event value or an error if the edge
-// was not loaded in eager-loading.
-func (e TurnEdges) EventOrErr() ([]*Event, error) {
+// was not loaded in eager-loading, or loaded but was not found.
+func (e TurnEdges) EventOrErr() (*Event, error) {
 	if e.loadedTypes[2] {
+		if e.Event == nil {
+			// Edge was loaded but was not found.
+			return nil, &NotFoundError{label: event.Label}
+		}
 		return e.Event, nil
 	}
 	return nil, &NotLoadedError{edge: "event"}
+}
+
+// GameplayerhandhaiOrErr returns the Gameplayerhandhai value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e TurnEdges) GameplayerhandhaiOrErr() (*GamePlayerHandHai, error) {
+	if e.loadedTypes[3] {
+		if e.Gameplayerhandhai == nil {
+			// Edge was loaded but was not found.
+			return nil, &NotFoundError{label: gameplayerhandhai.Label}
+		}
+		return e.Gameplayerhandhai, nil
+	}
+	return nil, &NotLoadedError{edge: "gameplayerhandhai"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -117,6 +138,11 @@ func (t *Turn) QueryGamePlayerPoints() *GamePlayerPointQuery {
 // QueryEvent queries the "event" edge of the Turn entity.
 func (t *Turn) QueryEvent() *EventQuery {
 	return (&TurnClient{config: t.config}).QueryEvent(t)
+}
+
+// QueryGameplayerhandhai queries the "gameplayerhandhai" edge of the Turn entity.
+func (t *Turn) QueryGameplayerhandhai() *GamePlayerHandHaiQuery {
+	return (&TurnClient{config: t.config}).QueryGameplayerhandhai(t)
 }
 
 // Update returns a builder for updating this Turn.

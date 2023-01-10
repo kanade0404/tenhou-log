@@ -72,7 +72,7 @@ func (mkd *MeldedKanDelete) sqlExec(ctx context.Context) (int, error) {
 		Node: &sqlgraph.NodeSpec{
 			Table: meldedkan.Table,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: meldedkan.FieldID,
 			},
 		},

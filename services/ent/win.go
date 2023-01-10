@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"entgo.io/ent/dialect/sql"
+	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/event"
 	"github.com/kanade0404/tenhou-log/services/ent/win"
 )
@@ -15,11 +16,11 @@ import (
 type Win struct {
 	config
 	// ID of the ent.
-	ID int `json:"id,omitempty"`
+	ID uuid.UUID `json:"id,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the WinQuery when eager-loading is set.
 	Edges     WinEdges `json:"edges"`
-	event_win *int
+	event_win *uuid.UUID
 }
 
 // WinEdges holds the relations/edges for other nodes in the graph.
@@ -50,9 +51,9 @@ func (*Win) scanValues(columns []string) ([]any, error) {
 	for i := range columns {
 		switch columns[i] {
 		case win.FieldID:
-			values[i] = new(sql.NullInt64)
+			values[i] = new(uuid.UUID)
 		case win.ForeignKeys[0]: // event_win
-			values[i] = new(sql.NullInt64)
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Win", columns[i])
 		}
@@ -69,17 +70,17 @@ func (w *Win) assignValues(columns []string, values []any) error {
 	for i := range columns {
 		switch columns[i] {
 		case win.FieldID:
-			value, ok := values[i].(*sql.NullInt64)
-			if !ok {
-				return fmt.Errorf("unexpected type %T for field id", value)
+			if value, ok := values[i].(*uuid.UUID); !ok {
+				return fmt.Errorf("unexpected type %T for field id", values[i])
+			} else if value != nil {
+				w.ID = *value
 			}
-			w.ID = int(value.Int64)
 		case win.ForeignKeys[0]:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for edge-field event_win", value)
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field event_win", values[i])
 			} else if value.Valid {
-				w.event_win = new(int)
-				*w.event_win = int(value.Int64)
+				w.event_win = new(uuid.UUID)
+				*w.event_win = *value.S.(*uuid.UUID)
 			}
 		}
 	}

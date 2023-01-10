@@ -2,13 +2,26 @@
 
 package chakan
 
+import (
+	"github.com/google/uuid"
+)
+
 const (
 	// Label holds the string label denoting the chakan type in the database.
 	Label = "chakan"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
+	// EdgeCall holds the string denoting the call edge name in mutations.
+	EdgeCall = "call"
 	// Table holds the table name of the chakan in the database.
 	Table = "chakans"
+	// CallTable is the table that holds the call relation/edge.
+	CallTable = "calls"
+	// CallInverseTable is the table name for the Call entity.
+	// It exists in this package in order to avoid circular dependency with the "call" package.
+	CallInverseTable = "calls"
+	// CallColumn is the table column denoting the call relation/edge.
+	CallColumn = "chakan_call"
 )
 
 // Columns holds all SQL columns for chakan fields.
@@ -25,3 +38,8 @@ func ValidColumn(column string) bool {
 	}
 	return false
 }
+
+var (
+	// DefaultID holds the default value on creation for the "id" field.
+	DefaultID func() uuid.UUID
+)

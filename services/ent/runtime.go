@@ -6,25 +6,55 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/call"
+	"github.com/kanade0404/tenhou-log/services/ent/chakan"
+	"github.com/kanade0404/tenhou-log/services/ent/chii"
 	"github.com/kanade0404/tenhou-log/services/ent/compressedmjlog"
+	"github.com/kanade0404/tenhou-log/services/ent/concealedkan"
 	"github.com/kanade0404/tenhou-log/services/ent/dan"
+	"github.com/kanade0404/tenhou-log/services/ent/discard"
+	"github.com/kanade0404/tenhou-log/services/ent/drawn"
+	"github.com/kanade0404/tenhou-log/services/ent/event"
 	"github.com/kanade0404/tenhou-log/services/ent/game"
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayer"
+	"github.com/kanade0404/tenhou-log/services/ent/gameplayerhandhai"
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayerpoint"
 	"github.com/kanade0404/tenhou-log/services/ent/hand"
+	"github.com/kanade0404/tenhou-log/services/ent/meldedkan"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlog"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlogfile"
 	"github.com/kanade0404/tenhou-log/services/ent/player"
+	"github.com/kanade0404/tenhou-log/services/ent/pon"
+	"github.com/kanade0404/tenhou-log/services/ent/reach"
 	"github.com/kanade0404/tenhou-log/services/ent/room"
 	"github.com/kanade0404/tenhou-log/services/ent/round"
 	"github.com/kanade0404/tenhou-log/services/ent/schema"
 	"github.com/kanade0404/tenhou-log/services/ent/turn"
+	"github.com/kanade0404/tenhou-log/services/ent/win"
 )
 
 // The init function reads all schema descriptors with runtime code
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	callFields := schema.Call{}.Fields()
+	_ = callFields
+	// callDescID is the schema descriptor for id field.
+	callDescID := callFields[0].Descriptor()
+	// call.DefaultID holds the default value on creation for the id field.
+	call.DefaultID = callDescID.Default.(func() uuid.UUID)
+	chakanFields := schema.Chakan{}.Fields()
+	_ = chakanFields
+	// chakanDescID is the schema descriptor for id field.
+	chakanDescID := chakanFields[0].Descriptor()
+	// chakan.DefaultID holds the default value on creation for the id field.
+	chakan.DefaultID = chakanDescID.Default.(func() uuid.UUID)
+	chiiFields := schema.Chii{}.Fields()
+	_ = chiiFields
+	// chiiDescID is the schema descriptor for id field.
+	chiiDescID := chiiFields[0].Descriptor()
+	// chii.DefaultID holds the default value on creation for the id field.
+	chii.DefaultID = chiiDescID.Default.(func() uuid.UUID)
 	compressedmjlogFields := schema.CompressedMJLog{}.Fields()
 	_ = compressedmjlogFields
 	// compressedmjlogDescInsertedAt is the schema descriptor for inserted_at field.
@@ -35,12 +65,36 @@ func init() {
 	compressedmjlogDescID := compressedmjlogFields[0].Descriptor()
 	// compressedmjlog.DefaultID holds the default value on creation for the id field.
 	compressedmjlog.DefaultID = compressedmjlogDescID.Default.(func() uuid.UUID)
+	concealedkanFields := schema.ConcealedKan{}.Fields()
+	_ = concealedkanFields
+	// concealedkanDescID is the schema descriptor for id field.
+	concealedkanDescID := concealedkanFields[0].Descriptor()
+	// concealedkan.DefaultID holds the default value on creation for the id field.
+	concealedkan.DefaultID = concealedkanDescID.Default.(func() uuid.UUID)
 	danFields := schema.Dan{}.Fields()
 	_ = danFields
 	// danDescID is the schema descriptor for id field.
 	danDescID := danFields[0].Descriptor()
 	// dan.DefaultID holds the default value on creation for the id field.
 	dan.DefaultID = danDescID.Default.(func() uuid.UUID)
+	discardFields := schema.Discard{}.Fields()
+	_ = discardFields
+	// discardDescID is the schema descriptor for id field.
+	discardDescID := discardFields[0].Descriptor()
+	// discard.DefaultID holds the default value on creation for the id field.
+	discard.DefaultID = discardDescID.Default.(func() uuid.UUID)
+	drawnFields := schema.Drawn{}.Fields()
+	_ = drawnFields
+	// drawnDescID is the schema descriptor for id field.
+	drawnDescID := drawnFields[0].Descriptor()
+	// drawn.DefaultID holds the default value on creation for the id field.
+	drawn.DefaultID = drawnDescID.Default.(func() uuid.UUID)
+	eventFields := schema.Event{}.Fields()
+	_ = eventFields
+	// eventDescID is the schema descriptor for id field.
+	eventDescID := eventFields[0].Descriptor()
+	// event.DefaultID holds the default value on creation for the id field.
+	event.DefaultID = eventDescID.Default.(func() uuid.UUID)
 	gameFields := schema.Game{}.Fields()
 	_ = gameFields
 	// gameDescID is the schema descriptor for id field.
@@ -57,6 +111,12 @@ func init() {
 	gameplayerDescID := gameplayerFields[0].Descriptor()
 	// gameplayer.DefaultID holds the default value on creation for the id field.
 	gameplayer.DefaultID = gameplayerDescID.Default.(func() uuid.UUID)
+	gameplayerhandhaiFields := schema.GamePlayerHandHai{}.Fields()
+	_ = gameplayerhandhaiFields
+	// gameplayerhandhaiDescID is the schema descriptor for id field.
+	gameplayerhandhaiDescID := gameplayerhandhaiFields[0].Descriptor()
+	// gameplayerhandhai.DefaultID holds the default value on creation for the id field.
+	gameplayerhandhai.DefaultID = gameplayerhandhaiDescID.Default.(func() uuid.UUID)
 	gameplayerpointFields := schema.GamePlayerPoint{}.Fields()
 	_ = gameplayerpointFields
 	// gameplayerpointDescPoint is the schema descriptor for point field.
@@ -97,6 +157,12 @@ func init() {
 	mjlogfileDescID := mjlogfileFields[0].Descriptor()
 	// mjlogfile.DefaultID holds the default value on creation for the id field.
 	mjlogfile.DefaultID = mjlogfileDescID.Default.(func() uuid.UUID)
+	meldedkanFields := schema.MeldedKan{}.Fields()
+	_ = meldedkanFields
+	// meldedkanDescID is the schema descriptor for id field.
+	meldedkanDescID := meldedkanFields[0].Descriptor()
+	// meldedkan.DefaultID holds the default value on creation for the id field.
+	meldedkan.DefaultID = meldedkanDescID.Default.(func() uuid.UUID)
 	playerFields := schema.Player{}.Fields()
 	_ = playerFields
 	// playerDescSex is the schema descriptor for sex field.
@@ -107,6 +173,18 @@ func init() {
 	playerDescID := playerFields[0].Descriptor()
 	// player.DefaultID holds the default value on creation for the id field.
 	player.DefaultID = playerDescID.Default.(func() uuid.UUID)
+	ponFields := schema.Pon{}.Fields()
+	_ = ponFields
+	// ponDescID is the schema descriptor for id field.
+	ponDescID := ponFields[0].Descriptor()
+	// pon.DefaultID holds the default value on creation for the id field.
+	pon.DefaultID = ponDescID.Default.(func() uuid.UUID)
+	reachFields := schema.Reach{}.Fields()
+	_ = reachFields
+	// reachDescID is the schema descriptor for id field.
+	reachDescID := reachFields[0].Descriptor()
+	// reach.DefaultID holds the default value on creation for the id field.
+	reach.DefaultID = reachDescID.Default.(func() uuid.UUID)
 	roomFields := schema.Room{}.Fields()
 	_ = roomFields
 	// roomDescID is the schema descriptor for id field.
@@ -129,4 +207,10 @@ func init() {
 	turnDescID := turnFields[0].Descriptor()
 	// turn.DefaultID holds the default value on creation for the id field.
 	turn.DefaultID = turnDescID.Default.(func() uuid.UUID)
+	winFields := schema.Win{}.Fields()
+	_ = winFields
+	// winDescID is the schema descriptor for id field.
+	winDescID := winFields[0].Descriptor()
+	// win.DefaultID holds the default value on creation for the id field.
+	win.DefaultID = winDescID.Default.(func() uuid.UUID)
 }

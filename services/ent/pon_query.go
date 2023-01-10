@@ -4,12 +4,15 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/call"
 	"github.com/kanade0404/tenhou-log/services/ent/pon"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 )
@@ -23,6 +26,7 @@ type PonQuery struct {
 	order      []OrderFunc
 	fields     []string
 	predicates []predicate.Pon
+	withCall   *CallQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -59,6 +63,28 @@ func (pq *PonQuery) Order(o ...OrderFunc) *PonQuery {
 	return pq
 }
 
+// QueryCall chains the current query on the "call" edge.
+func (pq *PonQuery) QueryCall() *CallQuery {
+	query := &CallQuery{config: pq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := pq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := pq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(pon.Table, pon.FieldID, selector),
+			sqlgraph.To(call.Table, call.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, pon.CallTable, pon.CallColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(pq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
 // First returns the first Pon entity from the query.
 // Returns a *NotFoundError when no Pon was found.
 func (pq *PonQuery) First(ctx context.Context) (*Pon, error) {
@@ -83,8 +109,8 @@ func (pq *PonQuery) FirstX(ctx context.Context) *Pon {
 
 // FirstID returns the first Pon ID from the query.
 // Returns a *NotFoundError when no Pon ID was found.
-func (pq *PonQuery) FirstID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (pq *PonQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = pq.Limit(1).IDs(ctx); err != nil {
 		return
 	}
@@ -96,7 +122,7 @@ func (pq *PonQuery) FirstID(ctx context.Context) (id int, err error) {
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (pq *PonQuery) FirstIDX(ctx context.Context) int {
+func (pq *PonQuery) FirstIDX(ctx context.Context) uuid.UUID {
 	id, err := pq.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -134,8 +160,8 @@ func (pq *PonQuery) OnlyX(ctx context.Context) *Pon {
 // OnlyID is like Only, but returns the only Pon ID in the query.
 // Returns a *NotSingularError when more than one Pon ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (pq *PonQuery) OnlyID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (pq *PonQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = pq.Limit(2).IDs(ctx); err != nil {
 		return
 	}
@@ -151,7 +177,7 @@ func (pq *PonQuery) OnlyID(ctx context.Context) (id int, err error) {
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (pq *PonQuery) OnlyIDX(ctx context.Context) int {
+func (pq *PonQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 	id, err := pq.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -177,8 +203,8 @@ func (pq *PonQuery) AllX(ctx context.Context) []*Pon {
 }
 
 // IDs executes the query and returns a list of Pon IDs.
-func (pq *PonQuery) IDs(ctx context.Context) ([]int, error) {
-	var ids []int
+func (pq *PonQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	var ids []uuid.UUID
 	if err := pq.Select(pon.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
@@ -186,7 +212,7 @@ func (pq *PonQuery) IDs(ctx context.Context) ([]int, error) {
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (pq *PonQuery) IDsX(ctx context.Context) []int {
+func (pq *PonQuery) IDsX(ctx context.Context) []uuid.UUID {
 	ids, err := pq.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -240,11 +266,23 @@ func (pq *PonQuery) Clone() *PonQuery {
 		offset:     pq.offset,
 		order:      append([]OrderFunc{}, pq.order...),
 		predicates: append([]predicate.Pon{}, pq.predicates...),
+		withCall:   pq.withCall.Clone(),
 		// clone intermediate query.
 		sql:    pq.sql.Clone(),
 		path:   pq.path,
 		unique: pq.unique,
 	}
+}
+
+// WithCall tells the query-builder to eager-load the nodes that are connected to
+// the "call" edge. The optional arguments are used to configure the query builder of the edge.
+func (pq *PonQuery) WithCall(opts ...func(*CallQuery)) *PonQuery {
+	query := &CallQuery{config: pq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	pq.withCall = query
+	return pq
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -296,8 +334,11 @@ func (pq *PonQuery) prepareQuery(ctx context.Context) error {
 
 func (pq *PonQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Pon, error) {
 	var (
-		nodes = []*Pon{}
-		_spec = pq.querySpec()
+		nodes       = []*Pon{}
+		_spec       = pq.querySpec()
+		loadedTypes = [1]bool{
+			pq.withCall != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Pon).scanValues(nil, columns)
@@ -305,6 +346,7 @@ func (pq *PonQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Pon, err
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &Pon{config: pq.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -316,7 +358,42 @@ func (pq *PonQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Pon, err
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := pq.withCall; query != nil {
+		if err := pq.loadCall(ctx, query, nodes, nil,
+			func(n *Pon, e *Call) { n.Edges.Call = e }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (pq *PonQuery) loadCall(ctx context.Context, query *CallQuery, nodes []*Pon, init func(*Pon), assign func(*Pon, *Call)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Pon)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+	}
+	query.withFKs = true
+	query.Where(predicate.Call(func(s *sql.Selector) {
+		s.Where(sql.InValues(pon.CallColumn, fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.pon_call
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "pon_call" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "pon_call" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
 }
 
 func (pq *PonQuery) sqlCount(ctx context.Context) (int, error) {
@@ -345,7 +422,7 @@ func (pq *PonQuery) querySpec() *sqlgraph.QuerySpec {
 			Table:   pon.Table,
 			Columns: pon.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: pon.FieldID,
 			},
 		},

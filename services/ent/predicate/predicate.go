@@ -24,6 +24,9 @@ type ConcealedKan func(*sql.Selector)
 // Dan is the predicate function for dan builders.
 type Dan func(*sql.Selector)
 
+// Discard is the predicate function for discard builders.
+type Discard func(*sql.Selector)
+
 // Drawn is the predicate function for drawn builders.
 type Drawn func(*sql.Selector)
 
@@ -59,6 +62,9 @@ type Player func(*sql.Selector)
 
 // Pon is the predicate function for pon builders.
 type Pon func(*sql.Selector)
+
+// Reach is the predicate function for reach builders.
+type Reach func(*sql.Selector)
 
 // Room is the predicate function for room builders.
 type Room func(*sql.Selector)

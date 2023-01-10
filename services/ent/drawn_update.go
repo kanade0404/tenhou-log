@@ -10,7 +10,10 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/discard"
 	"github.com/kanade0404/tenhou-log/services/ent/drawn"
+	"github.com/kanade0404/tenhou-log/services/ent/event"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 )
 
@@ -27,9 +30,43 @@ func (du *DrawnUpdate) Where(ps ...predicate.Drawn) *DrawnUpdate {
 	return du
 }
 
+// SetEventID sets the "event" edge to the Event entity by ID.
+func (du *DrawnUpdate) SetEventID(id uuid.UUID) *DrawnUpdate {
+	du.mutation.SetEventID(id)
+	return du
+}
+
+// SetEvent sets the "event" edge to the Event entity.
+func (du *DrawnUpdate) SetEvent(e *Event) *DrawnUpdate {
+	return du.SetEventID(e.ID)
+}
+
+// SetDiscardID sets the "discard" edge to the Discard entity by ID.
+func (du *DrawnUpdate) SetDiscardID(id uuid.UUID) *DrawnUpdate {
+	du.mutation.SetDiscardID(id)
+	return du
+}
+
+// SetDiscard sets the "discard" edge to the Discard entity.
+func (du *DrawnUpdate) SetDiscard(d *Discard) *DrawnUpdate {
+	return du.SetDiscardID(d.ID)
+}
+
 // Mutation returns the DrawnMutation object of the builder.
 func (du *DrawnUpdate) Mutation() *DrawnMutation {
 	return du.mutation
+}
+
+// ClearEvent clears the "event" edge to the Event entity.
+func (du *DrawnUpdate) ClearEvent() *DrawnUpdate {
+	du.mutation.ClearEvent()
+	return du
+}
+
+// ClearDiscard clears the "discard" edge to the Discard entity.
+func (du *DrawnUpdate) ClearDiscard() *DrawnUpdate {
+	du.mutation.ClearDiscard()
+	return du
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -39,12 +76,18 @@ func (du *DrawnUpdate) Save(ctx context.Context) (int, error) {
 		affected int
 	)
 	if len(du.hooks) == 0 {
+		if err = du.check(); err != nil {
+			return 0, err
+		}
 		affected, err = du.sqlSave(ctx)
 	} else {
 		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 			mutation, ok := m.(*DrawnMutation)
 			if !ok {
 				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			if err = du.check(); err != nil {
+				return 0, err
 			}
 			du.mutation = mutation
 			affected, err = du.sqlSave(ctx)
@@ -86,13 +129,24 @@ func (du *DrawnUpdate) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (du *DrawnUpdate) check() error {
+	if _, ok := du.mutation.EventID(); du.mutation.EventCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "Drawn.event"`)
+	}
+	if _, ok := du.mutation.DiscardID(); du.mutation.DiscardCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "Drawn.discard"`)
+	}
+	return nil
+}
+
 func (du *DrawnUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	_spec := &sqlgraph.UpdateSpec{
 		Node: &sqlgraph.NodeSpec{
 			Table:   drawn.Table,
 			Columns: drawn.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: drawn.FieldID,
 			},
 		},
@@ -103,6 +157,76 @@ func (du *DrawnUpdate) sqlSave(ctx context.Context) (n int, err error) {
 				ps[i](selector)
 			}
 		}
+	}
+	if du.mutation.EventCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   drawn.EventTable,
+			Columns: []string{drawn.EventColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: event.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := du.mutation.EventIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   drawn.EventTable,
+			Columns: []string{drawn.EventColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: event.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if du.mutation.DiscardCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   drawn.DiscardTable,
+			Columns: []string{drawn.DiscardColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: discard.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := du.mutation.DiscardIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   drawn.DiscardTable,
+			Columns: []string{drawn.DiscardColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: discard.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, du.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -123,9 +247,43 @@ type DrawnUpdateOne struct {
 	mutation *DrawnMutation
 }
 
+// SetEventID sets the "event" edge to the Event entity by ID.
+func (duo *DrawnUpdateOne) SetEventID(id uuid.UUID) *DrawnUpdateOne {
+	duo.mutation.SetEventID(id)
+	return duo
+}
+
+// SetEvent sets the "event" edge to the Event entity.
+func (duo *DrawnUpdateOne) SetEvent(e *Event) *DrawnUpdateOne {
+	return duo.SetEventID(e.ID)
+}
+
+// SetDiscardID sets the "discard" edge to the Discard entity by ID.
+func (duo *DrawnUpdateOne) SetDiscardID(id uuid.UUID) *DrawnUpdateOne {
+	duo.mutation.SetDiscardID(id)
+	return duo
+}
+
+// SetDiscard sets the "discard" edge to the Discard entity.
+func (duo *DrawnUpdateOne) SetDiscard(d *Discard) *DrawnUpdateOne {
+	return duo.SetDiscardID(d.ID)
+}
+
 // Mutation returns the DrawnMutation object of the builder.
 func (duo *DrawnUpdateOne) Mutation() *DrawnMutation {
 	return duo.mutation
+}
+
+// ClearEvent clears the "event" edge to the Event entity.
+func (duo *DrawnUpdateOne) ClearEvent() *DrawnUpdateOne {
+	duo.mutation.ClearEvent()
+	return duo
+}
+
+// ClearDiscard clears the "discard" edge to the Discard entity.
+func (duo *DrawnUpdateOne) ClearDiscard() *DrawnUpdateOne {
+	duo.mutation.ClearDiscard()
+	return duo
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -142,12 +300,18 @@ func (duo *DrawnUpdateOne) Save(ctx context.Context) (*Drawn, error) {
 		node *Drawn
 	)
 	if len(duo.hooks) == 0 {
+		if err = duo.check(); err != nil {
+			return nil, err
+		}
 		node, err = duo.sqlSave(ctx)
 	} else {
 		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 			mutation, ok := m.(*DrawnMutation)
 			if !ok {
 				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			if err = duo.check(); err != nil {
+				return nil, err
 			}
 			duo.mutation = mutation
 			node, err = duo.sqlSave(ctx)
@@ -195,13 +359,24 @@ func (duo *DrawnUpdateOne) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (duo *DrawnUpdateOne) check() error {
+	if _, ok := duo.mutation.EventID(); duo.mutation.EventCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "Drawn.event"`)
+	}
+	if _, ok := duo.mutation.DiscardID(); duo.mutation.DiscardCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "Drawn.discard"`)
+	}
+	return nil
+}
+
 func (duo *DrawnUpdateOne) sqlSave(ctx context.Context) (_node *Drawn, err error) {
 	_spec := &sqlgraph.UpdateSpec{
 		Node: &sqlgraph.NodeSpec{
 			Table:   drawn.Table,
 			Columns: drawn.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: drawn.FieldID,
 			},
 		},
@@ -229,6 +404,76 @@ func (duo *DrawnUpdateOne) sqlSave(ctx context.Context) (_node *Drawn, err error
 				ps[i](selector)
 			}
 		}
+	}
+	if duo.mutation.EventCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   drawn.EventTable,
+			Columns: []string{drawn.EventColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: event.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := duo.mutation.EventIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   drawn.EventTable,
+			Columns: []string{drawn.EventColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: event.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if duo.mutation.DiscardCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   drawn.DiscardTable,
+			Columns: []string{drawn.DiscardColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: discard.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := duo.mutation.DiscardIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   drawn.DiscardTable,
+			Columns: []string{drawn.DiscardColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: discard.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &Drawn{config: duo.config}
 	_spec.Assign = _node.assignValues

@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"entgo.io/ent/dialect/sql"
+	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/call"
 	"github.com/kanade0404/tenhou-log/services/ent/concealedkan"
 )
 
@@ -14,7 +15,32 @@ import (
 type ConcealedKan struct {
 	config
 	// ID of the ent.
-	ID int `json:"id,omitempty"`
+	ID uuid.UUID `json:"id,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the ConcealedKanQuery when eager-loading is set.
+	Edges ConcealedKanEdges `json:"edges"`
+}
+
+// ConcealedKanEdges holds the relations/edges for other nodes in the graph.
+type ConcealedKanEdges struct {
+	// Call holds the value of the call edge.
+	Call *Call `json:"call,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// CallOrErr returns the Call value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ConcealedKanEdges) CallOrErr() (*Call, error) {
+	if e.loadedTypes[0] {
+		if e.Call == nil {
+			// Edge was loaded but was not found.
+			return nil, &NotFoundError{label: call.Label}
+		}
+		return e.Call, nil
+	}
+	return nil, &NotLoadedError{edge: "call"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -23,7 +49,7 @@ func (*ConcealedKan) scanValues(columns []string) ([]any, error) {
 	for i := range columns {
 		switch columns[i] {
 		case concealedkan.FieldID:
-			values[i] = new(sql.NullInt64)
+			values[i] = new(uuid.UUID)
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type ConcealedKan", columns[i])
 		}
@@ -40,14 +66,19 @@ func (ck *ConcealedKan) assignValues(columns []string, values []any) error {
 	for i := range columns {
 		switch columns[i] {
 		case concealedkan.FieldID:
-			value, ok := values[i].(*sql.NullInt64)
-			if !ok {
-				return fmt.Errorf("unexpected type %T for field id", value)
+			if value, ok := values[i].(*uuid.UUID); !ok {
+				return fmt.Errorf("unexpected type %T for field id", values[i])
+			} else if value != nil {
+				ck.ID = *value
 			}
-			ck.ID = int(value.Int64)
 		}
 	}
 	return nil
+}
+
+// QueryCall queries the "call" edge of the ConcealedKan entity.
+func (ck *ConcealedKan) QueryCall() *CallQuery {
+	return (&ConcealedKanClient{config: ck.config}).QueryCall(ck)
 }
 
 // Update returns a builder for updating this ConcealedKan.

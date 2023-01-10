@@ -10,19 +10,25 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/discard"
 	"github.com/kanade0404/tenhou-log/services/ent/drawn"
+	"github.com/kanade0404/tenhou-log/services/ent/event"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 )
 
 // DrawnQuery is the builder for querying Drawn entities.
 type DrawnQuery struct {
 	config
-	limit      *int
-	offset     *int
-	unique     *bool
-	order      []OrderFunc
-	fields     []string
-	predicates []predicate.Drawn
+	limit       *int
+	offset      *int
+	unique      *bool
+	order       []OrderFunc
+	fields      []string
+	predicates  []predicate.Drawn
+	withEvent   *EventQuery
+	withDiscard *DiscardQuery
+	withFKs     bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -59,6 +65,50 @@ func (dq *DrawnQuery) Order(o ...OrderFunc) *DrawnQuery {
 	return dq
 }
 
+// QueryEvent chains the current query on the "event" edge.
+func (dq *DrawnQuery) QueryEvent() *EventQuery {
+	query := &EventQuery{config: dq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := dq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := dq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(drawn.Table, drawn.FieldID, selector),
+			sqlgraph.To(event.Table, event.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, drawn.EventTable, drawn.EventColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(dq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryDiscard chains the current query on the "discard" edge.
+func (dq *DrawnQuery) QueryDiscard() *DiscardQuery {
+	query := &DiscardQuery{config: dq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := dq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := dq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(drawn.Table, drawn.FieldID, selector),
+			sqlgraph.To(discard.Table, discard.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, drawn.DiscardTable, drawn.DiscardColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(dq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
 // First returns the first Drawn entity from the query.
 // Returns a *NotFoundError when no Drawn was found.
 func (dq *DrawnQuery) First(ctx context.Context) (*Drawn, error) {
@@ -83,8 +133,8 @@ func (dq *DrawnQuery) FirstX(ctx context.Context) *Drawn {
 
 // FirstID returns the first Drawn ID from the query.
 // Returns a *NotFoundError when no Drawn ID was found.
-func (dq *DrawnQuery) FirstID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (dq *DrawnQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = dq.Limit(1).IDs(ctx); err != nil {
 		return
 	}
@@ -96,7 +146,7 @@ func (dq *DrawnQuery) FirstID(ctx context.Context) (id int, err error) {
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (dq *DrawnQuery) FirstIDX(ctx context.Context) int {
+func (dq *DrawnQuery) FirstIDX(ctx context.Context) uuid.UUID {
 	id, err := dq.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -134,8 +184,8 @@ func (dq *DrawnQuery) OnlyX(ctx context.Context) *Drawn {
 // OnlyID is like Only, but returns the only Drawn ID in the query.
 // Returns a *NotSingularError when more than one Drawn ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (dq *DrawnQuery) OnlyID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (dq *DrawnQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = dq.Limit(2).IDs(ctx); err != nil {
 		return
 	}
@@ -151,7 +201,7 @@ func (dq *DrawnQuery) OnlyID(ctx context.Context) (id int, err error) {
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (dq *DrawnQuery) OnlyIDX(ctx context.Context) int {
+func (dq *DrawnQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 	id, err := dq.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -177,8 +227,8 @@ func (dq *DrawnQuery) AllX(ctx context.Context) []*Drawn {
 }
 
 // IDs executes the query and returns a list of Drawn IDs.
-func (dq *DrawnQuery) IDs(ctx context.Context) ([]int, error) {
-	var ids []int
+func (dq *DrawnQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	var ids []uuid.UUID
 	if err := dq.Select(drawn.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
@@ -186,7 +236,7 @@ func (dq *DrawnQuery) IDs(ctx context.Context) ([]int, error) {
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (dq *DrawnQuery) IDsX(ctx context.Context) []int {
+func (dq *DrawnQuery) IDsX(ctx context.Context) []uuid.UUID {
 	ids, err := dq.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -235,16 +285,40 @@ func (dq *DrawnQuery) Clone() *DrawnQuery {
 		return nil
 	}
 	return &DrawnQuery{
-		config:     dq.config,
-		limit:      dq.limit,
-		offset:     dq.offset,
-		order:      append([]OrderFunc{}, dq.order...),
-		predicates: append([]predicate.Drawn{}, dq.predicates...),
+		config:      dq.config,
+		limit:       dq.limit,
+		offset:      dq.offset,
+		order:       append([]OrderFunc{}, dq.order...),
+		predicates:  append([]predicate.Drawn{}, dq.predicates...),
+		withEvent:   dq.withEvent.Clone(),
+		withDiscard: dq.withDiscard.Clone(),
 		// clone intermediate query.
 		sql:    dq.sql.Clone(),
 		path:   dq.path,
 		unique: dq.unique,
 	}
+}
+
+// WithEvent tells the query-builder to eager-load the nodes that are connected to
+// the "event" edge. The optional arguments are used to configure the query builder of the edge.
+func (dq *DrawnQuery) WithEvent(opts ...func(*EventQuery)) *DrawnQuery {
+	query := &EventQuery{config: dq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	dq.withEvent = query
+	return dq
+}
+
+// WithDiscard tells the query-builder to eager-load the nodes that are connected to
+// the "discard" edge. The optional arguments are used to configure the query builder of the edge.
+func (dq *DrawnQuery) WithDiscard(opts ...func(*DiscardQuery)) *DrawnQuery {
+	query := &DiscardQuery{config: dq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	dq.withDiscard = query
+	return dq
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -296,15 +370,27 @@ func (dq *DrawnQuery) prepareQuery(ctx context.Context) error {
 
 func (dq *DrawnQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Drawn, error) {
 	var (
-		nodes = []*Drawn{}
-		_spec = dq.querySpec()
+		nodes       = []*Drawn{}
+		withFKs     = dq.withFKs
+		_spec       = dq.querySpec()
+		loadedTypes = [2]bool{
+			dq.withEvent != nil,
+			dq.withDiscard != nil,
+		}
 	)
+	if dq.withEvent != nil || dq.withDiscard != nil {
+		withFKs = true
+	}
+	if withFKs {
+		_spec.Node.Columns = append(_spec.Node.Columns, drawn.ForeignKeys...)
+	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Drawn).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &Drawn{config: dq.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -316,7 +402,78 @@ func (dq *DrawnQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Drawn,
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := dq.withEvent; query != nil {
+		if err := dq.loadEvent(ctx, query, nodes, nil,
+			func(n *Drawn, e *Event) { n.Edges.Event = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := dq.withDiscard; query != nil {
+		if err := dq.loadDiscard(ctx, query, nodes, nil,
+			func(n *Drawn, e *Discard) { n.Edges.Discard = e }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (dq *DrawnQuery) loadEvent(ctx context.Context, query *EventQuery, nodes []*Drawn, init func(*Drawn), assign func(*Drawn, *Event)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Drawn)
+	for i := range nodes {
+		if nodes[i].event_draw == nil {
+			continue
+		}
+		fk := *nodes[i].event_draw
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	query.Where(event.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "event_draw" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (dq *DrawnQuery) loadDiscard(ctx context.Context, query *DiscardQuery, nodes []*Drawn, init func(*Drawn), assign func(*Drawn, *Discard)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Drawn)
+	for i := range nodes {
+		if nodes[i].discard_draw == nil {
+			continue
+		}
+		fk := *nodes[i].discard_draw
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	query.Where(discard.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "discard_draw" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
 }
 
 func (dq *DrawnQuery) sqlCount(ctx context.Context) (int, error) {
@@ -345,7 +502,7 @@ func (dq *DrawnQuery) querySpec() *sqlgraph.QuerySpec {
 			Table:   drawn.Table,
 			Columns: drawn.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: drawn.FieldID,
 			},
 		},

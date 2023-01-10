@@ -4,12 +4,15 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/call"
 	"github.com/kanade0404/tenhou-log/services/ent/meldedkan"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 )
@@ -23,6 +26,7 @@ type MeldedKanQuery struct {
 	order      []OrderFunc
 	fields     []string
 	predicates []predicate.MeldedKan
+	withCall   *CallQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -59,6 +63,28 @@ func (mkq *MeldedKanQuery) Order(o ...OrderFunc) *MeldedKanQuery {
 	return mkq
 }
 
+// QueryCall chains the current query on the "call" edge.
+func (mkq *MeldedKanQuery) QueryCall() *CallQuery {
+	query := &CallQuery{config: mkq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := mkq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := mkq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(meldedkan.Table, meldedkan.FieldID, selector),
+			sqlgraph.To(call.Table, call.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, meldedkan.CallTable, meldedkan.CallColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(mkq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
 // First returns the first MeldedKan entity from the query.
 // Returns a *NotFoundError when no MeldedKan was found.
 func (mkq *MeldedKanQuery) First(ctx context.Context) (*MeldedKan, error) {
@@ -83,8 +109,8 @@ func (mkq *MeldedKanQuery) FirstX(ctx context.Context) *MeldedKan {
 
 // FirstID returns the first MeldedKan ID from the query.
 // Returns a *NotFoundError when no MeldedKan ID was found.
-func (mkq *MeldedKanQuery) FirstID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (mkq *MeldedKanQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = mkq.Limit(1).IDs(ctx); err != nil {
 		return
 	}
@@ -96,7 +122,7 @@ func (mkq *MeldedKanQuery) FirstID(ctx context.Context) (id int, err error) {
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (mkq *MeldedKanQuery) FirstIDX(ctx context.Context) int {
+func (mkq *MeldedKanQuery) FirstIDX(ctx context.Context) uuid.UUID {
 	id, err := mkq.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -134,8 +160,8 @@ func (mkq *MeldedKanQuery) OnlyX(ctx context.Context) *MeldedKan {
 // OnlyID is like Only, but returns the only MeldedKan ID in the query.
 // Returns a *NotSingularError when more than one MeldedKan ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (mkq *MeldedKanQuery) OnlyID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (mkq *MeldedKanQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = mkq.Limit(2).IDs(ctx); err != nil {
 		return
 	}
@@ -151,7 +177,7 @@ func (mkq *MeldedKanQuery) OnlyID(ctx context.Context) (id int, err error) {
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (mkq *MeldedKanQuery) OnlyIDX(ctx context.Context) int {
+func (mkq *MeldedKanQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 	id, err := mkq.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -177,8 +203,8 @@ func (mkq *MeldedKanQuery) AllX(ctx context.Context) []*MeldedKan {
 }
 
 // IDs executes the query and returns a list of MeldedKan IDs.
-func (mkq *MeldedKanQuery) IDs(ctx context.Context) ([]int, error) {
-	var ids []int
+func (mkq *MeldedKanQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	var ids []uuid.UUID
 	if err := mkq.Select(meldedkan.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
@@ -186,7 +212,7 @@ func (mkq *MeldedKanQuery) IDs(ctx context.Context) ([]int, error) {
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (mkq *MeldedKanQuery) IDsX(ctx context.Context) []int {
+func (mkq *MeldedKanQuery) IDsX(ctx context.Context) []uuid.UUID {
 	ids, err := mkq.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -240,11 +266,23 @@ func (mkq *MeldedKanQuery) Clone() *MeldedKanQuery {
 		offset:     mkq.offset,
 		order:      append([]OrderFunc{}, mkq.order...),
 		predicates: append([]predicate.MeldedKan{}, mkq.predicates...),
+		withCall:   mkq.withCall.Clone(),
 		// clone intermediate query.
 		sql:    mkq.sql.Clone(),
 		path:   mkq.path,
 		unique: mkq.unique,
 	}
+}
+
+// WithCall tells the query-builder to eager-load the nodes that are connected to
+// the "call" edge. The optional arguments are used to configure the query builder of the edge.
+func (mkq *MeldedKanQuery) WithCall(opts ...func(*CallQuery)) *MeldedKanQuery {
+	query := &CallQuery{config: mkq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	mkq.withCall = query
+	return mkq
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -296,8 +334,11 @@ func (mkq *MeldedKanQuery) prepareQuery(ctx context.Context) error {
 
 func (mkq *MeldedKanQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*MeldedKan, error) {
 	var (
-		nodes = []*MeldedKan{}
-		_spec = mkq.querySpec()
+		nodes       = []*MeldedKan{}
+		_spec       = mkq.querySpec()
+		loadedTypes = [1]bool{
+			mkq.withCall != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*MeldedKan).scanValues(nil, columns)
@@ -305,6 +346,7 @@ func (mkq *MeldedKanQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*M
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &MeldedKan{config: mkq.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -316,7 +358,42 @@ func (mkq *MeldedKanQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*M
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := mkq.withCall; query != nil {
+		if err := mkq.loadCall(ctx, query, nodes, nil,
+			func(n *MeldedKan, e *Call) { n.Edges.Call = e }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (mkq *MeldedKanQuery) loadCall(ctx context.Context, query *CallQuery, nodes []*MeldedKan, init func(*MeldedKan), assign func(*MeldedKan, *Call)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*MeldedKan)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+	}
+	query.withFKs = true
+	query.Where(predicate.Call(func(s *sql.Selector) {
+		s.Where(sql.InValues(meldedkan.CallColumn, fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.melded_kan_call
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "melded_kan_call" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "melded_kan_call" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
 }
 
 func (mkq *MeldedKanQuery) sqlCount(ctx context.Context) (int, error) {
@@ -345,7 +422,7 @@ func (mkq *MeldedKanQuery) querySpec() *sqlgraph.QuerySpec {
 			Table:   meldedkan.Table,
 			Columns: meldedkan.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: meldedkan.FieldID,
 			},
 		},

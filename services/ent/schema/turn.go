@@ -25,6 +25,7 @@ func (Turn) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("hands", Hand.Type).Ref("turns"),
 		edge.To("game_player_points", GamePlayerPoint.Type),
-		edge.To("event", Event.Type),
+		edge.To("event", Event.Type).Unique(),
+		edge.To("gameplayerhandhai", GamePlayerHandHai.Type).Unique(),
 	}
 }

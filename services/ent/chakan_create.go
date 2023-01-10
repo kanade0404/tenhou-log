@@ -7,9 +7,12 @@ import (
 	"errors"
 	"fmt"
 
+	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/call"
 	"github.com/kanade0404/tenhou-log/services/ent/chakan"
 )
 
@@ -19,6 +22,39 @@ type ChakanCreate struct {
 	mutation *ChakanMutation
 	hooks    []Hook
 	conflict []sql.ConflictOption
+}
+
+// SetID sets the "id" field.
+func (cc *ChakanCreate) SetID(u uuid.UUID) *ChakanCreate {
+	cc.mutation.SetID(u)
+	return cc
+}
+
+// SetNillableID sets the "id" field if the given value is not nil.
+func (cc *ChakanCreate) SetNillableID(u *uuid.UUID) *ChakanCreate {
+	if u != nil {
+		cc.SetID(*u)
+	}
+	return cc
+}
+
+// SetCallID sets the "call" edge to the Call entity by ID.
+func (cc *ChakanCreate) SetCallID(id uuid.UUID) *ChakanCreate {
+	cc.mutation.SetCallID(id)
+	return cc
+}
+
+// SetNillableCallID sets the "call" edge to the Call entity by ID if the given value is not nil.
+func (cc *ChakanCreate) SetNillableCallID(id *uuid.UUID) *ChakanCreate {
+	if id != nil {
+		cc = cc.SetCallID(*id)
+	}
+	return cc
+}
+
+// SetCall sets the "call" edge to the Call entity.
+func (cc *ChakanCreate) SetCall(c *Call) *ChakanCreate {
+	return cc.SetCallID(c.ID)
 }
 
 // Mutation returns the ChakanMutation object of the builder.
@@ -32,6 +68,7 @@ func (cc *ChakanCreate) Save(ctx context.Context) (*Chakan, error) {
 		err  error
 		node *Chakan
 	)
+	cc.defaults()
 	if len(cc.hooks) == 0 {
 		if err = cc.check(); err != nil {
 			return nil, err
@@ -95,6 +132,14 @@ func (cc *ChakanCreate) ExecX(ctx context.Context) {
 	}
 }
 
+// defaults sets the default values of the builder before save.
+func (cc *ChakanCreate) defaults() {
+	if _, ok := cc.mutation.ID(); !ok {
+		v := chakan.DefaultID()
+		cc.mutation.SetID(v)
+	}
+}
+
 // check runs all checks and user-defined validators on the builder.
 func (cc *ChakanCreate) check() error {
 	return nil
@@ -108,8 +153,13 @@ func (cc *ChakanCreate) sqlSave(ctx context.Context) (*Chakan, error) {
 		}
 		return nil, err
 	}
-	id := _spec.ID.Value.(int64)
-	_node.ID = int(id)
+	if _spec.ID.Value != nil {
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
+	}
 	return _node, nil
 }
 
@@ -119,12 +169,35 @@ func (cc *ChakanCreate) createSpec() (*Chakan, *sqlgraph.CreateSpec) {
 		_spec = &sqlgraph.CreateSpec{
 			Table: chakan.Table,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: chakan.FieldID,
 			},
 		}
 	)
 	_spec.OnConflict = cc.conflict
+	if id, ok := cc.mutation.ID(); ok {
+		_node.ID = id
+		_spec.ID.Value = &id
+	}
+	if nodes := cc.mutation.CallIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   chakan.CallTable,
+			Columns: []string{chakan.CallColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: call.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
 	return _node, _spec
 }
 
@@ -171,16 +244,24 @@ type (
 	}
 )
 
-// UpdateNewValues updates the mutable fields using the new values that were set on create.
+// UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
 // Using this option is equivalent to using:
 //
 //	client.Chakan.Create().
 //		OnConflict(
 //			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(chakan.FieldID)
+//			}),
 //		).
 //		Exec(ctx)
 func (u *ChakanUpsertOne) UpdateNewValues() *ChakanUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.ID(); exists {
+			s.SetIgnore(chakan.FieldID)
+		}
+	}))
 	return u
 }
 
@@ -227,7 +308,12 @@ func (u *ChakanUpsertOne) ExecX(ctx context.Context) {
 }
 
 // Exec executes the UPSERT query and returns the inserted/updated ID.
-func (u *ChakanUpsertOne) ID(ctx context.Context) (id int, err error) {
+func (u *ChakanUpsertOne) ID(ctx context.Context) (id uuid.UUID, err error) {
+	if u.create.driver.Dialect() == dialect.MySQL {
+		// In case of "ON CONFLICT", there is no way to get back non-numeric ID
+		// fields from the database since MySQL does not support the RETURNING clause.
+		return id, errors.New("ent: ChakanUpsertOne.ID is not supported by MySQL driver. Use ChakanUpsertOne.Exec instead")
+	}
 	node, err := u.create.Save(ctx)
 	if err != nil {
 		return id, err
@@ -236,7 +322,7 @@ func (u *ChakanUpsertOne) ID(ctx context.Context) (id int, err error) {
 }
 
 // IDX is like ID, but panics if an error occurs.
-func (u *ChakanUpsertOne) IDX(ctx context.Context) int {
+func (u *ChakanUpsertOne) IDX(ctx context.Context) uuid.UUID {
 	id, err := u.ID(ctx)
 	if err != nil {
 		panic(err)
@@ -259,6 +345,7 @@ func (ccb *ChakanCreateBulk) Save(ctx context.Context) ([]*Chakan, error) {
 	for i := range ccb.builders {
 		func(i int, root context.Context) {
 			builder := ccb.builders[i]
+			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*ChakanMutation)
 				if !ok {
@@ -286,10 +373,6 @@ func (ccb *ChakanCreateBulk) Save(ctx context.Context) ([]*Chakan, error) {
 					return nil, err
 				}
 				mutation.id = &nodes[i].ID
-				if specs[i].ID.Value != nil {
-					id := specs[i].ID.Value.(int64)
-					nodes[i].ID = int(id)
-				}
 				mutation.done = true
 				return nodes[i], nil
 			})
@@ -371,10 +454,20 @@ type ChakanUpsertBulk struct {
 //	client.Chakan.Create().
 //		OnConflict(
 //			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(chakan.FieldID)
+//			}),
 //		).
 //		Exec(ctx)
 func (u *ChakanUpsertBulk) UpdateNewValues() *ChakanUpsertBulk {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.ID(); exists {
+				s.SetIgnore(chakan.FieldID)
+			}
+		}
+	}))
 	return u
 }
 

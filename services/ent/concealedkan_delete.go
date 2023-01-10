@@ -72,7 +72,7 @@ func (ckd *ConcealedKanDelete) sqlExec(ctx context.Context) (int, error) {
 		Node: &sqlgraph.NodeSpec{
 			Table: concealedkan.Table,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: concealedkan.FieldID,
 			},
 		},

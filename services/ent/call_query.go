@@ -10,19 +10,35 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/call"
+	"github.com/kanade0404/tenhou-log/services/ent/chakan"
+	"github.com/kanade0404/tenhou-log/services/ent/chii"
+	"github.com/kanade0404/tenhou-log/services/ent/concealedkan"
+	"github.com/kanade0404/tenhou-log/services/ent/discard"
+	"github.com/kanade0404/tenhou-log/services/ent/event"
+	"github.com/kanade0404/tenhou-log/services/ent/meldedkan"
+	"github.com/kanade0404/tenhou-log/services/ent/pon"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 )
 
 // CallQuery is the builder for querying Call entities.
 type CallQuery struct {
 	config
-	limit      *int
-	offset     *int
-	unique     *bool
-	order      []OrderFunc
-	fields     []string
-	predicates []predicate.Call
+	limit            *int
+	offset           *int
+	unique           *bool
+	order            []OrderFunc
+	fields           []string
+	predicates       []predicate.Call
+	withEvent        *EventQuery
+	withDiscard      *DiscardQuery
+	withChii         *ChiiQuery
+	withChakan       *ChakanQuery
+	withConcealedkan *ConcealedKanQuery
+	withMeldedkan    *MeldedKanQuery
+	withPon          *PonQuery
+	withFKs          bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -59,6 +75,160 @@ func (cq *CallQuery) Order(o ...OrderFunc) *CallQuery {
 	return cq
 }
 
+// QueryEvent chains the current query on the "event" edge.
+func (cq *CallQuery) QueryEvent() *EventQuery {
+	query := &EventQuery{config: cq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := cq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := cq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(call.Table, call.FieldID, selector),
+			sqlgraph.To(event.Table, event.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, call.EventTable, call.EventColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(cq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryDiscard chains the current query on the "discard" edge.
+func (cq *CallQuery) QueryDiscard() *DiscardQuery {
+	query := &DiscardQuery{config: cq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := cq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := cq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(call.Table, call.FieldID, selector),
+			sqlgraph.To(discard.Table, discard.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, call.DiscardTable, call.DiscardColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(cq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryChii chains the current query on the "chii" edge.
+func (cq *CallQuery) QueryChii() *ChiiQuery {
+	query := &ChiiQuery{config: cq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := cq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := cq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(call.Table, call.FieldID, selector),
+			sqlgraph.To(chii.Table, chii.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, call.ChiiTable, call.ChiiColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(cq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryChakan chains the current query on the "chakan" edge.
+func (cq *CallQuery) QueryChakan() *ChakanQuery {
+	query := &ChakanQuery{config: cq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := cq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := cq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(call.Table, call.FieldID, selector),
+			sqlgraph.To(chakan.Table, chakan.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, call.ChakanTable, call.ChakanColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(cq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryConcealedkan chains the current query on the "concealedkan" edge.
+func (cq *CallQuery) QueryConcealedkan() *ConcealedKanQuery {
+	query := &ConcealedKanQuery{config: cq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := cq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := cq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(call.Table, call.FieldID, selector),
+			sqlgraph.To(concealedkan.Table, concealedkan.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, call.ConcealedkanTable, call.ConcealedkanColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(cq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryMeldedkan chains the current query on the "meldedkan" edge.
+func (cq *CallQuery) QueryMeldedkan() *MeldedKanQuery {
+	query := &MeldedKanQuery{config: cq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := cq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := cq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(call.Table, call.FieldID, selector),
+			sqlgraph.To(meldedkan.Table, meldedkan.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, call.MeldedkanTable, call.MeldedkanColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(cq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryPon chains the current query on the "pon" edge.
+func (cq *CallQuery) QueryPon() *PonQuery {
+	query := &PonQuery{config: cq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := cq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := cq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(call.Table, call.FieldID, selector),
+			sqlgraph.To(pon.Table, pon.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, true, call.PonTable, call.PonColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(cq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
 // First returns the first Call entity from the query.
 // Returns a *NotFoundError when no Call was found.
 func (cq *CallQuery) First(ctx context.Context) (*Call, error) {
@@ -83,8 +253,8 @@ func (cq *CallQuery) FirstX(ctx context.Context) *Call {
 
 // FirstID returns the first Call ID from the query.
 // Returns a *NotFoundError when no Call ID was found.
-func (cq *CallQuery) FirstID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (cq *CallQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = cq.Limit(1).IDs(ctx); err != nil {
 		return
 	}
@@ -96,7 +266,7 @@ func (cq *CallQuery) FirstID(ctx context.Context) (id int, err error) {
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (cq *CallQuery) FirstIDX(ctx context.Context) int {
+func (cq *CallQuery) FirstIDX(ctx context.Context) uuid.UUID {
 	id, err := cq.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -134,8 +304,8 @@ func (cq *CallQuery) OnlyX(ctx context.Context) *Call {
 // OnlyID is like Only, but returns the only Call ID in the query.
 // Returns a *NotSingularError when more than one Call ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (cq *CallQuery) OnlyID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (cq *CallQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = cq.Limit(2).IDs(ctx); err != nil {
 		return
 	}
@@ -151,7 +321,7 @@ func (cq *CallQuery) OnlyID(ctx context.Context) (id int, err error) {
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (cq *CallQuery) OnlyIDX(ctx context.Context) int {
+func (cq *CallQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 	id, err := cq.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -177,8 +347,8 @@ func (cq *CallQuery) AllX(ctx context.Context) []*Call {
 }
 
 // IDs executes the query and returns a list of Call IDs.
-func (cq *CallQuery) IDs(ctx context.Context) ([]int, error) {
-	var ids []int
+func (cq *CallQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	var ids []uuid.UUID
 	if err := cq.Select(call.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
@@ -186,7 +356,7 @@ func (cq *CallQuery) IDs(ctx context.Context) ([]int, error) {
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (cq *CallQuery) IDsX(ctx context.Context) []int {
+func (cq *CallQuery) IDsX(ctx context.Context) []uuid.UUID {
 	ids, err := cq.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -235,16 +405,100 @@ func (cq *CallQuery) Clone() *CallQuery {
 		return nil
 	}
 	return &CallQuery{
-		config:     cq.config,
-		limit:      cq.limit,
-		offset:     cq.offset,
-		order:      append([]OrderFunc{}, cq.order...),
-		predicates: append([]predicate.Call{}, cq.predicates...),
+		config:           cq.config,
+		limit:            cq.limit,
+		offset:           cq.offset,
+		order:            append([]OrderFunc{}, cq.order...),
+		predicates:       append([]predicate.Call{}, cq.predicates...),
+		withEvent:        cq.withEvent.Clone(),
+		withDiscard:      cq.withDiscard.Clone(),
+		withChii:         cq.withChii.Clone(),
+		withChakan:       cq.withChakan.Clone(),
+		withConcealedkan: cq.withConcealedkan.Clone(),
+		withMeldedkan:    cq.withMeldedkan.Clone(),
+		withPon:          cq.withPon.Clone(),
 		// clone intermediate query.
 		sql:    cq.sql.Clone(),
 		path:   cq.path,
 		unique: cq.unique,
 	}
+}
+
+// WithEvent tells the query-builder to eager-load the nodes that are connected to
+// the "event" edge. The optional arguments are used to configure the query builder of the edge.
+func (cq *CallQuery) WithEvent(opts ...func(*EventQuery)) *CallQuery {
+	query := &EventQuery{config: cq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	cq.withEvent = query
+	return cq
+}
+
+// WithDiscard tells the query-builder to eager-load the nodes that are connected to
+// the "discard" edge. The optional arguments are used to configure the query builder of the edge.
+func (cq *CallQuery) WithDiscard(opts ...func(*DiscardQuery)) *CallQuery {
+	query := &DiscardQuery{config: cq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	cq.withDiscard = query
+	return cq
+}
+
+// WithChii tells the query-builder to eager-load the nodes that are connected to
+// the "chii" edge. The optional arguments are used to configure the query builder of the edge.
+func (cq *CallQuery) WithChii(opts ...func(*ChiiQuery)) *CallQuery {
+	query := &ChiiQuery{config: cq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	cq.withChii = query
+	return cq
+}
+
+// WithChakan tells the query-builder to eager-load the nodes that are connected to
+// the "chakan" edge. The optional arguments are used to configure the query builder of the edge.
+func (cq *CallQuery) WithChakan(opts ...func(*ChakanQuery)) *CallQuery {
+	query := &ChakanQuery{config: cq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	cq.withChakan = query
+	return cq
+}
+
+// WithConcealedkan tells the query-builder to eager-load the nodes that are connected to
+// the "concealedkan" edge. The optional arguments are used to configure the query builder of the edge.
+func (cq *CallQuery) WithConcealedkan(opts ...func(*ConcealedKanQuery)) *CallQuery {
+	query := &ConcealedKanQuery{config: cq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	cq.withConcealedkan = query
+	return cq
+}
+
+// WithMeldedkan tells the query-builder to eager-load the nodes that are connected to
+// the "meldedkan" edge. The optional arguments are used to configure the query builder of the edge.
+func (cq *CallQuery) WithMeldedkan(opts ...func(*MeldedKanQuery)) *CallQuery {
+	query := &MeldedKanQuery{config: cq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	cq.withMeldedkan = query
+	return cq
+}
+
+// WithPon tells the query-builder to eager-load the nodes that are connected to
+// the "pon" edge. The optional arguments are used to configure the query builder of the edge.
+func (cq *CallQuery) WithPon(opts ...func(*PonQuery)) *CallQuery {
+	query := &PonQuery{config: cq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	cq.withPon = query
+	return cq
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -296,15 +550,32 @@ func (cq *CallQuery) prepareQuery(ctx context.Context) error {
 
 func (cq *CallQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Call, error) {
 	var (
-		nodes = []*Call{}
-		_spec = cq.querySpec()
+		nodes       = []*Call{}
+		withFKs     = cq.withFKs
+		_spec       = cq.querySpec()
+		loadedTypes = [7]bool{
+			cq.withEvent != nil,
+			cq.withDiscard != nil,
+			cq.withChii != nil,
+			cq.withChakan != nil,
+			cq.withConcealedkan != nil,
+			cq.withMeldedkan != nil,
+			cq.withPon != nil,
+		}
 	)
+	if cq.withEvent != nil || cq.withDiscard != nil || cq.withChii != nil || cq.withChakan != nil || cq.withConcealedkan != nil || cq.withMeldedkan != nil || cq.withPon != nil {
+		withFKs = true
+	}
+	if withFKs {
+		_spec.Node.Columns = append(_spec.Node.Columns, call.ForeignKeys...)
+	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Call).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &Call{config: cq.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -316,7 +587,253 @@ func (cq *CallQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Call, e
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := cq.withEvent; query != nil {
+		if err := cq.loadEvent(ctx, query, nodes, nil,
+			func(n *Call, e *Event) { n.Edges.Event = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := cq.withDiscard; query != nil {
+		if err := cq.loadDiscard(ctx, query, nodes, nil,
+			func(n *Call, e *Discard) { n.Edges.Discard = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := cq.withChii; query != nil {
+		if err := cq.loadChii(ctx, query, nodes, nil,
+			func(n *Call, e *Chii) { n.Edges.Chii = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := cq.withChakan; query != nil {
+		if err := cq.loadChakan(ctx, query, nodes, nil,
+			func(n *Call, e *Chakan) { n.Edges.Chakan = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := cq.withConcealedkan; query != nil {
+		if err := cq.loadConcealedkan(ctx, query, nodes, nil,
+			func(n *Call, e *ConcealedKan) { n.Edges.Concealedkan = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := cq.withMeldedkan; query != nil {
+		if err := cq.loadMeldedkan(ctx, query, nodes, nil,
+			func(n *Call, e *MeldedKan) { n.Edges.Meldedkan = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := cq.withPon; query != nil {
+		if err := cq.loadPon(ctx, query, nodes, nil,
+			func(n *Call, e *Pon) { n.Edges.Pon = e }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (cq *CallQuery) loadEvent(ctx context.Context, query *EventQuery, nodes []*Call, init func(*Call), assign func(*Call, *Event)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Call)
+	for i := range nodes {
+		if nodes[i].event_call == nil {
+			continue
+		}
+		fk := *nodes[i].event_call
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	query.Where(event.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "event_call" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (cq *CallQuery) loadDiscard(ctx context.Context, query *DiscardQuery, nodes []*Call, init func(*Call), assign func(*Call, *Discard)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Call)
+	for i := range nodes {
+		if nodes[i].discard_call == nil {
+			continue
+		}
+		fk := *nodes[i].discard_call
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	query.Where(discard.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "discard_call" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (cq *CallQuery) loadChii(ctx context.Context, query *ChiiQuery, nodes []*Call, init func(*Call), assign func(*Call, *Chii)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Call)
+	for i := range nodes {
+		if nodes[i].chii_call == nil {
+			continue
+		}
+		fk := *nodes[i].chii_call
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	query.Where(chii.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "chii_call" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (cq *CallQuery) loadChakan(ctx context.Context, query *ChakanQuery, nodes []*Call, init func(*Call), assign func(*Call, *Chakan)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Call)
+	for i := range nodes {
+		if nodes[i].chakan_call == nil {
+			continue
+		}
+		fk := *nodes[i].chakan_call
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	query.Where(chakan.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "chakan_call" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (cq *CallQuery) loadConcealedkan(ctx context.Context, query *ConcealedKanQuery, nodes []*Call, init func(*Call), assign func(*Call, *ConcealedKan)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Call)
+	for i := range nodes {
+		if nodes[i].concealed_kan_call == nil {
+			continue
+		}
+		fk := *nodes[i].concealed_kan_call
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	query.Where(concealedkan.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "concealed_kan_call" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (cq *CallQuery) loadMeldedkan(ctx context.Context, query *MeldedKanQuery, nodes []*Call, init func(*Call), assign func(*Call, *MeldedKan)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Call)
+	for i := range nodes {
+		if nodes[i].melded_kan_call == nil {
+			continue
+		}
+		fk := *nodes[i].melded_kan_call
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	query.Where(meldedkan.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "melded_kan_call" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (cq *CallQuery) loadPon(ctx context.Context, query *PonQuery, nodes []*Call, init func(*Call), assign func(*Call, *Pon)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*Call)
+	for i := range nodes {
+		if nodes[i].pon_call == nil {
+			continue
+		}
+		fk := *nodes[i].pon_call
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	query.Where(pon.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "pon_call" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
 }
 
 func (cq *CallQuery) sqlCount(ctx context.Context) (int, error) {
@@ -345,7 +862,7 @@ func (cq *CallQuery) querySpec() *sqlgraph.QuerySpec {
 			Table:   call.Table,
 			Columns: call.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: call.FieldID,
 			},
 		},

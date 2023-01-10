@@ -4,12 +4,15 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/call"
 	"github.com/kanade0404/tenhou-log/services/ent/chii"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 )
@@ -23,6 +26,7 @@ type ChiiQuery struct {
 	order      []OrderFunc
 	fields     []string
 	predicates []predicate.Chii
+	withCall   *CallQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -59,6 +63,28 @@ func (cq *ChiiQuery) Order(o ...OrderFunc) *ChiiQuery {
 	return cq
 }
 
+// QueryCall chains the current query on the "call" edge.
+func (cq *ChiiQuery) QueryCall() *CallQuery {
+	query := &CallQuery{config: cq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := cq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := cq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(chii.Table, chii.FieldID, selector),
+			sqlgraph.To(call.Table, call.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, chii.CallTable, chii.CallColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(cq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
 // First returns the first Chii entity from the query.
 // Returns a *NotFoundError when no Chii was found.
 func (cq *ChiiQuery) First(ctx context.Context) (*Chii, error) {
@@ -83,8 +109,8 @@ func (cq *ChiiQuery) FirstX(ctx context.Context) *Chii {
 
 // FirstID returns the first Chii ID from the query.
 // Returns a *NotFoundError when no Chii ID was found.
-func (cq *ChiiQuery) FirstID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (cq *ChiiQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = cq.Limit(1).IDs(ctx); err != nil {
 		return
 	}
@@ -96,7 +122,7 @@ func (cq *ChiiQuery) FirstID(ctx context.Context) (id int, err error) {
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (cq *ChiiQuery) FirstIDX(ctx context.Context) int {
+func (cq *ChiiQuery) FirstIDX(ctx context.Context) uuid.UUID {
 	id, err := cq.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -134,8 +160,8 @@ func (cq *ChiiQuery) OnlyX(ctx context.Context) *Chii {
 // OnlyID is like Only, but returns the only Chii ID in the query.
 // Returns a *NotSingularError when more than one Chii ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (cq *ChiiQuery) OnlyID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (cq *ChiiQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = cq.Limit(2).IDs(ctx); err != nil {
 		return
 	}
@@ -151,7 +177,7 @@ func (cq *ChiiQuery) OnlyID(ctx context.Context) (id int, err error) {
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (cq *ChiiQuery) OnlyIDX(ctx context.Context) int {
+func (cq *ChiiQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 	id, err := cq.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -177,8 +203,8 @@ func (cq *ChiiQuery) AllX(ctx context.Context) []*Chii {
 }
 
 // IDs executes the query and returns a list of Chii IDs.
-func (cq *ChiiQuery) IDs(ctx context.Context) ([]int, error) {
-	var ids []int
+func (cq *ChiiQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	var ids []uuid.UUID
 	if err := cq.Select(chii.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
@@ -186,7 +212,7 @@ func (cq *ChiiQuery) IDs(ctx context.Context) ([]int, error) {
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (cq *ChiiQuery) IDsX(ctx context.Context) []int {
+func (cq *ChiiQuery) IDsX(ctx context.Context) []uuid.UUID {
 	ids, err := cq.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -240,11 +266,23 @@ func (cq *ChiiQuery) Clone() *ChiiQuery {
 		offset:     cq.offset,
 		order:      append([]OrderFunc{}, cq.order...),
 		predicates: append([]predicate.Chii{}, cq.predicates...),
+		withCall:   cq.withCall.Clone(),
 		// clone intermediate query.
 		sql:    cq.sql.Clone(),
 		path:   cq.path,
 		unique: cq.unique,
 	}
+}
+
+// WithCall tells the query-builder to eager-load the nodes that are connected to
+// the "call" edge. The optional arguments are used to configure the query builder of the edge.
+func (cq *ChiiQuery) WithCall(opts ...func(*CallQuery)) *ChiiQuery {
+	query := &CallQuery{config: cq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	cq.withCall = query
+	return cq
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -296,8 +334,11 @@ func (cq *ChiiQuery) prepareQuery(ctx context.Context) error {
 
 func (cq *ChiiQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Chii, error) {
 	var (
-		nodes = []*Chii{}
-		_spec = cq.querySpec()
+		nodes       = []*Chii{}
+		_spec       = cq.querySpec()
+		loadedTypes = [1]bool{
+			cq.withCall != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Chii).scanValues(nil, columns)
@@ -305,6 +346,7 @@ func (cq *ChiiQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Chii, e
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &Chii{config: cq.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -316,7 +358,42 @@ func (cq *ChiiQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Chii, e
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := cq.withCall; query != nil {
+		if err := cq.loadCall(ctx, query, nodes, nil,
+			func(n *Chii, e *Call) { n.Edges.Call = e }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (cq *ChiiQuery) loadCall(ctx context.Context, query *CallQuery, nodes []*Chii, init func(*Chii), assign func(*Chii, *Call)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Chii)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+	}
+	query.withFKs = true
+	query.Where(predicate.Call(func(s *sql.Selector) {
+		s.Where(sql.InValues(chii.CallColumn, fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.chii_call
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "chii_call" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "chii_call" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
 }
 
 func (cq *ChiiQuery) sqlCount(ctx context.Context) (int, error) {
@@ -345,7 +422,7 @@ func (cq *ChiiQuery) querySpec() *sqlgraph.QuerySpec {
 			Table:   chii.Table,
 			Columns: chii.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: chii.FieldID,
 			},
 		},

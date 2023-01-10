@@ -2,18 +2,40 @@
 
 package gameplayerhandhai
 
+import (
+	"github.com/google/uuid"
+)
+
 const (
 	// Label holds the string label denoting the gameplayerhandhai type in the database.
 	Label = "game_player_hand_hai"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
+	// FieldHais holds the string denoting the hais field in the database.
+	FieldHais = "hais"
+	// EdgeTurn holds the string denoting the turn edge name in mutations.
+	EdgeTurn = "turn"
 	// Table holds the table name of the gameplayerhandhai in the database.
 	Table = "game_player_hand_hais"
+	// TurnTable is the table that holds the turn relation/edge.
+	TurnTable = "game_player_hand_hais"
+	// TurnInverseTable is the table name for the Turn entity.
+	// It exists in this package in order to avoid circular dependency with the "turn" package.
+	TurnInverseTable = "turns"
+	// TurnColumn is the table column denoting the turn relation/edge.
+	TurnColumn = "turn_gameplayerhandhai"
 )
 
 // Columns holds all SQL columns for gameplayerhandhai fields.
 var Columns = []string{
 	FieldID,
+	FieldHais,
+}
+
+// ForeignKeys holds the SQL foreign-keys that are owned by the "game_player_hand_hais"
+// table and are not defined as standalone fields in the schema.
+var ForeignKeys = []string{
+	"turn_gameplayerhandhai",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -23,5 +45,15 @@ func ValidColumn(column string) bool {
 			return true
 		}
 	}
+	for i := range ForeignKeys {
+		if column == ForeignKeys[i] {
+			return true
+		}
+	}
 	return false
 }
+
+var (
+	// DefaultID holds the default value on creation for the "id" field.
+	DefaultID func() uuid.UUID
+)

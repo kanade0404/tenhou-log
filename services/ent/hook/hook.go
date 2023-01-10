@@ -87,6 +87,19 @@ func (f DanFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) 
 	return f(ctx, mv)
 }
 
+// The DiscardFunc type is an adapter to allow the use of ordinary
+// function as Discard mutator.
+type DiscardFunc func(context.Context, *ent.DiscardMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f DiscardFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	mv, ok := m.(*ent.DiscardMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.DiscardMutation", m)
+	}
+	return f(ctx, mv)
+}
+
 // The DrawnFunc type is an adapter to allow the use of ordinary
 // function as Drawn mutator.
 type DrawnFunc func(context.Context, *ent.DrawnMutation) (ent.Value, error)
@@ -239,6 +252,19 @@ func (f PonFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) 
 	mv, ok := m.(*ent.PonMutation)
 	if !ok {
 		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PonMutation", m)
+	}
+	return f(ctx, mv)
+}
+
+// The ReachFunc type is an adapter to allow the use of ordinary
+// function as Reach mutator.
+type ReachFunc func(context.Context, *ent.ReachMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ReachFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	mv, ok := m.(*ent.ReachMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ReachMutation", m)
 	}
 	return f(ctx, mv)
 }

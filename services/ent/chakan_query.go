@@ -4,12 +4,15 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/call"
 	"github.com/kanade0404/tenhou-log/services/ent/chakan"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 )
@@ -23,6 +26,7 @@ type ChakanQuery struct {
 	order      []OrderFunc
 	fields     []string
 	predicates []predicate.Chakan
+	withCall   *CallQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -59,6 +63,28 @@ func (cq *ChakanQuery) Order(o ...OrderFunc) *ChakanQuery {
 	return cq
 }
 
+// QueryCall chains the current query on the "call" edge.
+func (cq *ChakanQuery) QueryCall() *CallQuery {
+	query := &CallQuery{config: cq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := cq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := cq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(chakan.Table, chakan.FieldID, selector),
+			sqlgraph.To(call.Table, call.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, chakan.CallTable, chakan.CallColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(cq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
 // First returns the first Chakan entity from the query.
 // Returns a *NotFoundError when no Chakan was found.
 func (cq *ChakanQuery) First(ctx context.Context) (*Chakan, error) {
@@ -83,8 +109,8 @@ func (cq *ChakanQuery) FirstX(ctx context.Context) *Chakan {
 
 // FirstID returns the first Chakan ID from the query.
 // Returns a *NotFoundError when no Chakan ID was found.
-func (cq *ChakanQuery) FirstID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (cq *ChakanQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = cq.Limit(1).IDs(ctx); err != nil {
 		return
 	}
@@ -96,7 +122,7 @@ func (cq *ChakanQuery) FirstID(ctx context.Context) (id int, err error) {
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (cq *ChakanQuery) FirstIDX(ctx context.Context) int {
+func (cq *ChakanQuery) FirstIDX(ctx context.Context) uuid.UUID {
 	id, err := cq.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -134,8 +160,8 @@ func (cq *ChakanQuery) OnlyX(ctx context.Context) *Chakan {
 // OnlyID is like Only, but returns the only Chakan ID in the query.
 // Returns a *NotSingularError when more than one Chakan ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (cq *ChakanQuery) OnlyID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (cq *ChakanQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = cq.Limit(2).IDs(ctx); err != nil {
 		return
 	}
@@ -151,7 +177,7 @@ func (cq *ChakanQuery) OnlyID(ctx context.Context) (id int, err error) {
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (cq *ChakanQuery) OnlyIDX(ctx context.Context) int {
+func (cq *ChakanQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 	id, err := cq.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -177,8 +203,8 @@ func (cq *ChakanQuery) AllX(ctx context.Context) []*Chakan {
 }
 
 // IDs executes the query and returns a list of Chakan IDs.
-func (cq *ChakanQuery) IDs(ctx context.Context) ([]int, error) {
-	var ids []int
+func (cq *ChakanQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	var ids []uuid.UUID
 	if err := cq.Select(chakan.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
@@ -186,7 +212,7 @@ func (cq *ChakanQuery) IDs(ctx context.Context) ([]int, error) {
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (cq *ChakanQuery) IDsX(ctx context.Context) []int {
+func (cq *ChakanQuery) IDsX(ctx context.Context) []uuid.UUID {
 	ids, err := cq.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -240,11 +266,23 @@ func (cq *ChakanQuery) Clone() *ChakanQuery {
 		offset:     cq.offset,
 		order:      append([]OrderFunc{}, cq.order...),
 		predicates: append([]predicate.Chakan{}, cq.predicates...),
+		withCall:   cq.withCall.Clone(),
 		// clone intermediate query.
 		sql:    cq.sql.Clone(),
 		path:   cq.path,
 		unique: cq.unique,
 	}
+}
+
+// WithCall tells the query-builder to eager-load the nodes that are connected to
+// the "call" edge. The optional arguments are used to configure the query builder of the edge.
+func (cq *ChakanQuery) WithCall(opts ...func(*CallQuery)) *ChakanQuery {
+	query := &CallQuery{config: cq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	cq.withCall = query
+	return cq
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -296,8 +334,11 @@ func (cq *ChakanQuery) prepareQuery(ctx context.Context) error {
 
 func (cq *ChakanQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Chakan, error) {
 	var (
-		nodes = []*Chakan{}
-		_spec = cq.querySpec()
+		nodes       = []*Chakan{}
+		_spec       = cq.querySpec()
+		loadedTypes = [1]bool{
+			cq.withCall != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Chakan).scanValues(nil, columns)
@@ -305,6 +346,7 @@ func (cq *ChakanQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Chaka
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &Chakan{config: cq.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -316,7 +358,42 @@ func (cq *ChakanQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Chaka
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := cq.withCall; query != nil {
+		if err := cq.loadCall(ctx, query, nodes, nil,
+			func(n *Chakan, e *Call) { n.Edges.Call = e }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (cq *ChakanQuery) loadCall(ctx context.Context, query *CallQuery, nodes []*Chakan, init func(*Chakan), assign func(*Chakan, *Call)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Chakan)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+	}
+	query.withFKs = true
+	query.Where(predicate.Call(func(s *sql.Selector) {
+		s.Where(sql.InValues(chakan.CallColumn, fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.chakan_call
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "chakan_call" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "chakan_call" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
 }
 
 func (cq *ChakanQuery) sqlCount(ctx context.Context) (int, error) {
@@ -345,7 +422,7 @@ func (cq *ChakanQuery) querySpec() *sqlgraph.QuerySpec {
 			Table:   chakan.Table,
 			Columns: chakan.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: chakan.FieldID,
 			},
 		},

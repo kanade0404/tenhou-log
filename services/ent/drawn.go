@@ -7,14 +7,59 @@ import (
 	"strings"
 
 	"entgo.io/ent/dialect/sql"
+	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/discard"
 	"github.com/kanade0404/tenhou-log/services/ent/drawn"
+	"github.com/kanade0404/tenhou-log/services/ent/event"
 )
 
 // Drawn is the model entity for the Drawn schema.
 type Drawn struct {
 	config
 	// ID of the ent.
-	ID int `json:"id,omitempty"`
+	ID uuid.UUID `json:"id,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the DrawnQuery when eager-loading is set.
+	Edges        DrawnEdges `json:"edges"`
+	discard_draw *uuid.UUID
+	event_draw   *uuid.UUID
+}
+
+// DrawnEdges holds the relations/edges for other nodes in the graph.
+type DrawnEdges struct {
+	// Event holds the value of the event edge.
+	Event *Event `json:"event,omitempty"`
+	// Discard holds the value of the discard edge.
+	Discard *Discard `json:"discard,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [2]bool
+}
+
+// EventOrErr returns the Event value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e DrawnEdges) EventOrErr() (*Event, error) {
+	if e.loadedTypes[0] {
+		if e.Event == nil {
+			// Edge was loaded but was not found.
+			return nil, &NotFoundError{label: event.Label}
+		}
+		return e.Event, nil
+	}
+	return nil, &NotLoadedError{edge: "event"}
+}
+
+// DiscardOrErr returns the Discard value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e DrawnEdges) DiscardOrErr() (*Discard, error) {
+	if e.loadedTypes[1] {
+		if e.Discard == nil {
+			// Edge was loaded but was not found.
+			return nil, &NotFoundError{label: discard.Label}
+		}
+		return e.Discard, nil
+	}
+	return nil, &NotLoadedError{edge: "discard"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -23,7 +68,11 @@ func (*Drawn) scanValues(columns []string) ([]any, error) {
 	for i := range columns {
 		switch columns[i] {
 		case drawn.FieldID:
-			values[i] = new(sql.NullInt64)
+			values[i] = new(uuid.UUID)
+		case drawn.ForeignKeys[0]: // discard_draw
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
+		case drawn.ForeignKeys[1]: // event_draw
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Drawn", columns[i])
 		}
@@ -40,14 +89,38 @@ func (d *Drawn) assignValues(columns []string, values []any) error {
 	for i := range columns {
 		switch columns[i] {
 		case drawn.FieldID:
-			value, ok := values[i].(*sql.NullInt64)
-			if !ok {
-				return fmt.Errorf("unexpected type %T for field id", value)
+			if value, ok := values[i].(*uuid.UUID); !ok {
+				return fmt.Errorf("unexpected type %T for field id", values[i])
+			} else if value != nil {
+				d.ID = *value
 			}
-			d.ID = int(value.Int64)
+		case drawn.ForeignKeys[0]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field discard_draw", values[i])
+			} else if value.Valid {
+				d.discard_draw = new(uuid.UUID)
+				*d.discard_draw = *value.S.(*uuid.UUID)
+			}
+		case drawn.ForeignKeys[1]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field event_draw", values[i])
+			} else if value.Valid {
+				d.event_draw = new(uuid.UUID)
+				*d.event_draw = *value.S.(*uuid.UUID)
+			}
 		}
 	}
 	return nil
+}
+
+// QueryEvent queries the "event" edge of the Drawn entity.
+func (d *Drawn) QueryEvent() *EventQuery {
+	return (&DrawnClient{config: d.config}).QueryEvent(d)
+}
+
+// QueryDiscard queries the "discard" edge of the Drawn entity.
+func (d *Drawn) QueryDiscard() *DiscardQuery {
+	return (&DrawnClient{config: d.config}).QueryDiscard(d)
 }
 
 // Update returns a builder for updating this Drawn.

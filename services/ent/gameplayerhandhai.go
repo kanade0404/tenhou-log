@@ -3,18 +3,49 @@
 package ent
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
 	"entgo.io/ent/dialect/sql"
+	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayerhandhai"
+	"github.com/kanade0404/tenhou-log/services/ent/turn"
 )
 
 // GamePlayerHandHai is the model entity for the GamePlayerHandHai schema.
 type GamePlayerHandHai struct {
-	config
+	config `json:"-"`
 	// ID of the ent.
-	ID int `json:"id,omitempty"`
+	ID uuid.UUID `json:"id,omitempty"`
+	// Hais holds the value of the "hais" field.
+	Hais []int `json:"hais,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the GamePlayerHandHaiQuery when eager-loading is set.
+	Edges                  GamePlayerHandHaiEdges `json:"edges"`
+	turn_gameplayerhandhai *uuid.UUID
+}
+
+// GamePlayerHandHaiEdges holds the relations/edges for other nodes in the graph.
+type GamePlayerHandHaiEdges struct {
+	// Turn holds the value of the turn edge.
+	Turn *Turn `json:"turn,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// TurnOrErr returns the Turn value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e GamePlayerHandHaiEdges) TurnOrErr() (*Turn, error) {
+	if e.loadedTypes[0] {
+		if e.Turn == nil {
+			// Edge was loaded but was not found.
+			return nil, &NotFoundError{label: turn.Label}
+		}
+		return e.Turn, nil
+	}
+	return nil, &NotLoadedError{edge: "turn"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -22,8 +53,12 @@ func (*GamePlayerHandHai) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case gameplayerhandhai.FieldHais:
+			values[i] = new([]byte)
 		case gameplayerhandhai.FieldID:
-			values[i] = new(sql.NullInt64)
+			values[i] = new(uuid.UUID)
+		case gameplayerhandhai.ForeignKeys[0]: // turn_gameplayerhandhai
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type GamePlayerHandHai", columns[i])
 		}
@@ -40,14 +75,34 @@ func (gphh *GamePlayerHandHai) assignValues(columns []string, values []any) erro
 	for i := range columns {
 		switch columns[i] {
 		case gameplayerhandhai.FieldID:
-			value, ok := values[i].(*sql.NullInt64)
-			if !ok {
-				return fmt.Errorf("unexpected type %T for field id", value)
+			if value, ok := values[i].(*uuid.UUID); !ok {
+				return fmt.Errorf("unexpected type %T for field id", values[i])
+			} else if value != nil {
+				gphh.ID = *value
 			}
-			gphh.ID = int(value.Int64)
+		case gameplayerhandhai.FieldHais:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field hais", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &gphh.Hais); err != nil {
+					return fmt.Errorf("unmarshal field hais: %w", err)
+				}
+			}
+		case gameplayerhandhai.ForeignKeys[0]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field turn_gameplayerhandhai", values[i])
+			} else if value.Valid {
+				gphh.turn_gameplayerhandhai = new(uuid.UUID)
+				*gphh.turn_gameplayerhandhai = *value.S.(*uuid.UUID)
+			}
 		}
 	}
 	return nil
+}
+
+// QueryTurn queries the "turn" edge of the GamePlayerHandHai entity.
+func (gphh *GamePlayerHandHai) QueryTurn() *TurnQuery {
+	return (&GamePlayerHandHaiClient{config: gphh.config}).QueryTurn(gphh)
 }
 
 // Update returns a builder for updating this GamePlayerHandHai.
@@ -72,7 +127,9 @@ func (gphh *GamePlayerHandHai) Unwrap() *GamePlayerHandHai {
 func (gphh *GamePlayerHandHai) String() string {
 	var builder strings.Builder
 	builder.WriteString("GamePlayerHandHai(")
-	builder.WriteString(fmt.Sprintf("id=%v", gphh.ID))
+	builder.WriteString(fmt.Sprintf("id=%v, ", gphh.ID))
+	builder.WriteString("hais=")
+	builder.WriteString(fmt.Sprintf("%v", gphh.Hais))
 	builder.WriteByte(')')
 	return builder.String()
 }

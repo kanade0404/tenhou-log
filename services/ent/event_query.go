@@ -12,8 +12,11 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/call"
+	"github.com/kanade0404/tenhou-log/services/ent/drawn"
 	"github.com/kanade0404/tenhou-log/services/ent/event"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
+	"github.com/kanade0404/tenhou-log/services/ent/reach"
 	"github.com/kanade0404/tenhou-log/services/ent/turn"
 	"github.com/kanade0404/tenhou-log/services/ent/win"
 )
@@ -29,6 +32,9 @@ type EventQuery struct {
 	predicates []predicate.Event
 	withTurn   *TurnQuery
 	withWin    *WinQuery
+	withCall   *CallQuery
+	withDraw   *DrawnQuery
+	withReach  *ReachQuery
 	withFKs    bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -80,7 +86,7 @@ func (eq *EventQuery) QueryTurn() *TurnQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(event.Table, event.FieldID, selector),
 			sqlgraph.To(turn.Table, turn.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, event.TurnTable, event.TurnColumn),
+			sqlgraph.Edge(sqlgraph.O2O, true, event.TurnTable, event.TurnColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(eq.driver.Dialect(), step)
 		return fromU, nil
@@ -103,6 +109,72 @@ func (eq *EventQuery) QueryWin() *WinQuery {
 			sqlgraph.From(event.Table, event.FieldID, selector),
 			sqlgraph.To(win.Table, win.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, event.WinTable, event.WinColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(eq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryCall chains the current query on the "call" edge.
+func (eq *EventQuery) QueryCall() *CallQuery {
+	query := &CallQuery{config: eq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := eq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := eq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(event.Table, event.FieldID, selector),
+			sqlgraph.To(call.Table, call.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, event.CallTable, event.CallColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(eq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryDraw chains the current query on the "draw" edge.
+func (eq *EventQuery) QueryDraw() *DrawnQuery {
+	query := &DrawnQuery{config: eq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := eq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := eq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(event.Table, event.FieldID, selector),
+			sqlgraph.To(drawn.Table, drawn.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, event.DrawTable, event.DrawColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(eq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryReach chains the current query on the "reach" edge.
+func (eq *EventQuery) QueryReach() *ReachQuery {
+	query := &ReachQuery{config: eq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := eq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := eq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(event.Table, event.FieldID, selector),
+			sqlgraph.To(reach.Table, reach.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, event.ReachTable, event.ReachColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(eq.driver.Dialect(), step)
 		return fromU, nil
@@ -134,8 +206,8 @@ func (eq *EventQuery) FirstX(ctx context.Context) *Event {
 
 // FirstID returns the first Event ID from the query.
 // Returns a *NotFoundError when no Event ID was found.
-func (eq *EventQuery) FirstID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (eq *EventQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = eq.Limit(1).IDs(ctx); err != nil {
 		return
 	}
@@ -147,7 +219,7 @@ func (eq *EventQuery) FirstID(ctx context.Context) (id int, err error) {
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (eq *EventQuery) FirstIDX(ctx context.Context) int {
+func (eq *EventQuery) FirstIDX(ctx context.Context) uuid.UUID {
 	id, err := eq.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -185,8 +257,8 @@ func (eq *EventQuery) OnlyX(ctx context.Context) *Event {
 // OnlyID is like Only, but returns the only Event ID in the query.
 // Returns a *NotSingularError when more than one Event ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (eq *EventQuery) OnlyID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (eq *EventQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = eq.Limit(2).IDs(ctx); err != nil {
 		return
 	}
@@ -202,7 +274,7 @@ func (eq *EventQuery) OnlyID(ctx context.Context) (id int, err error) {
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (eq *EventQuery) OnlyIDX(ctx context.Context) int {
+func (eq *EventQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 	id, err := eq.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -228,8 +300,8 @@ func (eq *EventQuery) AllX(ctx context.Context) []*Event {
 }
 
 // IDs executes the query and returns a list of Event IDs.
-func (eq *EventQuery) IDs(ctx context.Context) ([]int, error) {
-	var ids []int
+func (eq *EventQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	var ids []uuid.UUID
 	if err := eq.Select(event.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
@@ -237,7 +309,7 @@ func (eq *EventQuery) IDs(ctx context.Context) ([]int, error) {
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (eq *EventQuery) IDsX(ctx context.Context) []int {
+func (eq *EventQuery) IDsX(ctx context.Context) []uuid.UUID {
 	ids, err := eq.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -293,6 +365,9 @@ func (eq *EventQuery) Clone() *EventQuery {
 		predicates: append([]predicate.Event{}, eq.predicates...),
 		withTurn:   eq.withTurn.Clone(),
 		withWin:    eq.withWin.Clone(),
+		withCall:   eq.withCall.Clone(),
+		withDraw:   eq.withDraw.Clone(),
+		withReach:  eq.withReach.Clone(),
 		// clone intermediate query.
 		sql:    eq.sql.Clone(),
 		path:   eq.path,
@@ -319,6 +394,39 @@ func (eq *EventQuery) WithWin(opts ...func(*WinQuery)) *EventQuery {
 		opt(query)
 	}
 	eq.withWin = query
+	return eq
+}
+
+// WithCall tells the query-builder to eager-load the nodes that are connected to
+// the "call" edge. The optional arguments are used to configure the query builder of the edge.
+func (eq *EventQuery) WithCall(opts ...func(*CallQuery)) *EventQuery {
+	query := &CallQuery{config: eq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	eq.withCall = query
+	return eq
+}
+
+// WithDraw tells the query-builder to eager-load the nodes that are connected to
+// the "draw" edge. The optional arguments are used to configure the query builder of the edge.
+func (eq *EventQuery) WithDraw(opts ...func(*DrawnQuery)) *EventQuery {
+	query := &DrawnQuery{config: eq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	eq.withDraw = query
+	return eq
+}
+
+// WithReach tells the query-builder to eager-load the nodes that are connected to
+// the "reach" edge. The optional arguments are used to configure the query builder of the edge.
+func (eq *EventQuery) WithReach(opts ...func(*ReachQuery)) *EventQuery {
+	query := &ReachQuery{config: eq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	eq.withReach = query
 	return eq
 }
 
@@ -374,9 +482,12 @@ func (eq *EventQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Event,
 		nodes       = []*Event{}
 		withFKs     = eq.withFKs
 		_spec       = eq.querySpec()
-		loadedTypes = [2]bool{
+		loadedTypes = [5]bool{
 			eq.withTurn != nil,
 			eq.withWin != nil,
+			eq.withCall != nil,
+			eq.withDraw != nil,
+			eq.withReach != nil,
 		}
 	)
 	if eq.withTurn != nil {
@@ -416,6 +527,27 @@ func (eq *EventQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Event,
 			return nil, err
 		}
 	}
+	if query := eq.withCall; query != nil {
+		if err := eq.loadCall(ctx, query, nodes,
+			func(n *Event) { n.Edges.Call = []*Call{} },
+			func(n *Event, e *Call) { n.Edges.Call = append(n.Edges.Call, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := eq.withDraw; query != nil {
+		if err := eq.loadDraw(ctx, query, nodes,
+			func(n *Event) { n.Edges.Draw = []*Drawn{} },
+			func(n *Event, e *Drawn) { n.Edges.Draw = append(n.Edges.Draw, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := eq.withReach; query != nil {
+		if err := eq.loadReach(ctx, query, nodes,
+			func(n *Event) { n.Edges.Reach = []*Reach{} },
+			func(n *Event, e *Reach) { n.Edges.Reach = append(n.Edges.Reach, e) }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
 }
 
@@ -450,7 +582,7 @@ func (eq *EventQuery) loadTurn(ctx context.Context, query *TurnQuery, nodes []*E
 }
 func (eq *EventQuery) loadWin(ctx context.Context, query *WinQuery, nodes []*Event, init func(*Event), assign func(*Event, *Win)) error {
 	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[int]*Event)
+	nodeids := make(map[uuid.UUID]*Event)
 	for i := range nodes {
 		fks = append(fks, nodes[i].ID)
 		nodeids[nodes[i].ID] = nodes[i]
@@ -474,6 +606,99 @@ func (eq *EventQuery) loadWin(ctx context.Context, query *WinQuery, nodes []*Eve
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected foreign-key "event_win" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (eq *EventQuery) loadCall(ctx context.Context, query *CallQuery, nodes []*Event, init func(*Event), assign func(*Event, *Call)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Event)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.Call(func(s *sql.Selector) {
+		s.Where(sql.InValues(event.CallColumn, fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.event_call
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "event_call" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "event_call" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (eq *EventQuery) loadDraw(ctx context.Context, query *DrawnQuery, nodes []*Event, init func(*Event), assign func(*Event, *Drawn)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Event)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.Drawn(func(s *sql.Selector) {
+		s.Where(sql.InValues(event.DrawColumn, fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.event_draw
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "event_draw" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "event_draw" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (eq *EventQuery) loadReach(ctx context.Context, query *ReachQuery, nodes []*Event, init func(*Event), assign func(*Event, *Reach)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Event)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.Reach(func(s *sql.Selector) {
+		s.Where(sql.InValues(event.ReachColumn, fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.event_reach
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "event_reach" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "event_reach" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
@@ -506,7 +731,7 @@ func (eq *EventQuery) querySpec() *sqlgraph.QuerySpec {
 			Table:   event.Table,
 			Columns: event.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: event.FieldID,
 			},
 		},

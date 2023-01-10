@@ -3,6 +3,8 @@ package schema
 import (
 	"entgo.io/ent"
 	"entgo.io/ent/schema/edge"
+	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 )
 
 // Win holds the schema definition for the Win entity.
@@ -12,7 +14,9 @@ type Win struct {
 
 // Fields of the Win.
 func (Win) Fields() []ent.Field {
-	return nil
+	return []ent.Field{
+		field.UUID("id", uuid.UUID{}).Default(uuid.New),
+	}
 }
 
 // Edges of the Win.

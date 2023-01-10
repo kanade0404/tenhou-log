@@ -7,9 +7,12 @@ import (
 	"errors"
 	"fmt"
 
+	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/call"
 	"github.com/kanade0404/tenhou-log/services/ent/meldedkan"
 )
 
@@ -19,6 +22,39 @@ type MeldedKanCreate struct {
 	mutation *MeldedKanMutation
 	hooks    []Hook
 	conflict []sql.ConflictOption
+}
+
+// SetID sets the "id" field.
+func (mkc *MeldedKanCreate) SetID(u uuid.UUID) *MeldedKanCreate {
+	mkc.mutation.SetID(u)
+	return mkc
+}
+
+// SetNillableID sets the "id" field if the given value is not nil.
+func (mkc *MeldedKanCreate) SetNillableID(u *uuid.UUID) *MeldedKanCreate {
+	if u != nil {
+		mkc.SetID(*u)
+	}
+	return mkc
+}
+
+// SetCallID sets the "call" edge to the Call entity by ID.
+func (mkc *MeldedKanCreate) SetCallID(id uuid.UUID) *MeldedKanCreate {
+	mkc.mutation.SetCallID(id)
+	return mkc
+}
+
+// SetNillableCallID sets the "call" edge to the Call entity by ID if the given value is not nil.
+func (mkc *MeldedKanCreate) SetNillableCallID(id *uuid.UUID) *MeldedKanCreate {
+	if id != nil {
+		mkc = mkc.SetCallID(*id)
+	}
+	return mkc
+}
+
+// SetCall sets the "call" edge to the Call entity.
+func (mkc *MeldedKanCreate) SetCall(c *Call) *MeldedKanCreate {
+	return mkc.SetCallID(c.ID)
 }
 
 // Mutation returns the MeldedKanMutation object of the builder.
@@ -32,6 +68,7 @@ func (mkc *MeldedKanCreate) Save(ctx context.Context) (*MeldedKan, error) {
 		err  error
 		node *MeldedKan
 	)
+	mkc.defaults()
 	if len(mkc.hooks) == 0 {
 		if err = mkc.check(); err != nil {
 			return nil, err
@@ -95,6 +132,14 @@ func (mkc *MeldedKanCreate) ExecX(ctx context.Context) {
 	}
 }
 
+// defaults sets the default values of the builder before save.
+func (mkc *MeldedKanCreate) defaults() {
+	if _, ok := mkc.mutation.ID(); !ok {
+		v := meldedkan.DefaultID()
+		mkc.mutation.SetID(v)
+	}
+}
+
 // check runs all checks and user-defined validators on the builder.
 func (mkc *MeldedKanCreate) check() error {
 	return nil
@@ -108,8 +153,13 @@ func (mkc *MeldedKanCreate) sqlSave(ctx context.Context) (*MeldedKan, error) {
 		}
 		return nil, err
 	}
-	id := _spec.ID.Value.(int64)
-	_node.ID = int(id)
+	if _spec.ID.Value != nil {
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
+	}
 	return _node, nil
 }
 
@@ -119,12 +169,35 @@ func (mkc *MeldedKanCreate) createSpec() (*MeldedKan, *sqlgraph.CreateSpec) {
 		_spec = &sqlgraph.CreateSpec{
 			Table: meldedkan.Table,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: meldedkan.FieldID,
 			},
 		}
 	)
 	_spec.OnConflict = mkc.conflict
+	if id, ok := mkc.mutation.ID(); ok {
+		_node.ID = id
+		_spec.ID.Value = &id
+	}
+	if nodes := mkc.mutation.CallIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   meldedkan.CallTable,
+			Columns: []string{meldedkan.CallColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: call.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
 	return _node, _spec
 }
 
@@ -171,16 +244,24 @@ type (
 	}
 )
 
-// UpdateNewValues updates the mutable fields using the new values that were set on create.
+// UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
 // Using this option is equivalent to using:
 //
 //	client.MeldedKan.Create().
 //		OnConflict(
 //			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(meldedkan.FieldID)
+//			}),
 //		).
 //		Exec(ctx)
 func (u *MeldedKanUpsertOne) UpdateNewValues() *MeldedKanUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.ID(); exists {
+			s.SetIgnore(meldedkan.FieldID)
+		}
+	}))
 	return u
 }
 
@@ -227,7 +308,12 @@ func (u *MeldedKanUpsertOne) ExecX(ctx context.Context) {
 }
 
 // Exec executes the UPSERT query and returns the inserted/updated ID.
-func (u *MeldedKanUpsertOne) ID(ctx context.Context) (id int, err error) {
+func (u *MeldedKanUpsertOne) ID(ctx context.Context) (id uuid.UUID, err error) {
+	if u.create.driver.Dialect() == dialect.MySQL {
+		// In case of "ON CONFLICT", there is no way to get back non-numeric ID
+		// fields from the database since MySQL does not support the RETURNING clause.
+		return id, errors.New("ent: MeldedKanUpsertOne.ID is not supported by MySQL driver. Use MeldedKanUpsertOne.Exec instead")
+	}
 	node, err := u.create.Save(ctx)
 	if err != nil {
 		return id, err
@@ -236,7 +322,7 @@ func (u *MeldedKanUpsertOne) ID(ctx context.Context) (id int, err error) {
 }
 
 // IDX is like ID, but panics if an error occurs.
-func (u *MeldedKanUpsertOne) IDX(ctx context.Context) int {
+func (u *MeldedKanUpsertOne) IDX(ctx context.Context) uuid.UUID {
 	id, err := u.ID(ctx)
 	if err != nil {
 		panic(err)
@@ -259,6 +345,7 @@ func (mkcb *MeldedKanCreateBulk) Save(ctx context.Context) ([]*MeldedKan, error)
 	for i := range mkcb.builders {
 		func(i int, root context.Context) {
 			builder := mkcb.builders[i]
+			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*MeldedKanMutation)
 				if !ok {
@@ -286,10 +373,6 @@ func (mkcb *MeldedKanCreateBulk) Save(ctx context.Context) ([]*MeldedKan, error)
 					return nil, err
 				}
 				mutation.id = &nodes[i].ID
-				if specs[i].ID.Value != nil {
-					id := specs[i].ID.Value.(int64)
-					nodes[i].ID = int(id)
-				}
 				mutation.done = true
 				return nodes[i], nil
 			})
@@ -371,10 +454,20 @@ type MeldedKanUpsertBulk struct {
 //	client.MeldedKan.Create().
 //		OnConflict(
 //			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(meldedkan.FieldID)
+//			}),
 //		).
 //		Exec(ctx)
 func (u *MeldedKanUpsertBulk) UpdateNewValues() *MeldedKanUpsertBulk {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.ID(); exists {
+				s.SetIgnore(meldedkan.FieldID)
+			}
+		}
+	}))
 	return u
 }
 

@@ -213,7 +213,7 @@ func HasEvent() predicate.Turn {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
 			sqlgraph.To(EventTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, EventTable, EventColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, EventTable, EventColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
@@ -225,7 +225,35 @@ func HasEventWith(preds ...predicate.Event) predicate.Turn {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
 			sqlgraph.To(EventInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, EventTable, EventColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, EventTable, EventColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasGameplayerhandhai applies the HasEdge predicate on the "gameplayerhandhai" edge.
+func HasGameplayerhandhai() predicate.Turn {
+	return predicate.Turn(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(GameplayerhandhaiTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, GameplayerhandhaiTable, GameplayerhandhaiColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasGameplayerhandhaiWith applies the HasEdge predicate on the "gameplayerhandhai" edge with a given conditions (other predicates).
+func HasGameplayerhandhaiWith(preds ...predicate.GamePlayerHandHai) predicate.Turn {
+	return predicate.Turn(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(GameplayerhandhaiInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, GameplayerhandhaiTable, GameplayerhandhaiColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

@@ -7,10 +7,14 @@ import (
 	"errors"
 	"fmt"
 
+	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/discard"
 	"github.com/kanade0404/tenhou-log/services/ent/drawn"
+	"github.com/kanade0404/tenhou-log/services/ent/event"
 )
 
 // DrawnCreate is the builder for creating a Drawn entity.
@@ -19,6 +23,42 @@ type DrawnCreate struct {
 	mutation *DrawnMutation
 	hooks    []Hook
 	conflict []sql.ConflictOption
+}
+
+// SetID sets the "id" field.
+func (dc *DrawnCreate) SetID(u uuid.UUID) *DrawnCreate {
+	dc.mutation.SetID(u)
+	return dc
+}
+
+// SetNillableID sets the "id" field if the given value is not nil.
+func (dc *DrawnCreate) SetNillableID(u *uuid.UUID) *DrawnCreate {
+	if u != nil {
+		dc.SetID(*u)
+	}
+	return dc
+}
+
+// SetEventID sets the "event" edge to the Event entity by ID.
+func (dc *DrawnCreate) SetEventID(id uuid.UUID) *DrawnCreate {
+	dc.mutation.SetEventID(id)
+	return dc
+}
+
+// SetEvent sets the "event" edge to the Event entity.
+func (dc *DrawnCreate) SetEvent(e *Event) *DrawnCreate {
+	return dc.SetEventID(e.ID)
+}
+
+// SetDiscardID sets the "discard" edge to the Discard entity by ID.
+func (dc *DrawnCreate) SetDiscardID(id uuid.UUID) *DrawnCreate {
+	dc.mutation.SetDiscardID(id)
+	return dc
+}
+
+// SetDiscard sets the "discard" edge to the Discard entity.
+func (dc *DrawnCreate) SetDiscard(d *Discard) *DrawnCreate {
+	return dc.SetDiscardID(d.ID)
 }
 
 // Mutation returns the DrawnMutation object of the builder.
@@ -32,6 +72,7 @@ func (dc *DrawnCreate) Save(ctx context.Context) (*Drawn, error) {
 		err  error
 		node *Drawn
 	)
+	dc.defaults()
 	if len(dc.hooks) == 0 {
 		if err = dc.check(); err != nil {
 			return nil, err
@@ -95,8 +136,22 @@ func (dc *DrawnCreate) ExecX(ctx context.Context) {
 	}
 }
 
+// defaults sets the default values of the builder before save.
+func (dc *DrawnCreate) defaults() {
+	if _, ok := dc.mutation.ID(); !ok {
+		v := drawn.DefaultID()
+		dc.mutation.SetID(v)
+	}
+}
+
 // check runs all checks and user-defined validators on the builder.
 func (dc *DrawnCreate) check() error {
+	if _, ok := dc.mutation.EventID(); !ok {
+		return &ValidationError{Name: "event", err: errors.New(`ent: missing required edge "Drawn.event"`)}
+	}
+	if _, ok := dc.mutation.DiscardID(); !ok {
+		return &ValidationError{Name: "discard", err: errors.New(`ent: missing required edge "Drawn.discard"`)}
+	}
 	return nil
 }
 
@@ -108,8 +163,13 @@ func (dc *DrawnCreate) sqlSave(ctx context.Context) (*Drawn, error) {
 		}
 		return nil, err
 	}
-	id := _spec.ID.Value.(int64)
-	_node.ID = int(id)
+	if _spec.ID.Value != nil {
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
+	}
 	return _node, nil
 }
 
@@ -119,12 +179,56 @@ func (dc *DrawnCreate) createSpec() (*Drawn, *sqlgraph.CreateSpec) {
 		_spec = &sqlgraph.CreateSpec{
 			Table: drawn.Table,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: drawn.FieldID,
 			},
 		}
 	)
 	_spec.OnConflict = dc.conflict
+	if id, ok := dc.mutation.ID(); ok {
+		_node.ID = id
+		_spec.ID.Value = &id
+	}
+	if nodes := dc.mutation.EventIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   drawn.EventTable,
+			Columns: []string{drawn.EventColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: event.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.event_draw = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := dc.mutation.DiscardIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   drawn.DiscardTable,
+			Columns: []string{drawn.DiscardColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: discard.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.discard_draw = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
 	return _node, _spec
 }
 
@@ -171,16 +275,24 @@ type (
 	}
 )
 
-// UpdateNewValues updates the mutable fields using the new values that were set on create.
+// UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
 // Using this option is equivalent to using:
 //
 //	client.Drawn.Create().
 //		OnConflict(
 //			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(drawn.FieldID)
+//			}),
 //		).
 //		Exec(ctx)
 func (u *DrawnUpsertOne) UpdateNewValues() *DrawnUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.ID(); exists {
+			s.SetIgnore(drawn.FieldID)
+		}
+	}))
 	return u
 }
 
@@ -227,7 +339,12 @@ func (u *DrawnUpsertOne) ExecX(ctx context.Context) {
 }
 
 // Exec executes the UPSERT query and returns the inserted/updated ID.
-func (u *DrawnUpsertOne) ID(ctx context.Context) (id int, err error) {
+func (u *DrawnUpsertOne) ID(ctx context.Context) (id uuid.UUID, err error) {
+	if u.create.driver.Dialect() == dialect.MySQL {
+		// In case of "ON CONFLICT", there is no way to get back non-numeric ID
+		// fields from the database since MySQL does not support the RETURNING clause.
+		return id, errors.New("ent: DrawnUpsertOne.ID is not supported by MySQL driver. Use DrawnUpsertOne.Exec instead")
+	}
 	node, err := u.create.Save(ctx)
 	if err != nil {
 		return id, err
@@ -236,7 +353,7 @@ func (u *DrawnUpsertOne) ID(ctx context.Context) (id int, err error) {
 }
 
 // IDX is like ID, but panics if an error occurs.
-func (u *DrawnUpsertOne) IDX(ctx context.Context) int {
+func (u *DrawnUpsertOne) IDX(ctx context.Context) uuid.UUID {
 	id, err := u.ID(ctx)
 	if err != nil {
 		panic(err)
@@ -259,6 +376,7 @@ func (dcb *DrawnCreateBulk) Save(ctx context.Context) ([]*Drawn, error) {
 	for i := range dcb.builders {
 		func(i int, root context.Context) {
 			builder := dcb.builders[i]
+			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*DrawnMutation)
 				if !ok {
@@ -286,10 +404,6 @@ func (dcb *DrawnCreateBulk) Save(ctx context.Context) ([]*Drawn, error) {
 					return nil, err
 				}
 				mutation.id = &nodes[i].ID
-				if specs[i].ID.Value != nil {
-					id := specs[i].ID.Value.(int64)
-					nodes[i].ID = int(id)
-				}
 				mutation.done = true
 				return nodes[i], nil
 			})
@@ -371,10 +485,20 @@ type DrawnUpsertBulk struct {
 //	client.Drawn.Create().
 //		OnConflict(
 //			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(drawn.FieldID)
+//			}),
 //		).
 //		Exec(ctx)
 func (u *DrawnUpsertBulk) UpdateNewValues() *DrawnUpsertBulk {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.ID(); exists {
+				s.SetIgnore(drawn.FieldID)
+			}
+		}
+	}))
 	return u
 }
 

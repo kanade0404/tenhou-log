@@ -10,6 +10,8 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/call"
 	"github.com/kanade0404/tenhou-log/services/ent/concealedkan"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 )
@@ -27,9 +29,34 @@ func (cku *ConcealedKanUpdate) Where(ps ...predicate.ConcealedKan) *ConcealedKan
 	return cku
 }
 
+// SetCallID sets the "call" edge to the Call entity by ID.
+func (cku *ConcealedKanUpdate) SetCallID(id uuid.UUID) *ConcealedKanUpdate {
+	cku.mutation.SetCallID(id)
+	return cku
+}
+
+// SetNillableCallID sets the "call" edge to the Call entity by ID if the given value is not nil.
+func (cku *ConcealedKanUpdate) SetNillableCallID(id *uuid.UUID) *ConcealedKanUpdate {
+	if id != nil {
+		cku = cku.SetCallID(*id)
+	}
+	return cku
+}
+
+// SetCall sets the "call" edge to the Call entity.
+func (cku *ConcealedKanUpdate) SetCall(c *Call) *ConcealedKanUpdate {
+	return cku.SetCallID(c.ID)
+}
+
 // Mutation returns the ConcealedKanMutation object of the builder.
 func (cku *ConcealedKanUpdate) Mutation() *ConcealedKanMutation {
 	return cku.mutation
+}
+
+// ClearCall clears the "call" edge to the Call entity.
+func (cku *ConcealedKanUpdate) ClearCall() *ConcealedKanUpdate {
+	cku.mutation.ClearCall()
+	return cku
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -92,7 +119,7 @@ func (cku *ConcealedKanUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Table:   concealedkan.Table,
 			Columns: concealedkan.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: concealedkan.FieldID,
 			},
 		},
@@ -103,6 +130,41 @@ func (cku *ConcealedKanUpdate) sqlSave(ctx context.Context) (n int, err error) {
 				ps[i](selector)
 			}
 		}
+	}
+	if cku.mutation.CallCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   concealedkan.CallTable,
+			Columns: []string{concealedkan.CallColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: call.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := cku.mutation.CallIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   concealedkan.CallTable,
+			Columns: []string{concealedkan.CallColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: call.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, cku.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -123,9 +185,34 @@ type ConcealedKanUpdateOne struct {
 	mutation *ConcealedKanMutation
 }
 
+// SetCallID sets the "call" edge to the Call entity by ID.
+func (ckuo *ConcealedKanUpdateOne) SetCallID(id uuid.UUID) *ConcealedKanUpdateOne {
+	ckuo.mutation.SetCallID(id)
+	return ckuo
+}
+
+// SetNillableCallID sets the "call" edge to the Call entity by ID if the given value is not nil.
+func (ckuo *ConcealedKanUpdateOne) SetNillableCallID(id *uuid.UUID) *ConcealedKanUpdateOne {
+	if id != nil {
+		ckuo = ckuo.SetCallID(*id)
+	}
+	return ckuo
+}
+
+// SetCall sets the "call" edge to the Call entity.
+func (ckuo *ConcealedKanUpdateOne) SetCall(c *Call) *ConcealedKanUpdateOne {
+	return ckuo.SetCallID(c.ID)
+}
+
 // Mutation returns the ConcealedKanMutation object of the builder.
 func (ckuo *ConcealedKanUpdateOne) Mutation() *ConcealedKanMutation {
 	return ckuo.mutation
+}
+
+// ClearCall clears the "call" edge to the Call entity.
+func (ckuo *ConcealedKanUpdateOne) ClearCall() *ConcealedKanUpdateOne {
+	ckuo.mutation.ClearCall()
+	return ckuo
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -201,7 +288,7 @@ func (ckuo *ConcealedKanUpdateOne) sqlSave(ctx context.Context) (_node *Conceale
 			Table:   concealedkan.Table,
 			Columns: concealedkan.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: concealedkan.FieldID,
 			},
 		},
@@ -229,6 +316,41 @@ func (ckuo *ConcealedKanUpdateOne) sqlSave(ctx context.Context) (_node *Conceale
 				ps[i](selector)
 			}
 		}
+	}
+	if ckuo.mutation.CallCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   concealedkan.CallTable,
+			Columns: []string{concealedkan.CallColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: call.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := ckuo.mutation.CallIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   concealedkan.CallTable,
+			Columns: []string{concealedkan.CallColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: call.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &ConcealedKan{config: ckuo.config}
 	_spec.Assign = _node.assignValues

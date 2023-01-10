@@ -16,6 +16,7 @@ import (
 	"github.com/kanade0404/tenhou-log/services/ent/compressedmjlog"
 	"github.com/kanade0404/tenhou-log/services/ent/concealedkan"
 	"github.com/kanade0404/tenhou-log/services/ent/dan"
+	"github.com/kanade0404/tenhou-log/services/ent/discard"
 	"github.com/kanade0404/tenhou-log/services/ent/drawn"
 	"github.com/kanade0404/tenhou-log/services/ent/event"
 	"github.com/kanade0404/tenhou-log/services/ent/game"
@@ -28,6 +29,7 @@ import (
 	"github.com/kanade0404/tenhou-log/services/ent/mjlogfile"
 	"github.com/kanade0404/tenhou-log/services/ent/player"
 	"github.com/kanade0404/tenhou-log/services/ent/pon"
+	"github.com/kanade0404/tenhou-log/services/ent/reach"
 	"github.com/kanade0404/tenhou-log/services/ent/room"
 	"github.com/kanade0404/tenhou-log/services/ent/round"
 	"github.com/kanade0404/tenhou-log/services/ent/turn"
@@ -58,6 +60,7 @@ func columnChecker(table string) func(string) error {
 		compressedmjlog.Table:   compressedmjlog.ValidColumn,
 		concealedkan.Table:      concealedkan.ValidColumn,
 		dan.Table:               dan.ValidColumn,
+		discard.Table:           discard.ValidColumn,
 		drawn.Table:             drawn.ValidColumn,
 		event.Table:             event.ValidColumn,
 		game.Table:              game.ValidColumn,
@@ -70,6 +73,7 @@ func columnChecker(table string) func(string) error {
 		meldedkan.Table:         meldedkan.ValidColumn,
 		player.Table:            player.ValidColumn,
 		pon.Table:               pon.ValidColumn,
+		reach.Table:             reach.ValidColumn,
 		room.Table:              room.ValidColumn,
 		round.Table:             round.ValidColumn,
 		turn.Table:              turn.ValidColumn,

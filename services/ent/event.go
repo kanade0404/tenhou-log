@@ -16,7 +16,7 @@ import (
 type Event struct {
 	config
 	// ID of the ent.
-	ID int `json:"id,omitempty"`
+	ID uuid.UUID `json:"id,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the EventQuery when eager-loading is set.
 	Edges      EventEdges `json:"edges"`
@@ -29,9 +29,15 @@ type EventEdges struct {
 	Turn *Turn `json:"turn,omitempty"`
 	// Win holds the value of the win edge.
 	Win []*Win `json:"win,omitempty"`
+	// Call holds the value of the call edge.
+	Call []*Call `json:"call,omitempty"`
+	// Draw holds the value of the draw edge.
+	Draw []*Drawn `json:"draw,omitempty"`
+	// Reach holds the value of the reach edge.
+	Reach []*Reach `json:"reach,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [5]bool
 }
 
 // TurnOrErr returns the Turn value or an error if the edge
@@ -56,13 +62,40 @@ func (e EventEdges) WinOrErr() ([]*Win, error) {
 	return nil, &NotLoadedError{edge: "win"}
 }
 
+// CallOrErr returns the Call value or an error if the edge
+// was not loaded in eager-loading.
+func (e EventEdges) CallOrErr() ([]*Call, error) {
+	if e.loadedTypes[2] {
+		return e.Call, nil
+	}
+	return nil, &NotLoadedError{edge: "call"}
+}
+
+// DrawOrErr returns the Draw value or an error if the edge
+// was not loaded in eager-loading.
+func (e EventEdges) DrawOrErr() ([]*Drawn, error) {
+	if e.loadedTypes[3] {
+		return e.Draw, nil
+	}
+	return nil, &NotLoadedError{edge: "draw"}
+}
+
+// ReachOrErr returns the Reach value or an error if the edge
+// was not loaded in eager-loading.
+func (e EventEdges) ReachOrErr() ([]*Reach, error) {
+	if e.loadedTypes[4] {
+		return e.Reach, nil
+	}
+	return nil, &NotLoadedError{edge: "reach"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*Event) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
 		case event.FieldID:
-			values[i] = new(sql.NullInt64)
+			values[i] = new(uuid.UUID)
 		case event.ForeignKeys[0]: // turn_event
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
@@ -81,11 +114,11 @@ func (e *Event) assignValues(columns []string, values []any) error {
 	for i := range columns {
 		switch columns[i] {
 		case event.FieldID:
-			value, ok := values[i].(*sql.NullInt64)
-			if !ok {
-				return fmt.Errorf("unexpected type %T for field id", value)
+			if value, ok := values[i].(*uuid.UUID); !ok {
+				return fmt.Errorf("unexpected type %T for field id", values[i])
+			} else if value != nil {
+				e.ID = *value
 			}
-			e.ID = int(value.Int64)
 		case event.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field turn_event", values[i])
@@ -106,6 +139,21 @@ func (e *Event) QueryTurn() *TurnQuery {
 // QueryWin queries the "win" edge of the Event entity.
 func (e *Event) QueryWin() *WinQuery {
 	return (&EventClient{config: e.config}).QueryWin(e)
+}
+
+// QueryCall queries the "call" edge of the Event entity.
+func (e *Event) QueryCall() *CallQuery {
+	return (&EventClient{config: e.config}).QueryCall(e)
+}
+
+// QueryDraw queries the "draw" edge of the Event entity.
+func (e *Event) QueryDraw() *DrawnQuery {
+	return (&EventClient{config: e.config}).QueryDraw(e)
+}
+
+// QueryReach queries the "reach" edge of the Event entity.
+func (e *Event) QueryReach() *ReachQuery {
+	return (&EventClient{config: e.config}).QueryReach(e)
 }
 
 // Update returns a builder for updating this Event.

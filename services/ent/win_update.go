@@ -10,6 +10,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/event"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 	"github.com/kanade0404/tenhou-log/services/ent/win"
@@ -29,7 +30,7 @@ func (wu *WinUpdate) Where(ps ...predicate.Win) *WinUpdate {
 }
 
 // SetEventID sets the "event" edge to the Event entity by ID.
-func (wu *WinUpdate) SetEventID(id int) *WinUpdate {
+func (wu *WinUpdate) SetEventID(id uuid.UUID) *WinUpdate {
 	wu.mutation.SetEventID(id)
 	return wu
 }
@@ -124,7 +125,7 @@ func (wu *WinUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Table:   win.Table,
 			Columns: win.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: win.FieldID,
 			},
 		},
@@ -145,7 +146,7 @@ func (wu *WinUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
+					Type:   field.TypeUUID,
 					Column: event.FieldID,
 				},
 			},
@@ -161,7 +162,7 @@ func (wu *WinUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
+					Type:   field.TypeUUID,
 					Column: event.FieldID,
 				},
 			},
@@ -191,7 +192,7 @@ type WinUpdateOne struct {
 }
 
 // SetEventID sets the "event" edge to the Event entity by ID.
-func (wuo *WinUpdateOne) SetEventID(id int) *WinUpdateOne {
+func (wuo *WinUpdateOne) SetEventID(id uuid.UUID) *WinUpdateOne {
 	wuo.mutation.SetEventID(id)
 	return wuo
 }
@@ -299,7 +300,7 @@ func (wuo *WinUpdateOne) sqlSave(ctx context.Context) (_node *Win, err error) {
 			Table:   win.Table,
 			Columns: win.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: win.FieldID,
 			},
 		},
@@ -337,7 +338,7 @@ func (wuo *WinUpdateOne) sqlSave(ctx context.Context) (_node *Win, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
+					Type:   field.TypeUUID,
 					Column: event.FieldID,
 				},
 			},
@@ -353,7 +354,7 @@ func (wuo *WinUpdateOne) sqlSave(ctx context.Context) (_node *Win, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
+					Type:   field.TypeUUID,
 					Column: event.FieldID,
 				},
 			},

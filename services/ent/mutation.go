@@ -10,17 +10,27 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/call"
+	"github.com/kanade0404/tenhou-log/services/ent/chakan"
+	"github.com/kanade0404/tenhou-log/services/ent/chii"
 	"github.com/kanade0404/tenhou-log/services/ent/compressedmjlog"
+	"github.com/kanade0404/tenhou-log/services/ent/concealedkan"
 	"github.com/kanade0404/tenhou-log/services/ent/dan"
+	"github.com/kanade0404/tenhou-log/services/ent/discard"
+	"github.com/kanade0404/tenhou-log/services/ent/drawn"
 	"github.com/kanade0404/tenhou-log/services/ent/event"
 	"github.com/kanade0404/tenhou-log/services/ent/game"
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayer"
+	"github.com/kanade0404/tenhou-log/services/ent/gameplayerhandhai"
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayerpoint"
 	"github.com/kanade0404/tenhou-log/services/ent/hand"
+	"github.com/kanade0404/tenhou-log/services/ent/meldedkan"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlog"
 	"github.com/kanade0404/tenhou-log/services/ent/mjlogfile"
 	"github.com/kanade0404/tenhou-log/services/ent/player"
+	"github.com/kanade0404/tenhou-log/services/ent/pon"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
+	"github.com/kanade0404/tenhou-log/services/ent/reach"
 	"github.com/kanade0404/tenhou-log/services/ent/room"
 	"github.com/kanade0404/tenhou-log/services/ent/round"
 	"github.com/kanade0404/tenhou-log/services/ent/turn"
@@ -44,6 +54,7 @@ const (
 	TypeCompressedMJLog   = "CompressedMJLog"
 	TypeConcealedKan      = "ConcealedKan"
 	TypeDan               = "Dan"
+	TypeDiscard           = "Discard"
 	TypeDrawn             = "Drawn"
 	TypeEvent             = "Event"
 	TypeGame              = "Game"
@@ -56,6 +67,7 @@ const (
 	TypeMeldedKan         = "MeldedKan"
 	TypePlayer            = "Player"
 	TypePon               = "Pon"
+	TypeReach             = "Reach"
 	TypeRoom              = "Room"
 	TypeRound             = "Round"
 	TypeTurn              = "Turn"
@@ -65,13 +77,27 @@ const (
 // CallMutation represents an operation that mutates the Call nodes in the graph.
 type CallMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *int
-	clearedFields map[string]struct{}
-	done          bool
-	oldValue      func(context.Context) (*Call, error)
-	predicates    []predicate.Call
+	op                  Op
+	typ                 string
+	id                  *uuid.UUID
+	clearedFields       map[string]struct{}
+	event               *uuid.UUID
+	clearedevent        bool
+	discard             *uuid.UUID
+	cleareddiscard      bool
+	chii                *uuid.UUID
+	clearedchii         bool
+	chakan              *uuid.UUID
+	clearedchakan       bool
+	concealedkan        *uuid.UUID
+	clearedconcealedkan bool
+	meldedkan           *uuid.UUID
+	clearedmeldedkan    bool
+	pon                 *uuid.UUID
+	clearedpon          bool
+	done                bool
+	oldValue            func(context.Context) (*Call, error)
+	predicates          []predicate.Call
 }
 
 var _ ent.Mutation = (*CallMutation)(nil)
@@ -94,7 +120,7 @@ func newCallMutation(c config, op Op, opts ...callOption) *CallMutation {
 }
 
 // withCallID sets the ID field of the mutation.
-func withCallID(id int) callOption {
+func withCallID(id uuid.UUID) callOption {
 	return func(m *CallMutation) {
 		var (
 			err   error
@@ -144,9 +170,15 @@ func (m CallMutation) Tx() (*Tx, error) {
 	return tx, nil
 }
 
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of Call entities.
+func (m *CallMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
 // ID returns the ID value in the mutation. Note that the ID is only available
 // if it was provided to the builder or after it was returned from the database.
-func (m *CallMutation) ID() (id int, exists bool) {
+func (m *CallMutation) ID() (id uuid.UUID, exists bool) {
 	if m.id == nil {
 		return
 	}
@@ -157,12 +189,12 @@ func (m *CallMutation) ID() (id int, exists bool) {
 // That means, if the mutation is applied within a transaction with an isolation level such
 // as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
 // or updated by the mutation.
-func (m *CallMutation) IDs(ctx context.Context) ([]int, error) {
+func (m *CallMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	switch {
 	case m.op.Is(OpUpdateOne | OpDeleteOne):
 		id, exists := m.ID()
 		if exists {
-			return []int{id}, nil
+			return []uuid.UUID{id}, nil
 		}
 		fallthrough
 	case m.op.Is(OpUpdate | OpDelete):
@@ -170,6 +202,279 @@ func (m *CallMutation) IDs(ctx context.Context) ([]int, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetEventID sets the "event" edge to the Event entity by id.
+func (m *CallMutation) SetEventID(id uuid.UUID) {
+	m.event = &id
+}
+
+// ClearEvent clears the "event" edge to the Event entity.
+func (m *CallMutation) ClearEvent() {
+	m.clearedevent = true
+}
+
+// EventCleared reports if the "event" edge to the Event entity was cleared.
+func (m *CallMutation) EventCleared() bool {
+	return m.clearedevent
+}
+
+// EventID returns the "event" edge ID in the mutation.
+func (m *CallMutation) EventID() (id uuid.UUID, exists bool) {
+	if m.event != nil {
+		return *m.event, true
+	}
+	return
+}
+
+// EventIDs returns the "event" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// EventID instead. It exists only for internal usage by the builders.
+func (m *CallMutation) EventIDs() (ids []uuid.UUID) {
+	if id := m.event; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetEvent resets all changes to the "event" edge.
+func (m *CallMutation) ResetEvent() {
+	m.event = nil
+	m.clearedevent = false
+}
+
+// SetDiscardID sets the "discard" edge to the Discard entity by id.
+func (m *CallMutation) SetDiscardID(id uuid.UUID) {
+	m.discard = &id
+}
+
+// ClearDiscard clears the "discard" edge to the Discard entity.
+func (m *CallMutation) ClearDiscard() {
+	m.cleareddiscard = true
+}
+
+// DiscardCleared reports if the "discard" edge to the Discard entity was cleared.
+func (m *CallMutation) DiscardCleared() bool {
+	return m.cleareddiscard
+}
+
+// DiscardID returns the "discard" edge ID in the mutation.
+func (m *CallMutation) DiscardID() (id uuid.UUID, exists bool) {
+	if m.discard != nil {
+		return *m.discard, true
+	}
+	return
+}
+
+// DiscardIDs returns the "discard" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// DiscardID instead. It exists only for internal usage by the builders.
+func (m *CallMutation) DiscardIDs() (ids []uuid.UUID) {
+	if id := m.discard; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetDiscard resets all changes to the "discard" edge.
+func (m *CallMutation) ResetDiscard() {
+	m.discard = nil
+	m.cleareddiscard = false
+}
+
+// SetChiiID sets the "chii" edge to the Chii entity by id.
+func (m *CallMutation) SetChiiID(id uuid.UUID) {
+	m.chii = &id
+}
+
+// ClearChii clears the "chii" edge to the Chii entity.
+func (m *CallMutation) ClearChii() {
+	m.clearedchii = true
+}
+
+// ChiiCleared reports if the "chii" edge to the Chii entity was cleared.
+func (m *CallMutation) ChiiCleared() bool {
+	return m.clearedchii
+}
+
+// ChiiID returns the "chii" edge ID in the mutation.
+func (m *CallMutation) ChiiID() (id uuid.UUID, exists bool) {
+	if m.chii != nil {
+		return *m.chii, true
+	}
+	return
+}
+
+// ChiiIDs returns the "chii" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ChiiID instead. It exists only for internal usage by the builders.
+func (m *CallMutation) ChiiIDs() (ids []uuid.UUID) {
+	if id := m.chii; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetChii resets all changes to the "chii" edge.
+func (m *CallMutation) ResetChii() {
+	m.chii = nil
+	m.clearedchii = false
+}
+
+// SetChakanID sets the "chakan" edge to the Chakan entity by id.
+func (m *CallMutation) SetChakanID(id uuid.UUID) {
+	m.chakan = &id
+}
+
+// ClearChakan clears the "chakan" edge to the Chakan entity.
+func (m *CallMutation) ClearChakan() {
+	m.clearedchakan = true
+}
+
+// ChakanCleared reports if the "chakan" edge to the Chakan entity was cleared.
+func (m *CallMutation) ChakanCleared() bool {
+	return m.clearedchakan
+}
+
+// ChakanID returns the "chakan" edge ID in the mutation.
+func (m *CallMutation) ChakanID() (id uuid.UUID, exists bool) {
+	if m.chakan != nil {
+		return *m.chakan, true
+	}
+	return
+}
+
+// ChakanIDs returns the "chakan" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ChakanID instead. It exists only for internal usage by the builders.
+func (m *CallMutation) ChakanIDs() (ids []uuid.UUID) {
+	if id := m.chakan; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetChakan resets all changes to the "chakan" edge.
+func (m *CallMutation) ResetChakan() {
+	m.chakan = nil
+	m.clearedchakan = false
+}
+
+// SetConcealedkanID sets the "concealedkan" edge to the ConcealedKan entity by id.
+func (m *CallMutation) SetConcealedkanID(id uuid.UUID) {
+	m.concealedkan = &id
+}
+
+// ClearConcealedkan clears the "concealedkan" edge to the ConcealedKan entity.
+func (m *CallMutation) ClearConcealedkan() {
+	m.clearedconcealedkan = true
+}
+
+// ConcealedkanCleared reports if the "concealedkan" edge to the ConcealedKan entity was cleared.
+func (m *CallMutation) ConcealedkanCleared() bool {
+	return m.clearedconcealedkan
+}
+
+// ConcealedkanID returns the "concealedkan" edge ID in the mutation.
+func (m *CallMutation) ConcealedkanID() (id uuid.UUID, exists bool) {
+	if m.concealedkan != nil {
+		return *m.concealedkan, true
+	}
+	return
+}
+
+// ConcealedkanIDs returns the "concealedkan" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ConcealedkanID instead. It exists only for internal usage by the builders.
+func (m *CallMutation) ConcealedkanIDs() (ids []uuid.UUID) {
+	if id := m.concealedkan; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetConcealedkan resets all changes to the "concealedkan" edge.
+func (m *CallMutation) ResetConcealedkan() {
+	m.concealedkan = nil
+	m.clearedconcealedkan = false
+}
+
+// SetMeldedkanID sets the "meldedkan" edge to the MeldedKan entity by id.
+func (m *CallMutation) SetMeldedkanID(id uuid.UUID) {
+	m.meldedkan = &id
+}
+
+// ClearMeldedkan clears the "meldedkan" edge to the MeldedKan entity.
+func (m *CallMutation) ClearMeldedkan() {
+	m.clearedmeldedkan = true
+}
+
+// MeldedkanCleared reports if the "meldedkan" edge to the MeldedKan entity was cleared.
+func (m *CallMutation) MeldedkanCleared() bool {
+	return m.clearedmeldedkan
+}
+
+// MeldedkanID returns the "meldedkan" edge ID in the mutation.
+func (m *CallMutation) MeldedkanID() (id uuid.UUID, exists bool) {
+	if m.meldedkan != nil {
+		return *m.meldedkan, true
+	}
+	return
+}
+
+// MeldedkanIDs returns the "meldedkan" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// MeldedkanID instead. It exists only for internal usage by the builders.
+func (m *CallMutation) MeldedkanIDs() (ids []uuid.UUID) {
+	if id := m.meldedkan; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetMeldedkan resets all changes to the "meldedkan" edge.
+func (m *CallMutation) ResetMeldedkan() {
+	m.meldedkan = nil
+	m.clearedmeldedkan = false
+}
+
+// SetPonID sets the "pon" edge to the Pon entity by id.
+func (m *CallMutation) SetPonID(id uuid.UUID) {
+	m.pon = &id
+}
+
+// ClearPon clears the "pon" edge to the Pon entity.
+func (m *CallMutation) ClearPon() {
+	m.clearedpon = true
+}
+
+// PonCleared reports if the "pon" edge to the Pon entity was cleared.
+func (m *CallMutation) PonCleared() bool {
+	return m.clearedpon
+}
+
+// PonID returns the "pon" edge ID in the mutation.
+func (m *CallMutation) PonID() (id uuid.UUID, exists bool) {
+	if m.pon != nil {
+		return *m.pon, true
+	}
+	return
+}
+
+// PonIDs returns the "pon" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// PonID instead. It exists only for internal usage by the builders.
+func (m *CallMutation) PonIDs() (ids []uuid.UUID) {
+	if id := m.pon; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetPon resets all changes to the "pon" edge.
+func (m *CallMutation) ResetPon() {
+	m.pon = nil
+	m.clearedpon = false
 }
 
 // Where appends a list predicates to the CallMutation builder.
@@ -265,19 +570,70 @@ func (m *CallMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *CallMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 7)
+	if m.event != nil {
+		edges = append(edges, call.EdgeEvent)
+	}
+	if m.discard != nil {
+		edges = append(edges, call.EdgeDiscard)
+	}
+	if m.chii != nil {
+		edges = append(edges, call.EdgeChii)
+	}
+	if m.chakan != nil {
+		edges = append(edges, call.EdgeChakan)
+	}
+	if m.concealedkan != nil {
+		edges = append(edges, call.EdgeConcealedkan)
+	}
+	if m.meldedkan != nil {
+		edges = append(edges, call.EdgeMeldedkan)
+	}
+	if m.pon != nil {
+		edges = append(edges, call.EdgePon)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *CallMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case call.EdgeEvent:
+		if id := m.event; id != nil {
+			return []ent.Value{*id}
+		}
+	case call.EdgeDiscard:
+		if id := m.discard; id != nil {
+			return []ent.Value{*id}
+		}
+	case call.EdgeChii:
+		if id := m.chii; id != nil {
+			return []ent.Value{*id}
+		}
+	case call.EdgeChakan:
+		if id := m.chakan; id != nil {
+			return []ent.Value{*id}
+		}
+	case call.EdgeConcealedkan:
+		if id := m.concealedkan; id != nil {
+			return []ent.Value{*id}
+		}
+	case call.EdgeMeldedkan:
+		if id := m.meldedkan; id != nil {
+			return []ent.Value{*id}
+		}
+	case call.EdgePon:
+		if id := m.pon; id != nil {
+			return []ent.Value{*id}
+		}
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *CallMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 7)
 	return edges
 }
 
@@ -289,25 +645,108 @@ func (m *CallMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *CallMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 7)
+	if m.clearedevent {
+		edges = append(edges, call.EdgeEvent)
+	}
+	if m.cleareddiscard {
+		edges = append(edges, call.EdgeDiscard)
+	}
+	if m.clearedchii {
+		edges = append(edges, call.EdgeChii)
+	}
+	if m.clearedchakan {
+		edges = append(edges, call.EdgeChakan)
+	}
+	if m.clearedconcealedkan {
+		edges = append(edges, call.EdgeConcealedkan)
+	}
+	if m.clearedmeldedkan {
+		edges = append(edges, call.EdgeMeldedkan)
+	}
+	if m.clearedpon {
+		edges = append(edges, call.EdgePon)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *CallMutation) EdgeCleared(name string) bool {
+	switch name {
+	case call.EdgeEvent:
+		return m.clearedevent
+	case call.EdgeDiscard:
+		return m.cleareddiscard
+	case call.EdgeChii:
+		return m.clearedchii
+	case call.EdgeChakan:
+		return m.clearedchakan
+	case call.EdgeConcealedkan:
+		return m.clearedconcealedkan
+	case call.EdgeMeldedkan:
+		return m.clearedmeldedkan
+	case call.EdgePon:
+		return m.clearedpon
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *CallMutation) ClearEdge(name string) error {
+	switch name {
+	case call.EdgeEvent:
+		m.ClearEvent()
+		return nil
+	case call.EdgeDiscard:
+		m.ClearDiscard()
+		return nil
+	case call.EdgeChii:
+		m.ClearChii()
+		return nil
+	case call.EdgeChakan:
+		m.ClearChakan()
+		return nil
+	case call.EdgeConcealedkan:
+		m.ClearConcealedkan()
+		return nil
+	case call.EdgeMeldedkan:
+		m.ClearMeldedkan()
+		return nil
+	case call.EdgePon:
+		m.ClearPon()
+		return nil
+	}
 	return fmt.Errorf("unknown Call unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *CallMutation) ResetEdge(name string) error {
+	switch name {
+	case call.EdgeEvent:
+		m.ResetEvent()
+		return nil
+	case call.EdgeDiscard:
+		m.ResetDiscard()
+		return nil
+	case call.EdgeChii:
+		m.ResetChii()
+		return nil
+	case call.EdgeChakan:
+		m.ResetChakan()
+		return nil
+	case call.EdgeConcealedkan:
+		m.ResetConcealedkan()
+		return nil
+	case call.EdgeMeldedkan:
+		m.ResetMeldedkan()
+		return nil
+	case call.EdgePon:
+		m.ResetPon()
+		return nil
+	}
 	return fmt.Errorf("unknown Call edge %s", name)
 }
 
@@ -316,8 +755,10 @@ type ChakanMutation struct {
 	config
 	op            Op
 	typ           string
-	id            *int
+	id            *uuid.UUID
 	clearedFields map[string]struct{}
+	call          *uuid.UUID
+	clearedcall   bool
 	done          bool
 	oldValue      func(context.Context) (*Chakan, error)
 	predicates    []predicate.Chakan
@@ -343,7 +784,7 @@ func newChakanMutation(c config, op Op, opts ...chakanOption) *ChakanMutation {
 }
 
 // withChakanID sets the ID field of the mutation.
-func withChakanID(id int) chakanOption {
+func withChakanID(id uuid.UUID) chakanOption {
 	return func(m *ChakanMutation) {
 		var (
 			err   error
@@ -393,9 +834,15 @@ func (m ChakanMutation) Tx() (*Tx, error) {
 	return tx, nil
 }
 
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of Chakan entities.
+func (m *ChakanMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
 // ID returns the ID value in the mutation. Note that the ID is only available
 // if it was provided to the builder or after it was returned from the database.
-func (m *ChakanMutation) ID() (id int, exists bool) {
+func (m *ChakanMutation) ID() (id uuid.UUID, exists bool) {
 	if m.id == nil {
 		return
 	}
@@ -406,12 +853,12 @@ func (m *ChakanMutation) ID() (id int, exists bool) {
 // That means, if the mutation is applied within a transaction with an isolation level such
 // as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
 // or updated by the mutation.
-func (m *ChakanMutation) IDs(ctx context.Context) ([]int, error) {
+func (m *ChakanMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	switch {
 	case m.op.Is(OpUpdateOne | OpDeleteOne):
 		id, exists := m.ID()
 		if exists {
-			return []int{id}, nil
+			return []uuid.UUID{id}, nil
 		}
 		fallthrough
 	case m.op.Is(OpUpdate | OpDelete):
@@ -419,6 +866,45 @@ func (m *ChakanMutation) IDs(ctx context.Context) ([]int, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetCallID sets the "call" edge to the Call entity by id.
+func (m *ChakanMutation) SetCallID(id uuid.UUID) {
+	m.call = &id
+}
+
+// ClearCall clears the "call" edge to the Call entity.
+func (m *ChakanMutation) ClearCall() {
+	m.clearedcall = true
+}
+
+// CallCleared reports if the "call" edge to the Call entity was cleared.
+func (m *ChakanMutation) CallCleared() bool {
+	return m.clearedcall
+}
+
+// CallID returns the "call" edge ID in the mutation.
+func (m *ChakanMutation) CallID() (id uuid.UUID, exists bool) {
+	if m.call != nil {
+		return *m.call, true
+	}
+	return
+}
+
+// CallIDs returns the "call" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// CallID instead. It exists only for internal usage by the builders.
+func (m *ChakanMutation) CallIDs() (ids []uuid.UUID) {
+	if id := m.call; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetCall resets all changes to the "call" edge.
+func (m *ChakanMutation) ResetCall() {
+	m.call = nil
+	m.clearedcall = false
 }
 
 // Where appends a list predicates to the ChakanMutation builder.
@@ -514,19 +1000,28 @@ func (m *ChakanMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ChakanMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.call != nil {
+		edges = append(edges, chakan.EdgeCall)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *ChakanMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case chakan.EdgeCall:
+		if id := m.call; id != nil {
+			return []ent.Value{*id}
+		}
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ChakanMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
 	return edges
 }
 
@@ -538,25 +1033,42 @@ func (m *ChakanMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ChakanMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.clearedcall {
+		edges = append(edges, chakan.EdgeCall)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *ChakanMutation) EdgeCleared(name string) bool {
+	switch name {
+	case chakan.EdgeCall:
+		return m.clearedcall
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *ChakanMutation) ClearEdge(name string) error {
+	switch name {
+	case chakan.EdgeCall:
+		m.ClearCall()
+		return nil
+	}
 	return fmt.Errorf("unknown Chakan unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *ChakanMutation) ResetEdge(name string) error {
+	switch name {
+	case chakan.EdgeCall:
+		m.ResetCall()
+		return nil
+	}
 	return fmt.Errorf("unknown Chakan edge %s", name)
 }
 
@@ -565,8 +1077,10 @@ type ChiiMutation struct {
 	config
 	op            Op
 	typ           string
-	id            *int
+	id            *uuid.UUID
 	clearedFields map[string]struct{}
+	call          *uuid.UUID
+	clearedcall   bool
 	done          bool
 	oldValue      func(context.Context) (*Chii, error)
 	predicates    []predicate.Chii
@@ -592,7 +1106,7 @@ func newChiiMutation(c config, op Op, opts ...chiiOption) *ChiiMutation {
 }
 
 // withChiiID sets the ID field of the mutation.
-func withChiiID(id int) chiiOption {
+func withChiiID(id uuid.UUID) chiiOption {
 	return func(m *ChiiMutation) {
 		var (
 			err   error
@@ -642,9 +1156,15 @@ func (m ChiiMutation) Tx() (*Tx, error) {
 	return tx, nil
 }
 
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of Chii entities.
+func (m *ChiiMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
 // ID returns the ID value in the mutation. Note that the ID is only available
 // if it was provided to the builder or after it was returned from the database.
-func (m *ChiiMutation) ID() (id int, exists bool) {
+func (m *ChiiMutation) ID() (id uuid.UUID, exists bool) {
 	if m.id == nil {
 		return
 	}
@@ -655,12 +1175,12 @@ func (m *ChiiMutation) ID() (id int, exists bool) {
 // That means, if the mutation is applied within a transaction with an isolation level such
 // as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
 // or updated by the mutation.
-func (m *ChiiMutation) IDs(ctx context.Context) ([]int, error) {
+func (m *ChiiMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	switch {
 	case m.op.Is(OpUpdateOne | OpDeleteOne):
 		id, exists := m.ID()
 		if exists {
-			return []int{id}, nil
+			return []uuid.UUID{id}, nil
 		}
 		fallthrough
 	case m.op.Is(OpUpdate | OpDelete):
@@ -668,6 +1188,45 @@ func (m *ChiiMutation) IDs(ctx context.Context) ([]int, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetCallID sets the "call" edge to the Call entity by id.
+func (m *ChiiMutation) SetCallID(id uuid.UUID) {
+	m.call = &id
+}
+
+// ClearCall clears the "call" edge to the Call entity.
+func (m *ChiiMutation) ClearCall() {
+	m.clearedcall = true
+}
+
+// CallCleared reports if the "call" edge to the Call entity was cleared.
+func (m *ChiiMutation) CallCleared() bool {
+	return m.clearedcall
+}
+
+// CallID returns the "call" edge ID in the mutation.
+func (m *ChiiMutation) CallID() (id uuid.UUID, exists bool) {
+	if m.call != nil {
+		return *m.call, true
+	}
+	return
+}
+
+// CallIDs returns the "call" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// CallID instead. It exists only for internal usage by the builders.
+func (m *ChiiMutation) CallIDs() (ids []uuid.UUID) {
+	if id := m.call; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetCall resets all changes to the "call" edge.
+func (m *ChiiMutation) ResetCall() {
+	m.call = nil
+	m.clearedcall = false
 }
 
 // Where appends a list predicates to the ChiiMutation builder.
@@ -763,19 +1322,28 @@ func (m *ChiiMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ChiiMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.call != nil {
+		edges = append(edges, chii.EdgeCall)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *ChiiMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case chii.EdgeCall:
+		if id := m.call; id != nil {
+			return []ent.Value{*id}
+		}
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ChiiMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
 	return edges
 }
 
@@ -787,25 +1355,42 @@ func (m *ChiiMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ChiiMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.clearedcall {
+		edges = append(edges, chii.EdgeCall)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *ChiiMutation) EdgeCleared(name string) bool {
+	switch name {
+	case chii.EdgeCall:
+		return m.clearedcall
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *ChiiMutation) ClearEdge(name string) error {
+	switch name {
+	case chii.EdgeCall:
+		m.ClearCall()
+		return nil
+	}
 	return fmt.Errorf("unknown Chii unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *ChiiMutation) ResetEdge(name string) error {
+	switch name {
+	case chii.EdgeCall:
+		m.ResetCall()
+		return nil
+	}
 	return fmt.Errorf("unknown Chii edge %s", name)
 }
 
@@ -1342,8 +1927,10 @@ type ConcealedKanMutation struct {
 	config
 	op            Op
 	typ           string
-	id            *int
+	id            *uuid.UUID
 	clearedFields map[string]struct{}
+	call          *uuid.UUID
+	clearedcall   bool
 	done          bool
 	oldValue      func(context.Context) (*ConcealedKan, error)
 	predicates    []predicate.ConcealedKan
@@ -1369,7 +1956,7 @@ func newConcealedKanMutation(c config, op Op, opts ...concealedkanOption) *Conce
 }
 
 // withConcealedKanID sets the ID field of the mutation.
-func withConcealedKanID(id int) concealedkanOption {
+func withConcealedKanID(id uuid.UUID) concealedkanOption {
 	return func(m *ConcealedKanMutation) {
 		var (
 			err   error
@@ -1419,9 +2006,15 @@ func (m ConcealedKanMutation) Tx() (*Tx, error) {
 	return tx, nil
 }
 
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of ConcealedKan entities.
+func (m *ConcealedKanMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
 // ID returns the ID value in the mutation. Note that the ID is only available
 // if it was provided to the builder or after it was returned from the database.
-func (m *ConcealedKanMutation) ID() (id int, exists bool) {
+func (m *ConcealedKanMutation) ID() (id uuid.UUID, exists bool) {
 	if m.id == nil {
 		return
 	}
@@ -1432,12 +2025,12 @@ func (m *ConcealedKanMutation) ID() (id int, exists bool) {
 // That means, if the mutation is applied within a transaction with an isolation level such
 // as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
 // or updated by the mutation.
-func (m *ConcealedKanMutation) IDs(ctx context.Context) ([]int, error) {
+func (m *ConcealedKanMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	switch {
 	case m.op.Is(OpUpdateOne | OpDeleteOne):
 		id, exists := m.ID()
 		if exists {
-			return []int{id}, nil
+			return []uuid.UUID{id}, nil
 		}
 		fallthrough
 	case m.op.Is(OpUpdate | OpDelete):
@@ -1445,6 +2038,45 @@ func (m *ConcealedKanMutation) IDs(ctx context.Context) ([]int, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetCallID sets the "call" edge to the Call entity by id.
+func (m *ConcealedKanMutation) SetCallID(id uuid.UUID) {
+	m.call = &id
+}
+
+// ClearCall clears the "call" edge to the Call entity.
+func (m *ConcealedKanMutation) ClearCall() {
+	m.clearedcall = true
+}
+
+// CallCleared reports if the "call" edge to the Call entity was cleared.
+func (m *ConcealedKanMutation) CallCleared() bool {
+	return m.clearedcall
+}
+
+// CallID returns the "call" edge ID in the mutation.
+func (m *ConcealedKanMutation) CallID() (id uuid.UUID, exists bool) {
+	if m.call != nil {
+		return *m.call, true
+	}
+	return
+}
+
+// CallIDs returns the "call" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// CallID instead. It exists only for internal usage by the builders.
+func (m *ConcealedKanMutation) CallIDs() (ids []uuid.UUID) {
+	if id := m.call; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetCall resets all changes to the "call" edge.
+func (m *ConcealedKanMutation) ResetCall() {
+	m.call = nil
+	m.clearedcall = false
 }
 
 // Where appends a list predicates to the ConcealedKanMutation builder.
@@ -1540,19 +2172,28 @@ func (m *ConcealedKanMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ConcealedKanMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.call != nil {
+		edges = append(edges, concealedkan.EdgeCall)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *ConcealedKanMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case concealedkan.EdgeCall:
+		if id := m.call; id != nil {
+			return []ent.Value{*id}
+		}
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ConcealedKanMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
 	return edges
 }
 
@@ -1564,25 +2205,42 @@ func (m *ConcealedKanMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ConcealedKanMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.clearedcall {
+		edges = append(edges, concealedkan.EdgeCall)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *ConcealedKanMutation) EdgeCleared(name string) bool {
+	switch name {
+	case concealedkan.EdgeCall:
+		return m.clearedcall
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *ConcealedKanMutation) ClearEdge(name string) error {
+	switch name {
+	case concealedkan.EdgeCall:
+		m.ClearCall()
+		return nil
+	}
 	return fmt.Errorf("unknown ConcealedKan unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *ConcealedKanMutation) ResetEdge(name string) error {
+	switch name {
+	case concealedkan.EdgeCall:
+		m.ResetCall()
+		return nil
+	}
 	return fmt.Errorf("unknown ConcealedKan edge %s", name)
 }
 
@@ -1996,16 +2654,460 @@ func (m *DanMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown Dan edge %s", name)
 }
 
-// DrawnMutation represents an operation that mutates the Drawn nodes in the graph.
-type DrawnMutation struct {
+// DiscardMutation represents an operation that mutates the Discard nodes in the graph.
+type DiscardMutation struct {
 	config
 	op            Op
 	typ           string
-	id            *int
+	id            *uuid.UUID
 	clearedFields map[string]struct{}
+	reach         *uuid.UUID
+	clearedreach  bool
+	call          *uuid.UUID
+	clearedcall   bool
+	draw          *uuid.UUID
+	cleareddraw   bool
 	done          bool
-	oldValue      func(context.Context) (*Drawn, error)
-	predicates    []predicate.Drawn
+	oldValue      func(context.Context) (*Discard, error)
+	predicates    []predicate.Discard
+}
+
+var _ ent.Mutation = (*DiscardMutation)(nil)
+
+// discardOption allows management of the mutation configuration using functional options.
+type discardOption func(*DiscardMutation)
+
+// newDiscardMutation creates new mutation for the Discard entity.
+func newDiscardMutation(c config, op Op, opts ...discardOption) *DiscardMutation {
+	m := &DiscardMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeDiscard,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withDiscardID sets the ID field of the mutation.
+func withDiscardID(id uuid.UUID) discardOption {
+	return func(m *DiscardMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *Discard
+		)
+		m.oldValue = func(ctx context.Context) (*Discard, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().Discard.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withDiscard sets the old Discard of the mutation.
+func withDiscard(node *Discard) discardOption {
+	return func(m *DiscardMutation) {
+		m.oldValue = func(context.Context) (*Discard, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m DiscardMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m DiscardMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of Discard entities.
+func (m *DiscardMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *DiscardMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *DiscardMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().Discard.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetReachID sets the "reach" edge to the Reach entity by id.
+func (m *DiscardMutation) SetReachID(id uuid.UUID) {
+	m.reach = &id
+}
+
+// ClearReach clears the "reach" edge to the Reach entity.
+func (m *DiscardMutation) ClearReach() {
+	m.clearedreach = true
+}
+
+// ReachCleared reports if the "reach" edge to the Reach entity was cleared.
+func (m *DiscardMutation) ReachCleared() bool {
+	return m.clearedreach
+}
+
+// ReachID returns the "reach" edge ID in the mutation.
+func (m *DiscardMutation) ReachID() (id uuid.UUID, exists bool) {
+	if m.reach != nil {
+		return *m.reach, true
+	}
+	return
+}
+
+// ReachIDs returns the "reach" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ReachID instead. It exists only for internal usage by the builders.
+func (m *DiscardMutation) ReachIDs() (ids []uuid.UUID) {
+	if id := m.reach; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetReach resets all changes to the "reach" edge.
+func (m *DiscardMutation) ResetReach() {
+	m.reach = nil
+	m.clearedreach = false
+}
+
+// SetCallID sets the "call" edge to the Call entity by id.
+func (m *DiscardMutation) SetCallID(id uuid.UUID) {
+	m.call = &id
+}
+
+// ClearCall clears the "call" edge to the Call entity.
+func (m *DiscardMutation) ClearCall() {
+	m.clearedcall = true
+}
+
+// CallCleared reports if the "call" edge to the Call entity was cleared.
+func (m *DiscardMutation) CallCleared() bool {
+	return m.clearedcall
+}
+
+// CallID returns the "call" edge ID in the mutation.
+func (m *DiscardMutation) CallID() (id uuid.UUID, exists bool) {
+	if m.call != nil {
+		return *m.call, true
+	}
+	return
+}
+
+// CallIDs returns the "call" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// CallID instead. It exists only for internal usage by the builders.
+func (m *DiscardMutation) CallIDs() (ids []uuid.UUID) {
+	if id := m.call; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetCall resets all changes to the "call" edge.
+func (m *DiscardMutation) ResetCall() {
+	m.call = nil
+	m.clearedcall = false
+}
+
+// SetDrawID sets the "draw" edge to the Drawn entity by id.
+func (m *DiscardMutation) SetDrawID(id uuid.UUID) {
+	m.draw = &id
+}
+
+// ClearDraw clears the "draw" edge to the Drawn entity.
+func (m *DiscardMutation) ClearDraw() {
+	m.cleareddraw = true
+}
+
+// DrawCleared reports if the "draw" edge to the Drawn entity was cleared.
+func (m *DiscardMutation) DrawCleared() bool {
+	return m.cleareddraw
+}
+
+// DrawID returns the "draw" edge ID in the mutation.
+func (m *DiscardMutation) DrawID() (id uuid.UUID, exists bool) {
+	if m.draw != nil {
+		return *m.draw, true
+	}
+	return
+}
+
+// DrawIDs returns the "draw" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// DrawID instead. It exists only for internal usage by the builders.
+func (m *DiscardMutation) DrawIDs() (ids []uuid.UUID) {
+	if id := m.draw; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetDraw resets all changes to the "draw" edge.
+func (m *DiscardMutation) ResetDraw() {
+	m.draw = nil
+	m.cleareddraw = false
+}
+
+// Where appends a list predicates to the DiscardMutation builder.
+func (m *DiscardMutation) Where(ps ...predicate.Discard) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// Op returns the operation name.
+func (m *DiscardMutation) Op() Op {
+	return m.op
+}
+
+// Type returns the node type of this mutation (Discard).
+func (m *DiscardMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *DiscardMutation) Fields() []string {
+	fields := make([]string, 0, 0)
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *DiscardMutation) Field(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *DiscardMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	return nil, fmt.Errorf("unknown Discard field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *DiscardMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown Discard field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *DiscardMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *DiscardMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *DiscardMutation) AddField(name string, value ent.Value) error {
+	return fmt.Errorf("unknown Discard numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *DiscardMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *DiscardMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *DiscardMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown Discard nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *DiscardMutation) ResetField(name string) error {
+	return fmt.Errorf("unknown Discard field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *DiscardMutation) AddedEdges() []string {
+	edges := make([]string, 0, 3)
+	if m.reach != nil {
+		edges = append(edges, discard.EdgeReach)
+	}
+	if m.call != nil {
+		edges = append(edges, discard.EdgeCall)
+	}
+	if m.draw != nil {
+		edges = append(edges, discard.EdgeDraw)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *DiscardMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case discard.EdgeReach:
+		if id := m.reach; id != nil {
+			return []ent.Value{*id}
+		}
+	case discard.EdgeCall:
+		if id := m.call; id != nil {
+			return []ent.Value{*id}
+		}
+	case discard.EdgeDraw:
+		if id := m.draw; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *DiscardMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 3)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *DiscardMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *DiscardMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 3)
+	if m.clearedreach {
+		edges = append(edges, discard.EdgeReach)
+	}
+	if m.clearedcall {
+		edges = append(edges, discard.EdgeCall)
+	}
+	if m.cleareddraw {
+		edges = append(edges, discard.EdgeDraw)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *DiscardMutation) EdgeCleared(name string) bool {
+	switch name {
+	case discard.EdgeReach:
+		return m.clearedreach
+	case discard.EdgeCall:
+		return m.clearedcall
+	case discard.EdgeDraw:
+		return m.cleareddraw
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *DiscardMutation) ClearEdge(name string) error {
+	switch name {
+	case discard.EdgeReach:
+		m.ClearReach()
+		return nil
+	case discard.EdgeCall:
+		m.ClearCall()
+		return nil
+	case discard.EdgeDraw:
+		m.ClearDraw()
+		return nil
+	}
+	return fmt.Errorf("unknown Discard unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *DiscardMutation) ResetEdge(name string) error {
+	switch name {
+	case discard.EdgeReach:
+		m.ResetReach()
+		return nil
+	case discard.EdgeCall:
+		m.ResetCall()
+		return nil
+	case discard.EdgeDraw:
+		m.ResetDraw()
+		return nil
+	}
+	return fmt.Errorf("unknown Discard edge %s", name)
+}
+
+// DrawnMutation represents an operation that mutates the Drawn nodes in the graph.
+type DrawnMutation struct {
+	config
+	op             Op
+	typ            string
+	id             *uuid.UUID
+	clearedFields  map[string]struct{}
+	event          *uuid.UUID
+	clearedevent   bool
+	discard        *uuid.UUID
+	cleareddiscard bool
+	done           bool
+	oldValue       func(context.Context) (*Drawn, error)
+	predicates     []predicate.Drawn
 }
 
 var _ ent.Mutation = (*DrawnMutation)(nil)
@@ -2028,7 +3130,7 @@ func newDrawnMutation(c config, op Op, opts ...drawnOption) *DrawnMutation {
 }
 
 // withDrawnID sets the ID field of the mutation.
-func withDrawnID(id int) drawnOption {
+func withDrawnID(id uuid.UUID) drawnOption {
 	return func(m *DrawnMutation) {
 		var (
 			err   error
@@ -2078,9 +3180,15 @@ func (m DrawnMutation) Tx() (*Tx, error) {
 	return tx, nil
 }
 
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of Drawn entities.
+func (m *DrawnMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
 // ID returns the ID value in the mutation. Note that the ID is only available
 // if it was provided to the builder or after it was returned from the database.
-func (m *DrawnMutation) ID() (id int, exists bool) {
+func (m *DrawnMutation) ID() (id uuid.UUID, exists bool) {
 	if m.id == nil {
 		return
 	}
@@ -2091,12 +3199,12 @@ func (m *DrawnMutation) ID() (id int, exists bool) {
 // That means, if the mutation is applied within a transaction with an isolation level such
 // as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
 // or updated by the mutation.
-func (m *DrawnMutation) IDs(ctx context.Context) ([]int, error) {
+func (m *DrawnMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	switch {
 	case m.op.Is(OpUpdateOne | OpDeleteOne):
 		id, exists := m.ID()
 		if exists {
-			return []int{id}, nil
+			return []uuid.UUID{id}, nil
 		}
 		fallthrough
 	case m.op.Is(OpUpdate | OpDelete):
@@ -2104,6 +3212,84 @@ func (m *DrawnMutation) IDs(ctx context.Context) ([]int, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetEventID sets the "event" edge to the Event entity by id.
+func (m *DrawnMutation) SetEventID(id uuid.UUID) {
+	m.event = &id
+}
+
+// ClearEvent clears the "event" edge to the Event entity.
+func (m *DrawnMutation) ClearEvent() {
+	m.clearedevent = true
+}
+
+// EventCleared reports if the "event" edge to the Event entity was cleared.
+func (m *DrawnMutation) EventCleared() bool {
+	return m.clearedevent
+}
+
+// EventID returns the "event" edge ID in the mutation.
+func (m *DrawnMutation) EventID() (id uuid.UUID, exists bool) {
+	if m.event != nil {
+		return *m.event, true
+	}
+	return
+}
+
+// EventIDs returns the "event" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// EventID instead. It exists only for internal usage by the builders.
+func (m *DrawnMutation) EventIDs() (ids []uuid.UUID) {
+	if id := m.event; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetEvent resets all changes to the "event" edge.
+func (m *DrawnMutation) ResetEvent() {
+	m.event = nil
+	m.clearedevent = false
+}
+
+// SetDiscardID sets the "discard" edge to the Discard entity by id.
+func (m *DrawnMutation) SetDiscardID(id uuid.UUID) {
+	m.discard = &id
+}
+
+// ClearDiscard clears the "discard" edge to the Discard entity.
+func (m *DrawnMutation) ClearDiscard() {
+	m.cleareddiscard = true
+}
+
+// DiscardCleared reports if the "discard" edge to the Discard entity was cleared.
+func (m *DrawnMutation) DiscardCleared() bool {
+	return m.cleareddiscard
+}
+
+// DiscardID returns the "discard" edge ID in the mutation.
+func (m *DrawnMutation) DiscardID() (id uuid.UUID, exists bool) {
+	if m.discard != nil {
+		return *m.discard, true
+	}
+	return
+}
+
+// DiscardIDs returns the "discard" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// DiscardID instead. It exists only for internal usage by the builders.
+func (m *DrawnMutation) DiscardIDs() (ids []uuid.UUID) {
+	if id := m.discard; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetDiscard resets all changes to the "discard" edge.
+func (m *DrawnMutation) ResetDiscard() {
+	m.discard = nil
+	m.cleareddiscard = false
 }
 
 // Where appends a list predicates to the DrawnMutation builder.
@@ -2199,19 +3385,35 @@ func (m *DrawnMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *DrawnMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 2)
+	if m.event != nil {
+		edges = append(edges, drawn.EdgeEvent)
+	}
+	if m.discard != nil {
+		edges = append(edges, drawn.EdgeDiscard)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *DrawnMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case drawn.EdgeEvent:
+		if id := m.event; id != nil {
+			return []ent.Value{*id}
+		}
+	case drawn.EdgeDiscard:
+		if id := m.discard; id != nil {
+			return []ent.Value{*id}
+		}
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *DrawnMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 2)
 	return edges
 }
 
@@ -2223,25 +3425,53 @@ func (m *DrawnMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *DrawnMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 2)
+	if m.clearedevent {
+		edges = append(edges, drawn.EdgeEvent)
+	}
+	if m.cleareddiscard {
+		edges = append(edges, drawn.EdgeDiscard)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *DrawnMutation) EdgeCleared(name string) bool {
+	switch name {
+	case drawn.EdgeEvent:
+		return m.clearedevent
+	case drawn.EdgeDiscard:
+		return m.cleareddiscard
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *DrawnMutation) ClearEdge(name string) error {
+	switch name {
+	case drawn.EdgeEvent:
+		m.ClearEvent()
+		return nil
+	case drawn.EdgeDiscard:
+		m.ClearDiscard()
+		return nil
+	}
 	return fmt.Errorf("unknown Drawn unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *DrawnMutation) ResetEdge(name string) error {
+	switch name {
+	case drawn.EdgeEvent:
+		m.ResetEvent()
+		return nil
+	case drawn.EdgeDiscard:
+		m.ResetDiscard()
+		return nil
+	}
 	return fmt.Errorf("unknown Drawn edge %s", name)
 }
 
@@ -2250,13 +3480,22 @@ type EventMutation struct {
 	config
 	op            Op
 	typ           string
-	id            *int
+	id            *uuid.UUID
 	clearedFields map[string]struct{}
 	turn          *uuid.UUID
 	clearedturn   bool
-	win           map[int]struct{}
-	removedwin    map[int]struct{}
+	win           map[uuid.UUID]struct{}
+	removedwin    map[uuid.UUID]struct{}
 	clearedwin    bool
+	call          map[uuid.UUID]struct{}
+	removedcall   map[uuid.UUID]struct{}
+	clearedcall   bool
+	draw          map[uuid.UUID]struct{}
+	removeddraw   map[uuid.UUID]struct{}
+	cleareddraw   bool
+	reach         map[uuid.UUID]struct{}
+	removedreach  map[uuid.UUID]struct{}
+	clearedreach  bool
 	done          bool
 	oldValue      func(context.Context) (*Event, error)
 	predicates    []predicate.Event
@@ -2282,7 +3521,7 @@ func newEventMutation(c config, op Op, opts ...eventOption) *EventMutation {
 }
 
 // withEventID sets the ID field of the mutation.
-func withEventID(id int) eventOption {
+func withEventID(id uuid.UUID) eventOption {
 	return func(m *EventMutation) {
 		var (
 			err   error
@@ -2332,9 +3571,15 @@ func (m EventMutation) Tx() (*Tx, error) {
 	return tx, nil
 }
 
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of Event entities.
+func (m *EventMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
 // ID returns the ID value in the mutation. Note that the ID is only available
 // if it was provided to the builder or after it was returned from the database.
-func (m *EventMutation) ID() (id int, exists bool) {
+func (m *EventMutation) ID() (id uuid.UUID, exists bool) {
 	if m.id == nil {
 		return
 	}
@@ -2345,12 +3590,12 @@ func (m *EventMutation) ID() (id int, exists bool) {
 // That means, if the mutation is applied within a transaction with an isolation level such
 // as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
 // or updated by the mutation.
-func (m *EventMutation) IDs(ctx context.Context) ([]int, error) {
+func (m *EventMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	switch {
 	case m.op.Is(OpUpdateOne | OpDeleteOne):
 		id, exists := m.ID()
 		if exists {
-			return []int{id}, nil
+			return []uuid.UUID{id}, nil
 		}
 		fallthrough
 	case m.op.Is(OpUpdate | OpDelete):
@@ -2400,9 +3645,9 @@ func (m *EventMutation) ResetTurn() {
 }
 
 // AddWinIDs adds the "win" edge to the Win entity by ids.
-func (m *EventMutation) AddWinIDs(ids ...int) {
+func (m *EventMutation) AddWinIDs(ids ...uuid.UUID) {
 	if m.win == nil {
-		m.win = make(map[int]struct{})
+		m.win = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
 		m.win[ids[i]] = struct{}{}
@@ -2420,9 +3665,9 @@ func (m *EventMutation) WinCleared() bool {
 }
 
 // RemoveWinIDs removes the "win" edge to the Win entity by IDs.
-func (m *EventMutation) RemoveWinIDs(ids ...int) {
+func (m *EventMutation) RemoveWinIDs(ids ...uuid.UUID) {
 	if m.removedwin == nil {
-		m.removedwin = make(map[int]struct{})
+		m.removedwin = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
 		delete(m.win, ids[i])
@@ -2431,7 +3676,7 @@ func (m *EventMutation) RemoveWinIDs(ids ...int) {
 }
 
 // RemovedWin returns the removed IDs of the "win" edge to the Win entity.
-func (m *EventMutation) RemovedWinIDs() (ids []int) {
+func (m *EventMutation) RemovedWinIDs() (ids []uuid.UUID) {
 	for id := range m.removedwin {
 		ids = append(ids, id)
 	}
@@ -2439,7 +3684,7 @@ func (m *EventMutation) RemovedWinIDs() (ids []int) {
 }
 
 // WinIDs returns the "win" edge IDs in the mutation.
-func (m *EventMutation) WinIDs() (ids []int) {
+func (m *EventMutation) WinIDs() (ids []uuid.UUID) {
 	for id := range m.win {
 		ids = append(ids, id)
 	}
@@ -2451,6 +3696,168 @@ func (m *EventMutation) ResetWin() {
 	m.win = nil
 	m.clearedwin = false
 	m.removedwin = nil
+}
+
+// AddCallIDs adds the "call" edge to the Call entity by ids.
+func (m *EventMutation) AddCallIDs(ids ...uuid.UUID) {
+	if m.call == nil {
+		m.call = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.call[ids[i]] = struct{}{}
+	}
+}
+
+// ClearCall clears the "call" edge to the Call entity.
+func (m *EventMutation) ClearCall() {
+	m.clearedcall = true
+}
+
+// CallCleared reports if the "call" edge to the Call entity was cleared.
+func (m *EventMutation) CallCleared() bool {
+	return m.clearedcall
+}
+
+// RemoveCallIDs removes the "call" edge to the Call entity by IDs.
+func (m *EventMutation) RemoveCallIDs(ids ...uuid.UUID) {
+	if m.removedcall == nil {
+		m.removedcall = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.call, ids[i])
+		m.removedcall[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedCall returns the removed IDs of the "call" edge to the Call entity.
+func (m *EventMutation) RemovedCallIDs() (ids []uuid.UUID) {
+	for id := range m.removedcall {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// CallIDs returns the "call" edge IDs in the mutation.
+func (m *EventMutation) CallIDs() (ids []uuid.UUID) {
+	for id := range m.call {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetCall resets all changes to the "call" edge.
+func (m *EventMutation) ResetCall() {
+	m.call = nil
+	m.clearedcall = false
+	m.removedcall = nil
+}
+
+// AddDrawIDs adds the "draw" edge to the Drawn entity by ids.
+func (m *EventMutation) AddDrawIDs(ids ...uuid.UUID) {
+	if m.draw == nil {
+		m.draw = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.draw[ids[i]] = struct{}{}
+	}
+}
+
+// ClearDraw clears the "draw" edge to the Drawn entity.
+func (m *EventMutation) ClearDraw() {
+	m.cleareddraw = true
+}
+
+// DrawCleared reports if the "draw" edge to the Drawn entity was cleared.
+func (m *EventMutation) DrawCleared() bool {
+	return m.cleareddraw
+}
+
+// RemoveDrawIDs removes the "draw" edge to the Drawn entity by IDs.
+func (m *EventMutation) RemoveDrawIDs(ids ...uuid.UUID) {
+	if m.removeddraw == nil {
+		m.removeddraw = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.draw, ids[i])
+		m.removeddraw[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedDraw returns the removed IDs of the "draw" edge to the Drawn entity.
+func (m *EventMutation) RemovedDrawIDs() (ids []uuid.UUID) {
+	for id := range m.removeddraw {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// DrawIDs returns the "draw" edge IDs in the mutation.
+func (m *EventMutation) DrawIDs() (ids []uuid.UUID) {
+	for id := range m.draw {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetDraw resets all changes to the "draw" edge.
+func (m *EventMutation) ResetDraw() {
+	m.draw = nil
+	m.cleareddraw = false
+	m.removeddraw = nil
+}
+
+// AddReachIDs adds the "reach" edge to the Reach entity by ids.
+func (m *EventMutation) AddReachIDs(ids ...uuid.UUID) {
+	if m.reach == nil {
+		m.reach = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.reach[ids[i]] = struct{}{}
+	}
+}
+
+// ClearReach clears the "reach" edge to the Reach entity.
+func (m *EventMutation) ClearReach() {
+	m.clearedreach = true
+}
+
+// ReachCleared reports if the "reach" edge to the Reach entity was cleared.
+func (m *EventMutation) ReachCleared() bool {
+	return m.clearedreach
+}
+
+// RemoveReachIDs removes the "reach" edge to the Reach entity by IDs.
+func (m *EventMutation) RemoveReachIDs(ids ...uuid.UUID) {
+	if m.removedreach == nil {
+		m.removedreach = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.reach, ids[i])
+		m.removedreach[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedReach returns the removed IDs of the "reach" edge to the Reach entity.
+func (m *EventMutation) RemovedReachIDs() (ids []uuid.UUID) {
+	for id := range m.removedreach {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ReachIDs returns the "reach" edge IDs in the mutation.
+func (m *EventMutation) ReachIDs() (ids []uuid.UUID) {
+	for id := range m.reach {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetReach resets all changes to the "reach" edge.
+func (m *EventMutation) ResetReach() {
+	m.reach = nil
+	m.clearedreach = false
+	m.removedreach = nil
 }
 
 // Where appends a list predicates to the EventMutation builder.
@@ -2546,12 +3953,21 @@ func (m *EventMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *EventMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 5)
 	if m.turn != nil {
 		edges = append(edges, event.EdgeTurn)
 	}
 	if m.win != nil {
 		edges = append(edges, event.EdgeWin)
+	}
+	if m.call != nil {
+		edges = append(edges, event.EdgeCall)
+	}
+	if m.draw != nil {
+		edges = append(edges, event.EdgeDraw)
+	}
+	if m.reach != nil {
+		edges = append(edges, event.EdgeReach)
 	}
 	return edges
 }
@@ -2570,15 +3986,42 @@ func (m *EventMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case event.EdgeCall:
+		ids := make([]ent.Value, 0, len(m.call))
+		for id := range m.call {
+			ids = append(ids, id)
+		}
+		return ids
+	case event.EdgeDraw:
+		ids := make([]ent.Value, 0, len(m.draw))
+		for id := range m.draw {
+			ids = append(ids, id)
+		}
+		return ids
+	case event.EdgeReach:
+		ids := make([]ent.Value, 0, len(m.reach))
+		for id := range m.reach {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *EventMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 5)
 	if m.removedwin != nil {
 		edges = append(edges, event.EdgeWin)
+	}
+	if m.removedcall != nil {
+		edges = append(edges, event.EdgeCall)
+	}
+	if m.removeddraw != nil {
+		edges = append(edges, event.EdgeDraw)
+	}
+	if m.removedreach != nil {
+		edges = append(edges, event.EdgeReach)
 	}
 	return edges
 }
@@ -2593,18 +4036,45 @@ func (m *EventMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case event.EdgeCall:
+		ids := make([]ent.Value, 0, len(m.removedcall))
+		for id := range m.removedcall {
+			ids = append(ids, id)
+		}
+		return ids
+	case event.EdgeDraw:
+		ids := make([]ent.Value, 0, len(m.removeddraw))
+		for id := range m.removeddraw {
+			ids = append(ids, id)
+		}
+		return ids
+	case event.EdgeReach:
+		ids := make([]ent.Value, 0, len(m.removedreach))
+		for id := range m.removedreach {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *EventMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 5)
 	if m.clearedturn {
 		edges = append(edges, event.EdgeTurn)
 	}
 	if m.clearedwin {
 		edges = append(edges, event.EdgeWin)
+	}
+	if m.clearedcall {
+		edges = append(edges, event.EdgeCall)
+	}
+	if m.cleareddraw {
+		edges = append(edges, event.EdgeDraw)
+	}
+	if m.clearedreach {
+		edges = append(edges, event.EdgeReach)
 	}
 	return edges
 }
@@ -2617,6 +4087,12 @@ func (m *EventMutation) EdgeCleared(name string) bool {
 		return m.clearedturn
 	case event.EdgeWin:
 		return m.clearedwin
+	case event.EdgeCall:
+		return m.clearedcall
+	case event.EdgeDraw:
+		return m.cleareddraw
+	case event.EdgeReach:
+		return m.clearedreach
 	}
 	return false
 }
@@ -2641,6 +4117,15 @@ func (m *EventMutation) ResetEdge(name string) error {
 		return nil
 	case event.EdgeWin:
 		m.ResetWin()
+		return nil
+	case event.EdgeCall:
+		m.ResetCall()
+		return nil
+	case event.EdgeDraw:
+		m.ResetDraw()
+		return nil
+	case event.EdgeReach:
+		m.ResetReach()
 		return nil
 	}
 	return fmt.Errorf("unknown Event edge %s", name)
@@ -3934,8 +5419,12 @@ type GamePlayerHandHaiMutation struct {
 	config
 	op            Op
 	typ           string
-	id            *int
+	id            *uuid.UUID
+	hais          *[]int
+	appendhais    []int
 	clearedFields map[string]struct{}
+	turn          *uuid.UUID
+	clearedturn   bool
 	done          bool
 	oldValue      func(context.Context) (*GamePlayerHandHai, error)
 	predicates    []predicate.GamePlayerHandHai
@@ -3961,7 +5450,7 @@ func newGamePlayerHandHaiMutation(c config, op Op, opts ...gameplayerhandhaiOpti
 }
 
 // withGamePlayerHandHaiID sets the ID field of the mutation.
-func withGamePlayerHandHaiID(id int) gameplayerhandhaiOption {
+func withGamePlayerHandHaiID(id uuid.UUID) gameplayerhandhaiOption {
 	return func(m *GamePlayerHandHaiMutation) {
 		var (
 			err   error
@@ -4011,9 +5500,15 @@ func (m GamePlayerHandHaiMutation) Tx() (*Tx, error) {
 	return tx, nil
 }
 
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of GamePlayerHandHai entities.
+func (m *GamePlayerHandHaiMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
 // ID returns the ID value in the mutation. Note that the ID is only available
 // if it was provided to the builder or after it was returned from the database.
-func (m *GamePlayerHandHaiMutation) ID() (id int, exists bool) {
+func (m *GamePlayerHandHaiMutation) ID() (id uuid.UUID, exists bool) {
 	if m.id == nil {
 		return
 	}
@@ -4024,12 +5519,12 @@ func (m *GamePlayerHandHaiMutation) ID() (id int, exists bool) {
 // That means, if the mutation is applied within a transaction with an isolation level such
 // as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
 // or updated by the mutation.
-func (m *GamePlayerHandHaiMutation) IDs(ctx context.Context) ([]int, error) {
+func (m *GamePlayerHandHaiMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	switch {
 	case m.op.Is(OpUpdateOne | OpDeleteOne):
 		id, exists := m.ID()
 		if exists {
-			return []int{id}, nil
+			return []uuid.UUID{id}, nil
 		}
 		fallthrough
 	case m.op.Is(OpUpdate | OpDelete):
@@ -4037,6 +5532,96 @@ func (m *GamePlayerHandHaiMutation) IDs(ctx context.Context) ([]int, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetHais sets the "hais" field.
+func (m *GamePlayerHandHaiMutation) SetHais(i []int) {
+	m.hais = &i
+	m.appendhais = nil
+}
+
+// Hais returns the value of the "hais" field in the mutation.
+func (m *GamePlayerHandHaiMutation) Hais() (r []int, exists bool) {
+	v := m.hais
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldHais returns the old "hais" field's value of the GamePlayerHandHai entity.
+// If the GamePlayerHandHai object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GamePlayerHandHaiMutation) OldHais(ctx context.Context) (v []int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldHais is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldHais requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldHais: %w", err)
+	}
+	return oldValue.Hais, nil
+}
+
+// AppendHais adds i to the "hais" field.
+func (m *GamePlayerHandHaiMutation) AppendHais(i []int) {
+	m.appendhais = append(m.appendhais, i...)
+}
+
+// AppendedHais returns the list of values that were appended to the "hais" field in this mutation.
+func (m *GamePlayerHandHaiMutation) AppendedHais() ([]int, bool) {
+	if len(m.appendhais) == 0 {
+		return nil, false
+	}
+	return m.appendhais, true
+}
+
+// ResetHais resets all changes to the "hais" field.
+func (m *GamePlayerHandHaiMutation) ResetHais() {
+	m.hais = nil
+	m.appendhais = nil
+}
+
+// SetTurnID sets the "turn" edge to the Turn entity by id.
+func (m *GamePlayerHandHaiMutation) SetTurnID(id uuid.UUID) {
+	m.turn = &id
+}
+
+// ClearTurn clears the "turn" edge to the Turn entity.
+func (m *GamePlayerHandHaiMutation) ClearTurn() {
+	m.clearedturn = true
+}
+
+// TurnCleared reports if the "turn" edge to the Turn entity was cleared.
+func (m *GamePlayerHandHaiMutation) TurnCleared() bool {
+	return m.clearedturn
+}
+
+// TurnID returns the "turn" edge ID in the mutation.
+func (m *GamePlayerHandHaiMutation) TurnID() (id uuid.UUID, exists bool) {
+	if m.turn != nil {
+		return *m.turn, true
+	}
+	return
+}
+
+// TurnIDs returns the "turn" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// TurnID instead. It exists only for internal usage by the builders.
+func (m *GamePlayerHandHaiMutation) TurnIDs() (ids []uuid.UUID) {
+	if id := m.turn; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetTurn resets all changes to the "turn" edge.
+func (m *GamePlayerHandHaiMutation) ResetTurn() {
+	m.turn = nil
+	m.clearedturn = false
 }
 
 // Where appends a list predicates to the GamePlayerHandHaiMutation builder.
@@ -4058,7 +5643,10 @@ func (m *GamePlayerHandHaiMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *GamePlayerHandHaiMutation) Fields() []string {
-	fields := make([]string, 0, 0)
+	fields := make([]string, 0, 1)
+	if m.hais != nil {
+		fields = append(fields, gameplayerhandhai.FieldHais)
+	}
 	return fields
 }
 
@@ -4066,6 +5654,10 @@ func (m *GamePlayerHandHaiMutation) Fields() []string {
 // return value indicates that this field was not set, or was not defined in the
 // schema.
 func (m *GamePlayerHandHaiMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case gameplayerhandhai.FieldHais:
+		return m.Hais()
+	}
 	return nil, false
 }
 
@@ -4073,6 +5665,10 @@ func (m *GamePlayerHandHaiMutation) Field(name string) (ent.Value, bool) {
 // returned if the mutation operation is not UpdateOne, or the query to the
 // database failed.
 func (m *GamePlayerHandHaiMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case gameplayerhandhai.FieldHais:
+		return m.OldHais(ctx)
+	}
 	return nil, fmt.Errorf("unknown GamePlayerHandHai field %s", name)
 }
 
@@ -4081,6 +5677,13 @@ func (m *GamePlayerHandHaiMutation) OldField(ctx context.Context, name string) (
 // type.
 func (m *GamePlayerHandHaiMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case gameplayerhandhai.FieldHais:
+		v, ok := value.([]int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetHais(v)
+		return nil
 	}
 	return fmt.Errorf("unknown GamePlayerHandHai field %s", name)
 }
@@ -4102,6 +5705,8 @@ func (m *GamePlayerHandHaiMutation) AddedField(name string) (ent.Value, bool) {
 // the field is not defined in the schema, or if the type mismatched the field
 // type.
 func (m *GamePlayerHandHaiMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
 	return fmt.Errorf("unknown GamePlayerHandHai numeric field %s", name)
 }
 
@@ -4127,24 +5732,38 @@ func (m *GamePlayerHandHaiMutation) ClearField(name string) error {
 // ResetField resets all changes in the mutation for the field with the given name.
 // It returns an error if the field is not defined in the schema.
 func (m *GamePlayerHandHaiMutation) ResetField(name string) error {
+	switch name {
+	case gameplayerhandhai.FieldHais:
+		m.ResetHais()
+		return nil
+	}
 	return fmt.Errorf("unknown GamePlayerHandHai field %s", name)
 }
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *GamePlayerHandHaiMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.turn != nil {
+		edges = append(edges, gameplayerhandhai.EdgeTurn)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *GamePlayerHandHaiMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case gameplayerhandhai.EdgeTurn:
+		if id := m.turn; id != nil {
+			return []ent.Value{*id}
+		}
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *GamePlayerHandHaiMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
 	return edges
 }
 
@@ -4156,25 +5775,42 @@ func (m *GamePlayerHandHaiMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *GamePlayerHandHaiMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.clearedturn {
+		edges = append(edges, gameplayerhandhai.EdgeTurn)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *GamePlayerHandHaiMutation) EdgeCleared(name string) bool {
+	switch name {
+	case gameplayerhandhai.EdgeTurn:
+		return m.clearedturn
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *GamePlayerHandHaiMutation) ClearEdge(name string) error {
+	switch name {
+	case gameplayerhandhai.EdgeTurn:
+		m.ClearTurn()
+		return nil
+	}
 	return fmt.Errorf("unknown GamePlayerHandHai unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *GamePlayerHandHaiMutation) ResetEdge(name string) error {
+	switch name {
+	case gameplayerhandhai.EdgeTurn:
+		m.ResetTurn()
+		return nil
+	}
 	return fmt.Errorf("unknown GamePlayerHandHai edge %s", name)
 }
 
@@ -6392,8 +8028,10 @@ type MeldedKanMutation struct {
 	config
 	op            Op
 	typ           string
-	id            *int
+	id            *uuid.UUID
 	clearedFields map[string]struct{}
+	call          *uuid.UUID
+	clearedcall   bool
 	done          bool
 	oldValue      func(context.Context) (*MeldedKan, error)
 	predicates    []predicate.MeldedKan
@@ -6419,7 +8057,7 @@ func newMeldedKanMutation(c config, op Op, opts ...meldedkanOption) *MeldedKanMu
 }
 
 // withMeldedKanID sets the ID field of the mutation.
-func withMeldedKanID(id int) meldedkanOption {
+func withMeldedKanID(id uuid.UUID) meldedkanOption {
 	return func(m *MeldedKanMutation) {
 		var (
 			err   error
@@ -6469,9 +8107,15 @@ func (m MeldedKanMutation) Tx() (*Tx, error) {
 	return tx, nil
 }
 
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of MeldedKan entities.
+func (m *MeldedKanMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
 // ID returns the ID value in the mutation. Note that the ID is only available
 // if it was provided to the builder or after it was returned from the database.
-func (m *MeldedKanMutation) ID() (id int, exists bool) {
+func (m *MeldedKanMutation) ID() (id uuid.UUID, exists bool) {
 	if m.id == nil {
 		return
 	}
@@ -6482,12 +8126,12 @@ func (m *MeldedKanMutation) ID() (id int, exists bool) {
 // That means, if the mutation is applied within a transaction with an isolation level such
 // as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
 // or updated by the mutation.
-func (m *MeldedKanMutation) IDs(ctx context.Context) ([]int, error) {
+func (m *MeldedKanMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	switch {
 	case m.op.Is(OpUpdateOne | OpDeleteOne):
 		id, exists := m.ID()
 		if exists {
-			return []int{id}, nil
+			return []uuid.UUID{id}, nil
 		}
 		fallthrough
 	case m.op.Is(OpUpdate | OpDelete):
@@ -6495,6 +8139,45 @@ func (m *MeldedKanMutation) IDs(ctx context.Context) ([]int, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetCallID sets the "call" edge to the Call entity by id.
+func (m *MeldedKanMutation) SetCallID(id uuid.UUID) {
+	m.call = &id
+}
+
+// ClearCall clears the "call" edge to the Call entity.
+func (m *MeldedKanMutation) ClearCall() {
+	m.clearedcall = true
+}
+
+// CallCleared reports if the "call" edge to the Call entity was cleared.
+func (m *MeldedKanMutation) CallCleared() bool {
+	return m.clearedcall
+}
+
+// CallID returns the "call" edge ID in the mutation.
+func (m *MeldedKanMutation) CallID() (id uuid.UUID, exists bool) {
+	if m.call != nil {
+		return *m.call, true
+	}
+	return
+}
+
+// CallIDs returns the "call" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// CallID instead. It exists only for internal usage by the builders.
+func (m *MeldedKanMutation) CallIDs() (ids []uuid.UUID) {
+	if id := m.call; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetCall resets all changes to the "call" edge.
+func (m *MeldedKanMutation) ResetCall() {
+	m.call = nil
+	m.clearedcall = false
 }
 
 // Where appends a list predicates to the MeldedKanMutation builder.
@@ -6590,19 +8273,28 @@ func (m *MeldedKanMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *MeldedKanMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.call != nil {
+		edges = append(edges, meldedkan.EdgeCall)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *MeldedKanMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case meldedkan.EdgeCall:
+		if id := m.call; id != nil {
+			return []ent.Value{*id}
+		}
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *MeldedKanMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
 	return edges
 }
 
@@ -6614,25 +8306,42 @@ func (m *MeldedKanMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *MeldedKanMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.clearedcall {
+		edges = append(edges, meldedkan.EdgeCall)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *MeldedKanMutation) EdgeCleared(name string) bool {
+	switch name {
+	case meldedkan.EdgeCall:
+		return m.clearedcall
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *MeldedKanMutation) ClearEdge(name string) error {
+	switch name {
+	case meldedkan.EdgeCall:
+		m.ClearCall()
+		return nil
+	}
 	return fmt.Errorf("unknown MeldedKan unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *MeldedKanMutation) ResetEdge(name string) error {
+	switch name {
+	case meldedkan.EdgeCall:
+		m.ResetCall()
+		return nil
+	}
 	return fmt.Errorf("unknown MeldedKan edge %s", name)
 }
 
@@ -7105,8 +8814,10 @@ type PonMutation struct {
 	config
 	op            Op
 	typ           string
-	id            *int
+	id            *uuid.UUID
 	clearedFields map[string]struct{}
+	call          *uuid.UUID
+	clearedcall   bool
 	done          bool
 	oldValue      func(context.Context) (*Pon, error)
 	predicates    []predicate.Pon
@@ -7132,7 +8843,7 @@ func newPonMutation(c config, op Op, opts ...ponOption) *PonMutation {
 }
 
 // withPonID sets the ID field of the mutation.
-func withPonID(id int) ponOption {
+func withPonID(id uuid.UUID) ponOption {
 	return func(m *PonMutation) {
 		var (
 			err   error
@@ -7182,9 +8893,15 @@ func (m PonMutation) Tx() (*Tx, error) {
 	return tx, nil
 }
 
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of Pon entities.
+func (m *PonMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
 // ID returns the ID value in the mutation. Note that the ID is only available
 // if it was provided to the builder or after it was returned from the database.
-func (m *PonMutation) ID() (id int, exists bool) {
+func (m *PonMutation) ID() (id uuid.UUID, exists bool) {
 	if m.id == nil {
 		return
 	}
@@ -7195,12 +8912,12 @@ func (m *PonMutation) ID() (id int, exists bool) {
 // That means, if the mutation is applied within a transaction with an isolation level such
 // as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
 // or updated by the mutation.
-func (m *PonMutation) IDs(ctx context.Context) ([]int, error) {
+func (m *PonMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	switch {
 	case m.op.Is(OpUpdateOne | OpDeleteOne):
 		id, exists := m.ID()
 		if exists {
-			return []int{id}, nil
+			return []uuid.UUID{id}, nil
 		}
 		fallthrough
 	case m.op.Is(OpUpdate | OpDelete):
@@ -7208,6 +8925,45 @@ func (m *PonMutation) IDs(ctx context.Context) ([]int, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetCallID sets the "call" edge to the Call entity by id.
+func (m *PonMutation) SetCallID(id uuid.UUID) {
+	m.call = &id
+}
+
+// ClearCall clears the "call" edge to the Call entity.
+func (m *PonMutation) ClearCall() {
+	m.clearedcall = true
+}
+
+// CallCleared reports if the "call" edge to the Call entity was cleared.
+func (m *PonMutation) CallCleared() bool {
+	return m.clearedcall
+}
+
+// CallID returns the "call" edge ID in the mutation.
+func (m *PonMutation) CallID() (id uuid.UUID, exists bool) {
+	if m.call != nil {
+		return *m.call, true
+	}
+	return
+}
+
+// CallIDs returns the "call" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// CallID instead. It exists only for internal usage by the builders.
+func (m *PonMutation) CallIDs() (ids []uuid.UUID) {
+	if id := m.call; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetCall resets all changes to the "call" edge.
+func (m *PonMutation) ResetCall() {
+	m.call = nil
+	m.clearedcall = false
 }
 
 // Where appends a list predicates to the PonMutation builder.
@@ -7303,19 +9059,28 @@ func (m *PonMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *PonMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.call != nil {
+		edges = append(edges, pon.EdgeCall)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *PonMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case pon.EdgeCall:
+		if id := m.call; id != nil {
+			return []ent.Value{*id}
+		}
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *PonMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
 	return edges
 }
 
@@ -7327,26 +9092,424 @@ func (m *PonMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *PonMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.clearedcall {
+		edges = append(edges, pon.EdgeCall)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *PonMutation) EdgeCleared(name string) bool {
+	switch name {
+	case pon.EdgeCall:
+		return m.clearedcall
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *PonMutation) ClearEdge(name string) error {
+	switch name {
+	case pon.EdgeCall:
+		m.ClearCall()
+		return nil
+	}
 	return fmt.Errorf("unknown Pon unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *PonMutation) ResetEdge(name string) error {
+	switch name {
+	case pon.EdgeCall:
+		m.ResetCall()
+		return nil
+	}
 	return fmt.Errorf("unknown Pon edge %s", name)
+}
+
+// ReachMutation represents an operation that mutates the Reach nodes in the graph.
+type ReachMutation struct {
+	config
+	op             Op
+	typ            string
+	id             *uuid.UUID
+	clearedFields  map[string]struct{}
+	event          *uuid.UUID
+	clearedevent   bool
+	discard        *uuid.UUID
+	cleareddiscard bool
+	done           bool
+	oldValue       func(context.Context) (*Reach, error)
+	predicates     []predicate.Reach
+}
+
+var _ ent.Mutation = (*ReachMutation)(nil)
+
+// reachOption allows management of the mutation configuration using functional options.
+type reachOption func(*ReachMutation)
+
+// newReachMutation creates new mutation for the Reach entity.
+func newReachMutation(c config, op Op, opts ...reachOption) *ReachMutation {
+	m := &ReachMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeReach,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withReachID sets the ID field of the mutation.
+func withReachID(id uuid.UUID) reachOption {
+	return func(m *ReachMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *Reach
+		)
+		m.oldValue = func(ctx context.Context) (*Reach, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().Reach.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withReach sets the old Reach of the mutation.
+func withReach(node *Reach) reachOption {
+	return func(m *ReachMutation) {
+		m.oldValue = func(context.Context) (*Reach, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ReachMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ReachMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of Reach entities.
+func (m *ReachMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ReachMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ReachMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().Reach.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetEventID sets the "event" edge to the Event entity by id.
+func (m *ReachMutation) SetEventID(id uuid.UUID) {
+	m.event = &id
+}
+
+// ClearEvent clears the "event" edge to the Event entity.
+func (m *ReachMutation) ClearEvent() {
+	m.clearedevent = true
+}
+
+// EventCleared reports if the "event" edge to the Event entity was cleared.
+func (m *ReachMutation) EventCleared() bool {
+	return m.clearedevent
+}
+
+// EventID returns the "event" edge ID in the mutation.
+func (m *ReachMutation) EventID() (id uuid.UUID, exists bool) {
+	if m.event != nil {
+		return *m.event, true
+	}
+	return
+}
+
+// EventIDs returns the "event" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// EventID instead. It exists only for internal usage by the builders.
+func (m *ReachMutation) EventIDs() (ids []uuid.UUID) {
+	if id := m.event; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetEvent resets all changes to the "event" edge.
+func (m *ReachMutation) ResetEvent() {
+	m.event = nil
+	m.clearedevent = false
+}
+
+// SetDiscardID sets the "discard" edge to the Discard entity by id.
+func (m *ReachMutation) SetDiscardID(id uuid.UUID) {
+	m.discard = &id
+}
+
+// ClearDiscard clears the "discard" edge to the Discard entity.
+func (m *ReachMutation) ClearDiscard() {
+	m.cleareddiscard = true
+}
+
+// DiscardCleared reports if the "discard" edge to the Discard entity was cleared.
+func (m *ReachMutation) DiscardCleared() bool {
+	return m.cleareddiscard
+}
+
+// DiscardID returns the "discard" edge ID in the mutation.
+func (m *ReachMutation) DiscardID() (id uuid.UUID, exists bool) {
+	if m.discard != nil {
+		return *m.discard, true
+	}
+	return
+}
+
+// DiscardIDs returns the "discard" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// DiscardID instead. It exists only for internal usage by the builders.
+func (m *ReachMutation) DiscardIDs() (ids []uuid.UUID) {
+	if id := m.discard; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetDiscard resets all changes to the "discard" edge.
+func (m *ReachMutation) ResetDiscard() {
+	m.discard = nil
+	m.cleareddiscard = false
+}
+
+// Where appends a list predicates to the ReachMutation builder.
+func (m *ReachMutation) Where(ps ...predicate.Reach) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// Op returns the operation name.
+func (m *ReachMutation) Op() Op {
+	return m.op
+}
+
+// Type returns the node type of this mutation (Reach).
+func (m *ReachMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ReachMutation) Fields() []string {
+	fields := make([]string, 0, 0)
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ReachMutation) Field(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ReachMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	return nil, fmt.Errorf("unknown Reach field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ReachMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown Reach field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ReachMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ReachMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ReachMutation) AddField(name string, value ent.Value) error {
+	return fmt.Errorf("unknown Reach numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ReachMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ReachMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ReachMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown Reach nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ReachMutation) ResetField(name string) error {
+	return fmt.Errorf("unknown Reach field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ReachMutation) AddedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.event != nil {
+		edges = append(edges, reach.EdgeEvent)
+	}
+	if m.discard != nil {
+		edges = append(edges, reach.EdgeDiscard)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ReachMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case reach.EdgeEvent:
+		if id := m.event; id != nil {
+			return []ent.Value{*id}
+		}
+	case reach.EdgeDiscard:
+		if id := m.discard; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ReachMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 2)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ReachMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ReachMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.clearedevent {
+		edges = append(edges, reach.EdgeEvent)
+	}
+	if m.cleareddiscard {
+		edges = append(edges, reach.EdgeDiscard)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ReachMutation) EdgeCleared(name string) bool {
+	switch name {
+	case reach.EdgeEvent:
+		return m.clearedevent
+	case reach.EdgeDiscard:
+		return m.cleareddiscard
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ReachMutation) ClearEdge(name string) error {
+	switch name {
+	case reach.EdgeEvent:
+		m.ClearEvent()
+		return nil
+	case reach.EdgeDiscard:
+		m.ClearDiscard()
+		return nil
+	}
+	return fmt.Errorf("unknown Reach unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ReachMutation) ResetEdge(name string) error {
+	switch name {
+	case reach.EdgeEvent:
+		m.ResetEvent()
+		return nil
+	case reach.EdgeDiscard:
+		m.ResetDiscard()
+		return nil
+	}
+	return fmt.Errorf("unknown Reach edge %s", name)
 }
 
 // RoomMutation represents an operation that mutates the Room nodes in the graph.
@@ -8243,9 +10406,10 @@ type TurnMutation struct {
 	game_player_points        map[uuid.UUID]struct{}
 	removedgame_player_points map[uuid.UUID]struct{}
 	clearedgame_player_points bool
-	event                     map[int]struct{}
-	removedevent              map[int]struct{}
+	event                     *uuid.UUID
 	clearedevent              bool
+	gameplayerhandhai         *uuid.UUID
+	clearedgameplayerhandhai  bool
 	done                      bool
 	oldValue                  func(context.Context) (*Turn, error)
 	predicates                []predicate.Turn
@@ -8519,14 +10683,9 @@ func (m *TurnMutation) ResetGamePlayerPoints() {
 	m.removedgame_player_points = nil
 }
 
-// AddEventIDs adds the "event" edge to the Event entity by ids.
-func (m *TurnMutation) AddEventIDs(ids ...int) {
-	if m.event == nil {
-		m.event = make(map[int]struct{})
-	}
-	for i := range ids {
-		m.event[ids[i]] = struct{}{}
-	}
+// SetEventID sets the "event" edge to the Event entity by id.
+func (m *TurnMutation) SetEventID(id uuid.UUID) {
+	m.event = &id
 }
 
 // ClearEvent clears the "event" edge to the Event entity.
@@ -8539,29 +10698,20 @@ func (m *TurnMutation) EventCleared() bool {
 	return m.clearedevent
 }
 
-// RemoveEventIDs removes the "event" edge to the Event entity by IDs.
-func (m *TurnMutation) RemoveEventIDs(ids ...int) {
-	if m.removedevent == nil {
-		m.removedevent = make(map[int]struct{})
-	}
-	for i := range ids {
-		delete(m.event, ids[i])
-		m.removedevent[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedEvent returns the removed IDs of the "event" edge to the Event entity.
-func (m *TurnMutation) RemovedEventIDs() (ids []int) {
-	for id := range m.removedevent {
-		ids = append(ids, id)
+// EventID returns the "event" edge ID in the mutation.
+func (m *TurnMutation) EventID() (id uuid.UUID, exists bool) {
+	if m.event != nil {
+		return *m.event, true
 	}
 	return
 }
 
 // EventIDs returns the "event" edge IDs in the mutation.
-func (m *TurnMutation) EventIDs() (ids []int) {
-	for id := range m.event {
-		ids = append(ids, id)
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// EventID instead. It exists only for internal usage by the builders.
+func (m *TurnMutation) EventIDs() (ids []uuid.UUID) {
+	if id := m.event; id != nil {
+		ids = append(ids, *id)
 	}
 	return
 }
@@ -8570,7 +10720,45 @@ func (m *TurnMutation) EventIDs() (ids []int) {
 func (m *TurnMutation) ResetEvent() {
 	m.event = nil
 	m.clearedevent = false
-	m.removedevent = nil
+}
+
+// SetGameplayerhandhaiID sets the "gameplayerhandhai" edge to the GamePlayerHandHai entity by id.
+func (m *TurnMutation) SetGameplayerhandhaiID(id uuid.UUID) {
+	m.gameplayerhandhai = &id
+}
+
+// ClearGameplayerhandhai clears the "gameplayerhandhai" edge to the GamePlayerHandHai entity.
+func (m *TurnMutation) ClearGameplayerhandhai() {
+	m.clearedgameplayerhandhai = true
+}
+
+// GameplayerhandhaiCleared reports if the "gameplayerhandhai" edge to the GamePlayerHandHai entity was cleared.
+func (m *TurnMutation) GameplayerhandhaiCleared() bool {
+	return m.clearedgameplayerhandhai
+}
+
+// GameplayerhandhaiID returns the "gameplayerhandhai" edge ID in the mutation.
+func (m *TurnMutation) GameplayerhandhaiID() (id uuid.UUID, exists bool) {
+	if m.gameplayerhandhai != nil {
+		return *m.gameplayerhandhai, true
+	}
+	return
+}
+
+// GameplayerhandhaiIDs returns the "gameplayerhandhai" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// GameplayerhandhaiID instead. It exists only for internal usage by the builders.
+func (m *TurnMutation) GameplayerhandhaiIDs() (ids []uuid.UUID) {
+	if id := m.gameplayerhandhai; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetGameplayerhandhai resets all changes to the "gameplayerhandhai" edge.
+func (m *TurnMutation) ResetGameplayerhandhai() {
+	m.gameplayerhandhai = nil
+	m.clearedgameplayerhandhai = false
 }
 
 // Where appends a list predicates to the TurnMutation builder.
@@ -8706,7 +10894,7 @@ func (m *TurnMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *TurnMutation) AddedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.hands != nil {
 		edges = append(edges, turn.EdgeHands)
 	}
@@ -8715,6 +10903,9 @@ func (m *TurnMutation) AddedEdges() []string {
 	}
 	if m.event != nil {
 		edges = append(edges, turn.EdgeEvent)
+	}
+	if m.gameplayerhandhai != nil {
+		edges = append(edges, turn.EdgeGameplayerhandhai)
 	}
 	return edges
 }
@@ -8736,26 +10927,25 @@ func (m *TurnMutation) AddedIDs(name string) []ent.Value {
 		}
 		return ids
 	case turn.EdgeEvent:
-		ids := make([]ent.Value, 0, len(m.event))
-		for id := range m.event {
-			ids = append(ids, id)
+		if id := m.event; id != nil {
+			return []ent.Value{*id}
 		}
-		return ids
+	case turn.EdgeGameplayerhandhai:
+		if id := m.gameplayerhandhai; id != nil {
+			return []ent.Value{*id}
+		}
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *TurnMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.removedhands != nil {
 		edges = append(edges, turn.EdgeHands)
 	}
 	if m.removedgame_player_points != nil {
 		edges = append(edges, turn.EdgeGamePlayerPoints)
-	}
-	if m.removedevent != nil {
-		edges = append(edges, turn.EdgeEvent)
 	}
 	return edges
 }
@@ -8776,19 +10966,13 @@ func (m *TurnMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
-	case turn.EdgeEvent:
-		ids := make([]ent.Value, 0, len(m.removedevent))
-		for id := range m.removedevent {
-			ids = append(ids, id)
-		}
-		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *TurnMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.clearedhands {
 		edges = append(edges, turn.EdgeHands)
 	}
@@ -8797,6 +10981,9 @@ func (m *TurnMutation) ClearedEdges() []string {
 	}
 	if m.clearedevent {
 		edges = append(edges, turn.EdgeEvent)
+	}
+	if m.clearedgameplayerhandhai {
+		edges = append(edges, turn.EdgeGameplayerhandhai)
 	}
 	return edges
 }
@@ -8811,6 +10998,8 @@ func (m *TurnMutation) EdgeCleared(name string) bool {
 		return m.clearedgame_player_points
 	case turn.EdgeEvent:
 		return m.clearedevent
+	case turn.EdgeGameplayerhandhai:
+		return m.clearedgameplayerhandhai
 	}
 	return false
 }
@@ -8819,6 +11008,12 @@ func (m *TurnMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *TurnMutation) ClearEdge(name string) error {
 	switch name {
+	case turn.EdgeEvent:
+		m.ClearEvent()
+		return nil
+	case turn.EdgeGameplayerhandhai:
+		m.ClearGameplayerhandhai()
+		return nil
 	}
 	return fmt.Errorf("unknown Turn unique edge %s", name)
 }
@@ -8836,6 +11031,9 @@ func (m *TurnMutation) ResetEdge(name string) error {
 	case turn.EdgeEvent:
 		m.ResetEvent()
 		return nil
+	case turn.EdgeGameplayerhandhai:
+		m.ResetGameplayerhandhai()
+		return nil
 	}
 	return fmt.Errorf("unknown Turn edge %s", name)
 }
@@ -8845,9 +11043,9 @@ type WinMutation struct {
 	config
 	op            Op
 	typ           string
-	id            *int
+	id            *uuid.UUID
 	clearedFields map[string]struct{}
-	event         *int
+	event         *uuid.UUID
 	clearedevent  bool
 	done          bool
 	oldValue      func(context.Context) (*Win, error)
@@ -8874,7 +11072,7 @@ func newWinMutation(c config, op Op, opts ...winOption) *WinMutation {
 }
 
 // withWinID sets the ID field of the mutation.
-func withWinID(id int) winOption {
+func withWinID(id uuid.UUID) winOption {
 	return func(m *WinMutation) {
 		var (
 			err   error
@@ -8924,9 +11122,15 @@ func (m WinMutation) Tx() (*Tx, error) {
 	return tx, nil
 }
 
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of Win entities.
+func (m *WinMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
 // ID returns the ID value in the mutation. Note that the ID is only available
 // if it was provided to the builder or after it was returned from the database.
-func (m *WinMutation) ID() (id int, exists bool) {
+func (m *WinMutation) ID() (id uuid.UUID, exists bool) {
 	if m.id == nil {
 		return
 	}
@@ -8937,12 +11141,12 @@ func (m *WinMutation) ID() (id int, exists bool) {
 // That means, if the mutation is applied within a transaction with an isolation level such
 // as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
 // or updated by the mutation.
-func (m *WinMutation) IDs(ctx context.Context) ([]int, error) {
+func (m *WinMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	switch {
 	case m.op.Is(OpUpdateOne | OpDeleteOne):
 		id, exists := m.ID()
 		if exists {
-			return []int{id}, nil
+			return []uuid.UUID{id}, nil
 		}
 		fallthrough
 	case m.op.Is(OpUpdate | OpDelete):
@@ -8953,7 +11157,7 @@ func (m *WinMutation) IDs(ctx context.Context) ([]int, error) {
 }
 
 // SetEventID sets the "event" edge to the Event entity by id.
-func (m *WinMutation) SetEventID(id int) {
+func (m *WinMutation) SetEventID(id uuid.UUID) {
 	m.event = &id
 }
 
@@ -8968,7 +11172,7 @@ func (m *WinMutation) EventCleared() bool {
 }
 
 // EventID returns the "event" edge ID in the mutation.
-func (m *WinMutation) EventID() (id int, exists bool) {
+func (m *WinMutation) EventID() (id uuid.UUID, exists bool) {
 	if m.event != nil {
 		return *m.event, true
 	}
@@ -8978,7 +11182,7 @@ func (m *WinMutation) EventID() (id int, exists bool) {
 // EventIDs returns the "event" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
 // EventID instead. It exists only for internal usage by the builders.
-func (m *WinMutation) EventIDs() (ids []int) {
+func (m *WinMutation) EventIDs() (ids []uuid.UUID) {
 	if id := m.event; id != nil {
 		ids = append(ids, *id)
 	}

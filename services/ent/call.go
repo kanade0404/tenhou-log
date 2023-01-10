@@ -7,14 +7,144 @@ import (
 	"strings"
 
 	"entgo.io/ent/dialect/sql"
+	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/call"
+	"github.com/kanade0404/tenhou-log/services/ent/chakan"
+	"github.com/kanade0404/tenhou-log/services/ent/chii"
+	"github.com/kanade0404/tenhou-log/services/ent/concealedkan"
+	"github.com/kanade0404/tenhou-log/services/ent/discard"
+	"github.com/kanade0404/tenhou-log/services/ent/event"
+	"github.com/kanade0404/tenhou-log/services/ent/meldedkan"
+	"github.com/kanade0404/tenhou-log/services/ent/pon"
 )
 
 // Call is the model entity for the Call schema.
 type Call struct {
 	config
 	// ID of the ent.
-	ID int `json:"id,omitempty"`
+	ID uuid.UUID `json:"id,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the CallQuery when eager-loading is set.
+	Edges              CallEdges `json:"edges"`
+	chakan_call        *uuid.UUID
+	chii_call          *uuid.UUID
+	concealed_kan_call *uuid.UUID
+	discard_call       *uuid.UUID
+	event_call         *uuid.UUID
+	melded_kan_call    *uuid.UUID
+	pon_call           *uuid.UUID
+}
+
+// CallEdges holds the relations/edges for other nodes in the graph.
+type CallEdges struct {
+	// Event holds the value of the event edge.
+	Event *Event `json:"event,omitempty"`
+	// Discard holds the value of the discard edge.
+	Discard *Discard `json:"discard,omitempty"`
+	// Chii holds the value of the chii edge.
+	Chii *Chii `json:"chii,omitempty"`
+	// Chakan holds the value of the chakan edge.
+	Chakan *Chakan `json:"chakan,omitempty"`
+	// Concealedkan holds the value of the concealedkan edge.
+	Concealedkan *ConcealedKan `json:"concealedkan,omitempty"`
+	// Meldedkan holds the value of the meldedkan edge.
+	Meldedkan *MeldedKan `json:"meldedkan,omitempty"`
+	// Pon holds the value of the pon edge.
+	Pon *Pon `json:"pon,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [7]bool
+}
+
+// EventOrErr returns the Event value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e CallEdges) EventOrErr() (*Event, error) {
+	if e.loadedTypes[0] {
+		if e.Event == nil {
+			// Edge was loaded but was not found.
+			return nil, &NotFoundError{label: event.Label}
+		}
+		return e.Event, nil
+	}
+	return nil, &NotLoadedError{edge: "event"}
+}
+
+// DiscardOrErr returns the Discard value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e CallEdges) DiscardOrErr() (*Discard, error) {
+	if e.loadedTypes[1] {
+		if e.Discard == nil {
+			// Edge was loaded but was not found.
+			return nil, &NotFoundError{label: discard.Label}
+		}
+		return e.Discard, nil
+	}
+	return nil, &NotLoadedError{edge: "discard"}
+}
+
+// ChiiOrErr returns the Chii value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e CallEdges) ChiiOrErr() (*Chii, error) {
+	if e.loadedTypes[2] {
+		if e.Chii == nil {
+			// Edge was loaded but was not found.
+			return nil, &NotFoundError{label: chii.Label}
+		}
+		return e.Chii, nil
+	}
+	return nil, &NotLoadedError{edge: "chii"}
+}
+
+// ChakanOrErr returns the Chakan value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e CallEdges) ChakanOrErr() (*Chakan, error) {
+	if e.loadedTypes[3] {
+		if e.Chakan == nil {
+			// Edge was loaded but was not found.
+			return nil, &NotFoundError{label: chakan.Label}
+		}
+		return e.Chakan, nil
+	}
+	return nil, &NotLoadedError{edge: "chakan"}
+}
+
+// ConcealedkanOrErr returns the Concealedkan value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e CallEdges) ConcealedkanOrErr() (*ConcealedKan, error) {
+	if e.loadedTypes[4] {
+		if e.Concealedkan == nil {
+			// Edge was loaded but was not found.
+			return nil, &NotFoundError{label: concealedkan.Label}
+		}
+		return e.Concealedkan, nil
+	}
+	return nil, &NotLoadedError{edge: "concealedkan"}
+}
+
+// MeldedkanOrErr returns the Meldedkan value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e CallEdges) MeldedkanOrErr() (*MeldedKan, error) {
+	if e.loadedTypes[5] {
+		if e.Meldedkan == nil {
+			// Edge was loaded but was not found.
+			return nil, &NotFoundError{label: meldedkan.Label}
+		}
+		return e.Meldedkan, nil
+	}
+	return nil, &NotLoadedError{edge: "meldedkan"}
+}
+
+// PonOrErr returns the Pon value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e CallEdges) PonOrErr() (*Pon, error) {
+	if e.loadedTypes[6] {
+		if e.Pon == nil {
+			// Edge was loaded but was not found.
+			return nil, &NotFoundError{label: pon.Label}
+		}
+		return e.Pon, nil
+	}
+	return nil, &NotLoadedError{edge: "pon"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -23,7 +153,21 @@ func (*Call) scanValues(columns []string) ([]any, error) {
 	for i := range columns {
 		switch columns[i] {
 		case call.FieldID:
-			values[i] = new(sql.NullInt64)
+			values[i] = new(uuid.UUID)
+		case call.ForeignKeys[0]: // chakan_call
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
+		case call.ForeignKeys[1]: // chii_call
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
+		case call.ForeignKeys[2]: // concealed_kan_call
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
+		case call.ForeignKeys[3]: // discard_call
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
+		case call.ForeignKeys[4]: // event_call
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
+		case call.ForeignKeys[5]: // melded_kan_call
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
+		case call.ForeignKeys[6]: // pon_call
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Call", columns[i])
 		}
@@ -40,14 +184,98 @@ func (c *Call) assignValues(columns []string, values []any) error {
 	for i := range columns {
 		switch columns[i] {
 		case call.FieldID:
-			value, ok := values[i].(*sql.NullInt64)
-			if !ok {
-				return fmt.Errorf("unexpected type %T for field id", value)
+			if value, ok := values[i].(*uuid.UUID); !ok {
+				return fmt.Errorf("unexpected type %T for field id", values[i])
+			} else if value != nil {
+				c.ID = *value
 			}
-			c.ID = int(value.Int64)
+		case call.ForeignKeys[0]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field chakan_call", values[i])
+			} else if value.Valid {
+				c.chakan_call = new(uuid.UUID)
+				*c.chakan_call = *value.S.(*uuid.UUID)
+			}
+		case call.ForeignKeys[1]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field chii_call", values[i])
+			} else if value.Valid {
+				c.chii_call = new(uuid.UUID)
+				*c.chii_call = *value.S.(*uuid.UUID)
+			}
+		case call.ForeignKeys[2]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field concealed_kan_call", values[i])
+			} else if value.Valid {
+				c.concealed_kan_call = new(uuid.UUID)
+				*c.concealed_kan_call = *value.S.(*uuid.UUID)
+			}
+		case call.ForeignKeys[3]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field discard_call", values[i])
+			} else if value.Valid {
+				c.discard_call = new(uuid.UUID)
+				*c.discard_call = *value.S.(*uuid.UUID)
+			}
+		case call.ForeignKeys[4]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field event_call", values[i])
+			} else if value.Valid {
+				c.event_call = new(uuid.UUID)
+				*c.event_call = *value.S.(*uuid.UUID)
+			}
+		case call.ForeignKeys[5]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field melded_kan_call", values[i])
+			} else if value.Valid {
+				c.melded_kan_call = new(uuid.UUID)
+				*c.melded_kan_call = *value.S.(*uuid.UUID)
+			}
+		case call.ForeignKeys[6]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field pon_call", values[i])
+			} else if value.Valid {
+				c.pon_call = new(uuid.UUID)
+				*c.pon_call = *value.S.(*uuid.UUID)
+			}
 		}
 	}
 	return nil
+}
+
+// QueryEvent queries the "event" edge of the Call entity.
+func (c *Call) QueryEvent() *EventQuery {
+	return (&CallClient{config: c.config}).QueryEvent(c)
+}
+
+// QueryDiscard queries the "discard" edge of the Call entity.
+func (c *Call) QueryDiscard() *DiscardQuery {
+	return (&CallClient{config: c.config}).QueryDiscard(c)
+}
+
+// QueryChii queries the "chii" edge of the Call entity.
+func (c *Call) QueryChii() *ChiiQuery {
+	return (&CallClient{config: c.config}).QueryChii(c)
+}
+
+// QueryChakan queries the "chakan" edge of the Call entity.
+func (c *Call) QueryChakan() *ChakanQuery {
+	return (&CallClient{config: c.config}).QueryChakan(c)
+}
+
+// QueryConcealedkan queries the "concealedkan" edge of the Call entity.
+func (c *Call) QueryConcealedkan() *ConcealedKanQuery {
+	return (&CallClient{config: c.config}).QueryConcealedkan(c)
+}
+
+// QueryMeldedkan queries the "meldedkan" edge of the Call entity.
+func (c *Call) QueryMeldedkan() *MeldedKanQuery {
+	return (&CallClient{config: c.config}).QueryMeldedkan(c)
+}
+
+// QueryPon queries the "pon" edge of the Call entity.
+func (c *Call) QueryPon() *PonQuery {
+	return (&CallClient{config: c.config}).QueryPon(c)
 }
 
 // Update returns a builder for updating this Call.

@@ -10,6 +10,8 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/call"
 	"github.com/kanade0404/tenhou-log/services/ent/chakan"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 )
@@ -27,9 +29,34 @@ func (cu *ChakanUpdate) Where(ps ...predicate.Chakan) *ChakanUpdate {
 	return cu
 }
 
+// SetCallID sets the "call" edge to the Call entity by ID.
+func (cu *ChakanUpdate) SetCallID(id uuid.UUID) *ChakanUpdate {
+	cu.mutation.SetCallID(id)
+	return cu
+}
+
+// SetNillableCallID sets the "call" edge to the Call entity by ID if the given value is not nil.
+func (cu *ChakanUpdate) SetNillableCallID(id *uuid.UUID) *ChakanUpdate {
+	if id != nil {
+		cu = cu.SetCallID(*id)
+	}
+	return cu
+}
+
+// SetCall sets the "call" edge to the Call entity.
+func (cu *ChakanUpdate) SetCall(c *Call) *ChakanUpdate {
+	return cu.SetCallID(c.ID)
+}
+
 // Mutation returns the ChakanMutation object of the builder.
 func (cu *ChakanUpdate) Mutation() *ChakanMutation {
 	return cu.mutation
+}
+
+// ClearCall clears the "call" edge to the Call entity.
+func (cu *ChakanUpdate) ClearCall() *ChakanUpdate {
+	cu.mutation.ClearCall()
+	return cu
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -92,7 +119,7 @@ func (cu *ChakanUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Table:   chakan.Table,
 			Columns: chakan.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: chakan.FieldID,
 			},
 		},
@@ -103,6 +130,41 @@ func (cu *ChakanUpdate) sqlSave(ctx context.Context) (n int, err error) {
 				ps[i](selector)
 			}
 		}
+	}
+	if cu.mutation.CallCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   chakan.CallTable,
+			Columns: []string{chakan.CallColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: call.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := cu.mutation.CallIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   chakan.CallTable,
+			Columns: []string{chakan.CallColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: call.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, cu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -123,9 +185,34 @@ type ChakanUpdateOne struct {
 	mutation *ChakanMutation
 }
 
+// SetCallID sets the "call" edge to the Call entity by ID.
+func (cuo *ChakanUpdateOne) SetCallID(id uuid.UUID) *ChakanUpdateOne {
+	cuo.mutation.SetCallID(id)
+	return cuo
+}
+
+// SetNillableCallID sets the "call" edge to the Call entity by ID if the given value is not nil.
+func (cuo *ChakanUpdateOne) SetNillableCallID(id *uuid.UUID) *ChakanUpdateOne {
+	if id != nil {
+		cuo = cuo.SetCallID(*id)
+	}
+	return cuo
+}
+
+// SetCall sets the "call" edge to the Call entity.
+func (cuo *ChakanUpdateOne) SetCall(c *Call) *ChakanUpdateOne {
+	return cuo.SetCallID(c.ID)
+}
+
 // Mutation returns the ChakanMutation object of the builder.
 func (cuo *ChakanUpdateOne) Mutation() *ChakanMutation {
 	return cuo.mutation
+}
+
+// ClearCall clears the "call" edge to the Call entity.
+func (cuo *ChakanUpdateOne) ClearCall() *ChakanUpdateOne {
+	cuo.mutation.ClearCall()
+	return cuo
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -201,7 +288,7 @@ func (cuo *ChakanUpdateOne) sqlSave(ctx context.Context) (_node *Chakan, err err
 			Table:   chakan.Table,
 			Columns: chakan.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: chakan.FieldID,
 			},
 		},
@@ -229,6 +316,41 @@ func (cuo *ChakanUpdateOne) sqlSave(ctx context.Context) (_node *Chakan, err err
 				ps[i](selector)
 			}
 		}
+	}
+	if cuo.mutation.CallCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   chakan.CallTable,
+			Columns: []string{chakan.CallColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: call.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := cuo.mutation.CallIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   chakan.CallTable,
+			Columns: []string{chakan.CallColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: call.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &Chakan{config: cuo.config}
 	_spec.Assign = _node.assignValues

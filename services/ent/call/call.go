@@ -2,18 +2,97 @@
 
 package call
 
+import (
+	"github.com/google/uuid"
+)
+
 const (
 	// Label holds the string label denoting the call type in the database.
 	Label = "call"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
+	// EdgeEvent holds the string denoting the event edge name in mutations.
+	EdgeEvent = "event"
+	// EdgeDiscard holds the string denoting the discard edge name in mutations.
+	EdgeDiscard = "discard"
+	// EdgeChii holds the string denoting the chii edge name in mutations.
+	EdgeChii = "chii"
+	// EdgeChakan holds the string denoting the chakan edge name in mutations.
+	EdgeChakan = "chakan"
+	// EdgeConcealedkan holds the string denoting the concealedkan edge name in mutations.
+	EdgeConcealedkan = "concealedkan"
+	// EdgeMeldedkan holds the string denoting the meldedkan edge name in mutations.
+	EdgeMeldedkan = "meldedkan"
+	// EdgePon holds the string denoting the pon edge name in mutations.
+	EdgePon = "pon"
 	// Table holds the table name of the call in the database.
 	Table = "calls"
+	// EventTable is the table that holds the event relation/edge.
+	EventTable = "calls"
+	// EventInverseTable is the table name for the Event entity.
+	// It exists in this package in order to avoid circular dependency with the "event" package.
+	EventInverseTable = "events"
+	// EventColumn is the table column denoting the event relation/edge.
+	EventColumn = "event_call"
+	// DiscardTable is the table that holds the discard relation/edge.
+	DiscardTable = "calls"
+	// DiscardInverseTable is the table name for the Discard entity.
+	// It exists in this package in order to avoid circular dependency with the "discard" package.
+	DiscardInverseTable = "discards"
+	// DiscardColumn is the table column denoting the discard relation/edge.
+	DiscardColumn = "discard_call"
+	// ChiiTable is the table that holds the chii relation/edge.
+	ChiiTable = "calls"
+	// ChiiInverseTable is the table name for the Chii entity.
+	// It exists in this package in order to avoid circular dependency with the "chii" package.
+	ChiiInverseTable = "chiis"
+	// ChiiColumn is the table column denoting the chii relation/edge.
+	ChiiColumn = "chii_call"
+	// ChakanTable is the table that holds the chakan relation/edge.
+	ChakanTable = "calls"
+	// ChakanInverseTable is the table name for the Chakan entity.
+	// It exists in this package in order to avoid circular dependency with the "chakan" package.
+	ChakanInverseTable = "chakans"
+	// ChakanColumn is the table column denoting the chakan relation/edge.
+	ChakanColumn = "chakan_call"
+	// ConcealedkanTable is the table that holds the concealedkan relation/edge.
+	ConcealedkanTable = "calls"
+	// ConcealedkanInverseTable is the table name for the ConcealedKan entity.
+	// It exists in this package in order to avoid circular dependency with the "concealedkan" package.
+	ConcealedkanInverseTable = "concealed_kans"
+	// ConcealedkanColumn is the table column denoting the concealedkan relation/edge.
+	ConcealedkanColumn = "concealed_kan_call"
+	// MeldedkanTable is the table that holds the meldedkan relation/edge.
+	MeldedkanTable = "calls"
+	// MeldedkanInverseTable is the table name for the MeldedKan entity.
+	// It exists in this package in order to avoid circular dependency with the "meldedkan" package.
+	MeldedkanInverseTable = "melded_kans"
+	// MeldedkanColumn is the table column denoting the meldedkan relation/edge.
+	MeldedkanColumn = "melded_kan_call"
+	// PonTable is the table that holds the pon relation/edge.
+	PonTable = "calls"
+	// PonInverseTable is the table name for the Pon entity.
+	// It exists in this package in order to avoid circular dependency with the "pon" package.
+	PonInverseTable = "pons"
+	// PonColumn is the table column denoting the pon relation/edge.
+	PonColumn = "pon_call"
 )
 
 // Columns holds all SQL columns for call fields.
 var Columns = []string{
 	FieldID,
+}
+
+// ForeignKeys holds the SQL foreign-keys that are owned by the "calls"
+// table and are not defined as standalone fields in the schema.
+var ForeignKeys = []string{
+	"chakan_call",
+	"chii_call",
+	"concealed_kan_call",
+	"discard_call",
+	"event_call",
+	"melded_kan_call",
+	"pon_call",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -23,5 +102,15 @@ func ValidColumn(column string) bool {
 			return true
 		}
 	}
+	for i := range ForeignKeys {
+		if column == ForeignKeys[i] {
+			return true
+		}
+	}
 	return false
 }
+
+var (
+	// DefaultID holds the default value on creation for the "id" field.
+	DefaultID func() uuid.UUID
+)

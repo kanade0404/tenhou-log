@@ -24,6 +24,8 @@ type Tx struct {
 	ConcealedKan *ConcealedKanClient
 	// Dan is the client for interacting with the Dan builders.
 	Dan *DanClient
+	// Discard is the client for interacting with the Discard builders.
+	Discard *DiscardClient
 	// Drawn is the client for interacting with the Drawn builders.
 	Drawn *DrawnClient
 	// Event is the client for interacting with the Event builders.
@@ -48,6 +50,8 @@ type Tx struct {
 	Player *PlayerClient
 	// Pon is the client for interacting with the Pon builders.
 	Pon *PonClient
+	// Reach is the client for interacting with the Reach builders.
+	Reach *ReachClient
 	// Room is the client for interacting with the Room builders.
 	Room *RoomClient
 	// Round is the client for interacting with the Round builders.
@@ -193,6 +197,7 @@ func (tx *Tx) init() {
 	tx.CompressedMJLog = NewCompressedMJLogClient(tx.config)
 	tx.ConcealedKan = NewConcealedKanClient(tx.config)
 	tx.Dan = NewDanClient(tx.config)
+	tx.Discard = NewDiscardClient(tx.config)
 	tx.Drawn = NewDrawnClient(tx.config)
 	tx.Event = NewEventClient(tx.config)
 	tx.Game = NewGameClient(tx.config)
@@ -205,6 +210,7 @@ func (tx *Tx) init() {
 	tx.MeldedKan = NewMeldedKanClient(tx.config)
 	tx.Player = NewPlayerClient(tx.config)
 	tx.Pon = NewPonClient(tx.config)
+	tx.Reach = NewReachClient(tx.config)
 	tx.Room = NewRoomClient(tx.config)
 	tx.Round = NewRoundClient(tx.config)
 	tx.Turn = NewTurnClient(tx.config)

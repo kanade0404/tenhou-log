@@ -10,8 +10,10 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayerhandhai"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
+	"github.com/kanade0404/tenhou-log/services/ent/turn"
 )
 
 // GamePlayerHandHaiUpdate is the builder for updating GamePlayerHandHai entities.
@@ -27,9 +29,26 @@ func (gphhu *GamePlayerHandHaiUpdate) Where(ps ...predicate.GamePlayerHandHai) *
 	return gphhu
 }
 
+// SetTurnID sets the "turn" edge to the Turn entity by ID.
+func (gphhu *GamePlayerHandHaiUpdate) SetTurnID(id uuid.UUID) *GamePlayerHandHaiUpdate {
+	gphhu.mutation.SetTurnID(id)
+	return gphhu
+}
+
+// SetTurn sets the "turn" edge to the Turn entity.
+func (gphhu *GamePlayerHandHaiUpdate) SetTurn(t *Turn) *GamePlayerHandHaiUpdate {
+	return gphhu.SetTurnID(t.ID)
+}
+
 // Mutation returns the GamePlayerHandHaiMutation object of the builder.
 func (gphhu *GamePlayerHandHaiUpdate) Mutation() *GamePlayerHandHaiMutation {
 	return gphhu.mutation
+}
+
+// ClearTurn clears the "turn" edge to the Turn entity.
+func (gphhu *GamePlayerHandHaiUpdate) ClearTurn() *GamePlayerHandHaiUpdate {
+	gphhu.mutation.ClearTurn()
+	return gphhu
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -39,12 +58,18 @@ func (gphhu *GamePlayerHandHaiUpdate) Save(ctx context.Context) (int, error) {
 		affected int
 	)
 	if len(gphhu.hooks) == 0 {
+		if err = gphhu.check(); err != nil {
+			return 0, err
+		}
 		affected, err = gphhu.sqlSave(ctx)
 	} else {
 		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 			mutation, ok := m.(*GamePlayerHandHaiMutation)
 			if !ok {
 				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			if err = gphhu.check(); err != nil {
+				return 0, err
 			}
 			gphhu.mutation = mutation
 			affected, err = gphhu.sqlSave(ctx)
@@ -86,13 +111,21 @@ func (gphhu *GamePlayerHandHaiUpdate) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (gphhu *GamePlayerHandHaiUpdate) check() error {
+	if _, ok := gphhu.mutation.TurnID(); gphhu.mutation.TurnCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "GamePlayerHandHai.turn"`)
+	}
+	return nil
+}
+
 func (gphhu *GamePlayerHandHaiUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	_spec := &sqlgraph.UpdateSpec{
 		Node: &sqlgraph.NodeSpec{
 			Table:   gameplayerhandhai.Table,
 			Columns: gameplayerhandhai.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: gameplayerhandhai.FieldID,
 			},
 		},
@@ -103,6 +136,41 @@ func (gphhu *GamePlayerHandHaiUpdate) sqlSave(ctx context.Context) (n int, err e
 				ps[i](selector)
 			}
 		}
+	}
+	if gphhu.mutation.TurnCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   gameplayerhandhai.TurnTable,
+			Columns: []string{gameplayerhandhai.TurnColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: turn.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := gphhu.mutation.TurnIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   gameplayerhandhai.TurnTable,
+			Columns: []string{gameplayerhandhai.TurnColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: turn.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, gphhu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -123,9 +191,26 @@ type GamePlayerHandHaiUpdateOne struct {
 	mutation *GamePlayerHandHaiMutation
 }
 
+// SetTurnID sets the "turn" edge to the Turn entity by ID.
+func (gphhuo *GamePlayerHandHaiUpdateOne) SetTurnID(id uuid.UUID) *GamePlayerHandHaiUpdateOne {
+	gphhuo.mutation.SetTurnID(id)
+	return gphhuo
+}
+
+// SetTurn sets the "turn" edge to the Turn entity.
+func (gphhuo *GamePlayerHandHaiUpdateOne) SetTurn(t *Turn) *GamePlayerHandHaiUpdateOne {
+	return gphhuo.SetTurnID(t.ID)
+}
+
 // Mutation returns the GamePlayerHandHaiMutation object of the builder.
 func (gphhuo *GamePlayerHandHaiUpdateOne) Mutation() *GamePlayerHandHaiMutation {
 	return gphhuo.mutation
+}
+
+// ClearTurn clears the "turn" edge to the Turn entity.
+func (gphhuo *GamePlayerHandHaiUpdateOne) ClearTurn() *GamePlayerHandHaiUpdateOne {
+	gphhuo.mutation.ClearTurn()
+	return gphhuo
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -142,12 +227,18 @@ func (gphhuo *GamePlayerHandHaiUpdateOne) Save(ctx context.Context) (*GamePlayer
 		node *GamePlayerHandHai
 	)
 	if len(gphhuo.hooks) == 0 {
+		if err = gphhuo.check(); err != nil {
+			return nil, err
+		}
 		node, err = gphhuo.sqlSave(ctx)
 	} else {
 		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 			mutation, ok := m.(*GamePlayerHandHaiMutation)
 			if !ok {
 				return nil, fmt.Errorf("unexpected mutation type %T", m)
+			}
+			if err = gphhuo.check(); err != nil {
+				return nil, err
 			}
 			gphhuo.mutation = mutation
 			node, err = gphhuo.sqlSave(ctx)
@@ -195,13 +286,21 @@ func (gphhuo *GamePlayerHandHaiUpdateOne) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (gphhuo *GamePlayerHandHaiUpdateOne) check() error {
+	if _, ok := gphhuo.mutation.TurnID(); gphhuo.mutation.TurnCleared() && !ok {
+		return errors.New(`ent: clearing a required unique edge "GamePlayerHandHai.turn"`)
+	}
+	return nil
+}
+
 func (gphhuo *GamePlayerHandHaiUpdateOne) sqlSave(ctx context.Context) (_node *GamePlayerHandHai, err error) {
 	_spec := &sqlgraph.UpdateSpec{
 		Node: &sqlgraph.NodeSpec{
 			Table:   gameplayerhandhai.Table,
 			Columns: gameplayerhandhai.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: gameplayerhandhai.FieldID,
 			},
 		},
@@ -229,6 +328,41 @@ func (gphhuo *GamePlayerHandHaiUpdateOne) sqlSave(ctx context.Context) (_node *G
 				ps[i](selector)
 			}
 		}
+	}
+	if gphhuo.mutation.TurnCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   gameplayerhandhai.TurnTable,
+			Columns: []string{gameplayerhandhai.TurnColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: turn.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := gphhuo.mutation.TurnIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   gameplayerhandhai.TurnTable,
+			Columns: []string{gameplayerhandhai.TurnColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: turn.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &GamePlayerHandHai{config: gphhuo.config}
 	_spec.Assign = _node.assignValues

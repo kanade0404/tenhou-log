@@ -1,6 +1,11 @@
 package schema
 
-import "entgo.io/ent"
+import (
+	"entgo.io/ent"
+	"entgo.io/ent/schema/edge"
+	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
+)
 
 // MeldedKan holds the schema definition for the MeldedKan entity.
 type MeldedKan struct {
@@ -9,10 +14,14 @@ type MeldedKan struct {
 
 // Fields of the MeldedKan.
 func (MeldedKan) Fields() []ent.Field {
-	return nil
+	return []ent.Field{
+		field.UUID("id", uuid.UUID{}).Default(uuid.New),
+	}
 }
 
 // Edges of the MeldedKan.
 func (MeldedKan) Edges() []ent.Edge {
-	return nil
+	return []ent.Edge{
+		edge.To("call", Call.Type).Unique(),
+	}
 }

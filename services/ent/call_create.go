@@ -7,10 +7,19 @@ import (
 	"errors"
 	"fmt"
 
+	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/call"
+	"github.com/kanade0404/tenhou-log/services/ent/chakan"
+	"github.com/kanade0404/tenhou-log/services/ent/chii"
+	"github.com/kanade0404/tenhou-log/services/ent/concealedkan"
+	"github.com/kanade0404/tenhou-log/services/ent/discard"
+	"github.com/kanade0404/tenhou-log/services/ent/event"
+	"github.com/kanade0404/tenhou-log/services/ent/meldedkan"
+	"github.com/kanade0404/tenhou-log/services/ent/pon"
 )
 
 // CallCreate is the builder for creating a Call entity.
@@ -19,6 +28,97 @@ type CallCreate struct {
 	mutation *CallMutation
 	hooks    []Hook
 	conflict []sql.ConflictOption
+}
+
+// SetID sets the "id" field.
+func (cc *CallCreate) SetID(u uuid.UUID) *CallCreate {
+	cc.mutation.SetID(u)
+	return cc
+}
+
+// SetNillableID sets the "id" field if the given value is not nil.
+func (cc *CallCreate) SetNillableID(u *uuid.UUID) *CallCreate {
+	if u != nil {
+		cc.SetID(*u)
+	}
+	return cc
+}
+
+// SetEventID sets the "event" edge to the Event entity by ID.
+func (cc *CallCreate) SetEventID(id uuid.UUID) *CallCreate {
+	cc.mutation.SetEventID(id)
+	return cc
+}
+
+// SetEvent sets the "event" edge to the Event entity.
+func (cc *CallCreate) SetEvent(e *Event) *CallCreate {
+	return cc.SetEventID(e.ID)
+}
+
+// SetDiscardID sets the "discard" edge to the Discard entity by ID.
+func (cc *CallCreate) SetDiscardID(id uuid.UUID) *CallCreate {
+	cc.mutation.SetDiscardID(id)
+	return cc
+}
+
+// SetDiscard sets the "discard" edge to the Discard entity.
+func (cc *CallCreate) SetDiscard(d *Discard) *CallCreate {
+	return cc.SetDiscardID(d.ID)
+}
+
+// SetChiiID sets the "chii" edge to the Chii entity by ID.
+func (cc *CallCreate) SetChiiID(id uuid.UUID) *CallCreate {
+	cc.mutation.SetChiiID(id)
+	return cc
+}
+
+// SetChii sets the "chii" edge to the Chii entity.
+func (cc *CallCreate) SetChii(c *Chii) *CallCreate {
+	return cc.SetChiiID(c.ID)
+}
+
+// SetChakanID sets the "chakan" edge to the Chakan entity by ID.
+func (cc *CallCreate) SetChakanID(id uuid.UUID) *CallCreate {
+	cc.mutation.SetChakanID(id)
+	return cc
+}
+
+// SetChakan sets the "chakan" edge to the Chakan entity.
+func (cc *CallCreate) SetChakan(c *Chakan) *CallCreate {
+	return cc.SetChakanID(c.ID)
+}
+
+// SetConcealedkanID sets the "concealedkan" edge to the ConcealedKan entity by ID.
+func (cc *CallCreate) SetConcealedkanID(id uuid.UUID) *CallCreate {
+	cc.mutation.SetConcealedkanID(id)
+	return cc
+}
+
+// SetConcealedkan sets the "concealedkan" edge to the ConcealedKan entity.
+func (cc *CallCreate) SetConcealedkan(c *ConcealedKan) *CallCreate {
+	return cc.SetConcealedkanID(c.ID)
+}
+
+// SetMeldedkanID sets the "meldedkan" edge to the MeldedKan entity by ID.
+func (cc *CallCreate) SetMeldedkanID(id uuid.UUID) *CallCreate {
+	cc.mutation.SetMeldedkanID(id)
+	return cc
+}
+
+// SetMeldedkan sets the "meldedkan" edge to the MeldedKan entity.
+func (cc *CallCreate) SetMeldedkan(m *MeldedKan) *CallCreate {
+	return cc.SetMeldedkanID(m.ID)
+}
+
+// SetPonID sets the "pon" edge to the Pon entity by ID.
+func (cc *CallCreate) SetPonID(id uuid.UUID) *CallCreate {
+	cc.mutation.SetPonID(id)
+	return cc
+}
+
+// SetPon sets the "pon" edge to the Pon entity.
+func (cc *CallCreate) SetPon(p *Pon) *CallCreate {
+	return cc.SetPonID(p.ID)
 }
 
 // Mutation returns the CallMutation object of the builder.
@@ -32,6 +132,7 @@ func (cc *CallCreate) Save(ctx context.Context) (*Call, error) {
 		err  error
 		node *Call
 	)
+	cc.defaults()
 	if len(cc.hooks) == 0 {
 		if err = cc.check(); err != nil {
 			return nil, err
@@ -95,8 +196,37 @@ func (cc *CallCreate) ExecX(ctx context.Context) {
 	}
 }
 
+// defaults sets the default values of the builder before save.
+func (cc *CallCreate) defaults() {
+	if _, ok := cc.mutation.ID(); !ok {
+		v := call.DefaultID()
+		cc.mutation.SetID(v)
+	}
+}
+
 // check runs all checks and user-defined validators on the builder.
 func (cc *CallCreate) check() error {
+	if _, ok := cc.mutation.EventID(); !ok {
+		return &ValidationError{Name: "event", err: errors.New(`ent: missing required edge "Call.event"`)}
+	}
+	if _, ok := cc.mutation.DiscardID(); !ok {
+		return &ValidationError{Name: "discard", err: errors.New(`ent: missing required edge "Call.discard"`)}
+	}
+	if _, ok := cc.mutation.ChiiID(); !ok {
+		return &ValidationError{Name: "chii", err: errors.New(`ent: missing required edge "Call.chii"`)}
+	}
+	if _, ok := cc.mutation.ChakanID(); !ok {
+		return &ValidationError{Name: "chakan", err: errors.New(`ent: missing required edge "Call.chakan"`)}
+	}
+	if _, ok := cc.mutation.ConcealedkanID(); !ok {
+		return &ValidationError{Name: "concealedkan", err: errors.New(`ent: missing required edge "Call.concealedkan"`)}
+	}
+	if _, ok := cc.mutation.MeldedkanID(); !ok {
+		return &ValidationError{Name: "meldedkan", err: errors.New(`ent: missing required edge "Call.meldedkan"`)}
+	}
+	if _, ok := cc.mutation.PonID(); !ok {
+		return &ValidationError{Name: "pon", err: errors.New(`ent: missing required edge "Call.pon"`)}
+	}
 	return nil
 }
 
@@ -108,8 +238,13 @@ func (cc *CallCreate) sqlSave(ctx context.Context) (*Call, error) {
 		}
 		return nil, err
 	}
-	id := _spec.ID.Value.(int64)
-	_node.ID = int(id)
+	if _spec.ID.Value != nil {
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
+	}
 	return _node, nil
 }
 
@@ -119,12 +254,156 @@ func (cc *CallCreate) createSpec() (*Call, *sqlgraph.CreateSpec) {
 		_spec = &sqlgraph.CreateSpec{
 			Table: call.Table,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: call.FieldID,
 			},
 		}
 	)
 	_spec.OnConflict = cc.conflict
+	if id, ok := cc.mutation.ID(); ok {
+		_node.ID = id
+		_spec.ID.Value = &id
+	}
+	if nodes := cc.mutation.EventIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   call.EventTable,
+			Columns: []string{call.EventColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: event.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.event_call = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := cc.mutation.DiscardIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   call.DiscardTable,
+			Columns: []string{call.DiscardColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: discard.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.discard_call = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := cc.mutation.ChiiIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   call.ChiiTable,
+			Columns: []string{call.ChiiColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: chii.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.chii_call = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := cc.mutation.ChakanIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   call.ChakanTable,
+			Columns: []string{call.ChakanColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: chakan.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.chakan_call = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := cc.mutation.ConcealedkanIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   call.ConcealedkanTable,
+			Columns: []string{call.ConcealedkanColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: concealedkan.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.concealed_kan_call = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := cc.mutation.MeldedkanIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   call.MeldedkanTable,
+			Columns: []string{call.MeldedkanColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: meldedkan.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.melded_kan_call = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := cc.mutation.PonIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   call.PonTable,
+			Columns: []string{call.PonColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: pon.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.pon_call = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
 	return _node, _spec
 }
 
@@ -171,16 +450,24 @@ type (
 	}
 )
 
-// UpdateNewValues updates the mutable fields using the new values that were set on create.
+// UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
 // Using this option is equivalent to using:
 //
 //	client.Call.Create().
 //		OnConflict(
 //			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(call.FieldID)
+//			}),
 //		).
 //		Exec(ctx)
 func (u *CallUpsertOne) UpdateNewValues() *CallUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.ID(); exists {
+			s.SetIgnore(call.FieldID)
+		}
+	}))
 	return u
 }
 
@@ -227,7 +514,12 @@ func (u *CallUpsertOne) ExecX(ctx context.Context) {
 }
 
 // Exec executes the UPSERT query and returns the inserted/updated ID.
-func (u *CallUpsertOne) ID(ctx context.Context) (id int, err error) {
+func (u *CallUpsertOne) ID(ctx context.Context) (id uuid.UUID, err error) {
+	if u.create.driver.Dialect() == dialect.MySQL {
+		// In case of "ON CONFLICT", there is no way to get back non-numeric ID
+		// fields from the database since MySQL does not support the RETURNING clause.
+		return id, errors.New("ent: CallUpsertOne.ID is not supported by MySQL driver. Use CallUpsertOne.Exec instead")
+	}
 	node, err := u.create.Save(ctx)
 	if err != nil {
 		return id, err
@@ -236,7 +528,7 @@ func (u *CallUpsertOne) ID(ctx context.Context) (id int, err error) {
 }
 
 // IDX is like ID, but panics if an error occurs.
-func (u *CallUpsertOne) IDX(ctx context.Context) int {
+func (u *CallUpsertOne) IDX(ctx context.Context) uuid.UUID {
 	id, err := u.ID(ctx)
 	if err != nil {
 		panic(err)
@@ -259,6 +551,7 @@ func (ccb *CallCreateBulk) Save(ctx context.Context) ([]*Call, error) {
 	for i := range ccb.builders {
 		func(i int, root context.Context) {
 			builder := ccb.builders[i]
+			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*CallMutation)
 				if !ok {
@@ -286,10 +579,6 @@ func (ccb *CallCreateBulk) Save(ctx context.Context) ([]*Call, error) {
 					return nil, err
 				}
 				mutation.id = &nodes[i].ID
-				if specs[i].ID.Value != nil {
-					id := specs[i].ID.Value.(int64)
-					nodes[i].ID = int(id)
-				}
 				mutation.done = true
 				return nodes[i], nil
 			})
@@ -371,10 +660,20 @@ type CallUpsertBulk struct {
 //	client.Call.Create().
 //		OnConflict(
 //			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(call.FieldID)
+//			}),
 //		).
 //		Exec(ctx)
 func (u *CallUpsertBulk) UpdateNewValues() *CallUpsertBulk {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.ID(); exists {
+				s.SetIgnore(call.FieldID)
+			}
+		}
+	}))
 	return u
 }
 

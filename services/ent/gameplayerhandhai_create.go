@@ -7,10 +7,13 @@ import (
 	"errors"
 	"fmt"
 
+	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayerhandhai"
+	"github.com/kanade0404/tenhou-log/services/ent/turn"
 )
 
 // GamePlayerHandHaiCreate is the builder for creating a GamePlayerHandHai entity.
@@ -19,6 +22,37 @@ type GamePlayerHandHaiCreate struct {
 	mutation *GamePlayerHandHaiMutation
 	hooks    []Hook
 	conflict []sql.ConflictOption
+}
+
+// SetHais sets the "hais" field.
+func (gphhc *GamePlayerHandHaiCreate) SetHais(i []int) *GamePlayerHandHaiCreate {
+	gphhc.mutation.SetHais(i)
+	return gphhc
+}
+
+// SetID sets the "id" field.
+func (gphhc *GamePlayerHandHaiCreate) SetID(u uuid.UUID) *GamePlayerHandHaiCreate {
+	gphhc.mutation.SetID(u)
+	return gphhc
+}
+
+// SetNillableID sets the "id" field if the given value is not nil.
+func (gphhc *GamePlayerHandHaiCreate) SetNillableID(u *uuid.UUID) *GamePlayerHandHaiCreate {
+	if u != nil {
+		gphhc.SetID(*u)
+	}
+	return gphhc
+}
+
+// SetTurnID sets the "turn" edge to the Turn entity by ID.
+func (gphhc *GamePlayerHandHaiCreate) SetTurnID(id uuid.UUID) *GamePlayerHandHaiCreate {
+	gphhc.mutation.SetTurnID(id)
+	return gphhc
+}
+
+// SetTurn sets the "turn" edge to the Turn entity.
+func (gphhc *GamePlayerHandHaiCreate) SetTurn(t *Turn) *GamePlayerHandHaiCreate {
+	return gphhc.SetTurnID(t.ID)
 }
 
 // Mutation returns the GamePlayerHandHaiMutation object of the builder.
@@ -32,6 +66,7 @@ func (gphhc *GamePlayerHandHaiCreate) Save(ctx context.Context) (*GamePlayerHand
 		err  error
 		node *GamePlayerHandHai
 	)
+	gphhc.defaults()
 	if len(gphhc.hooks) == 0 {
 		if err = gphhc.check(); err != nil {
 			return nil, err
@@ -95,8 +130,22 @@ func (gphhc *GamePlayerHandHaiCreate) ExecX(ctx context.Context) {
 	}
 }
 
+// defaults sets the default values of the builder before save.
+func (gphhc *GamePlayerHandHaiCreate) defaults() {
+	if _, ok := gphhc.mutation.ID(); !ok {
+		v := gameplayerhandhai.DefaultID()
+		gphhc.mutation.SetID(v)
+	}
+}
+
 // check runs all checks and user-defined validators on the builder.
 func (gphhc *GamePlayerHandHaiCreate) check() error {
+	if _, ok := gphhc.mutation.Hais(); !ok {
+		return &ValidationError{Name: "hais", err: errors.New(`ent: missing required field "GamePlayerHandHai.hais"`)}
+	}
+	if _, ok := gphhc.mutation.TurnID(); !ok {
+		return &ValidationError{Name: "turn", err: errors.New(`ent: missing required edge "GamePlayerHandHai.turn"`)}
+	}
 	return nil
 }
 
@@ -108,8 +157,13 @@ func (gphhc *GamePlayerHandHaiCreate) sqlSave(ctx context.Context) (*GamePlayerH
 		}
 		return nil, err
 	}
-	id := _spec.ID.Value.(int64)
-	_node.ID = int(id)
+	if _spec.ID.Value != nil {
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
+	}
 	return _node, nil
 }
 
@@ -119,12 +173,40 @@ func (gphhc *GamePlayerHandHaiCreate) createSpec() (*GamePlayerHandHai, *sqlgrap
 		_spec = &sqlgraph.CreateSpec{
 			Table: gameplayerhandhai.Table,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: gameplayerhandhai.FieldID,
 			},
 		}
 	)
 	_spec.OnConflict = gphhc.conflict
+	if id, ok := gphhc.mutation.ID(); ok {
+		_node.ID = id
+		_spec.ID.Value = &id
+	}
+	if value, ok := gphhc.mutation.Hais(); ok {
+		_spec.SetField(gameplayerhandhai.FieldHais, field.TypeJSON, value)
+		_node.Hais = value
+	}
+	if nodes := gphhc.mutation.TurnIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: true,
+			Table:   gameplayerhandhai.TurnTable,
+			Columns: []string{gameplayerhandhai.TurnColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: turn.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.turn_gameplayerhandhai = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
 	return _node, _spec
 }
 
@@ -132,11 +214,17 @@ func (gphhc *GamePlayerHandHaiCreate) createSpec() (*GamePlayerHandHai, *sqlgrap
 // of the `INSERT` statement. For example:
 //
 //	client.GamePlayerHandHai.Create().
+//		SetHais(v).
 //		OnConflict(
 //			// Update the row with the new values
 //			// the was proposed for insertion.
 //			sql.ResolveWithNewValues(),
 //		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.GamePlayerHandHaiUpsert) {
+//			SetHais(v+v).
+//		}).
 //		Exec(ctx)
 func (gphhc *GamePlayerHandHaiCreate) OnConflict(opts ...sql.ConflictOption) *GamePlayerHandHaiUpsertOne {
 	gphhc.conflict = opts
@@ -171,16 +259,27 @@ type (
 	}
 )
 
-// UpdateNewValues updates the mutable fields using the new values that were set on create.
+// UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
 // Using this option is equivalent to using:
 //
 //	client.GamePlayerHandHai.Create().
 //		OnConflict(
 //			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(gameplayerhandhai.FieldID)
+//			}),
 //		).
 //		Exec(ctx)
 func (u *GamePlayerHandHaiUpsertOne) UpdateNewValues() *GamePlayerHandHaiUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.ID(); exists {
+			s.SetIgnore(gameplayerhandhai.FieldID)
+		}
+		if _, exists := u.create.mutation.Hais(); exists {
+			s.SetIgnore(gameplayerhandhai.FieldHais)
+		}
+	}))
 	return u
 }
 
@@ -227,7 +326,12 @@ func (u *GamePlayerHandHaiUpsertOne) ExecX(ctx context.Context) {
 }
 
 // Exec executes the UPSERT query and returns the inserted/updated ID.
-func (u *GamePlayerHandHaiUpsertOne) ID(ctx context.Context) (id int, err error) {
+func (u *GamePlayerHandHaiUpsertOne) ID(ctx context.Context) (id uuid.UUID, err error) {
+	if u.create.driver.Dialect() == dialect.MySQL {
+		// In case of "ON CONFLICT", there is no way to get back non-numeric ID
+		// fields from the database since MySQL does not support the RETURNING clause.
+		return id, errors.New("ent: GamePlayerHandHaiUpsertOne.ID is not supported by MySQL driver. Use GamePlayerHandHaiUpsertOne.Exec instead")
+	}
 	node, err := u.create.Save(ctx)
 	if err != nil {
 		return id, err
@@ -236,7 +340,7 @@ func (u *GamePlayerHandHaiUpsertOne) ID(ctx context.Context) (id int, err error)
 }
 
 // IDX is like ID, but panics if an error occurs.
-func (u *GamePlayerHandHaiUpsertOne) IDX(ctx context.Context) int {
+func (u *GamePlayerHandHaiUpsertOne) IDX(ctx context.Context) uuid.UUID {
 	id, err := u.ID(ctx)
 	if err != nil {
 		panic(err)
@@ -259,6 +363,7 @@ func (gphhcb *GamePlayerHandHaiCreateBulk) Save(ctx context.Context) ([]*GamePla
 	for i := range gphhcb.builders {
 		func(i int, root context.Context) {
 			builder := gphhcb.builders[i]
+			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*GamePlayerHandHaiMutation)
 				if !ok {
@@ -286,10 +391,6 @@ func (gphhcb *GamePlayerHandHaiCreateBulk) Save(ctx context.Context) ([]*GamePla
 					return nil, err
 				}
 				mutation.id = &nodes[i].ID
-				if specs[i].ID.Value != nil {
-					id := specs[i].ID.Value.(int64)
-					nodes[i].ID = int(id)
-				}
 				mutation.done = true
 				return nodes[i], nil
 			})
@@ -338,6 +439,11 @@ func (gphhcb *GamePlayerHandHaiCreateBulk) ExecX(ctx context.Context) {
 //			// the was proposed for insertion.
 //			sql.ResolveWithNewValues(),
 //		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.GamePlayerHandHaiUpsert) {
+//			SetHais(v+v).
+//		}).
 //		Exec(ctx)
 func (gphhcb *GamePlayerHandHaiCreateBulk) OnConflict(opts ...sql.ConflictOption) *GamePlayerHandHaiUpsertBulk {
 	gphhcb.conflict = opts
@@ -371,10 +477,23 @@ type GamePlayerHandHaiUpsertBulk struct {
 //	client.GamePlayerHandHai.Create().
 //		OnConflict(
 //			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(gameplayerhandhai.FieldID)
+//			}),
 //		).
 //		Exec(ctx)
 func (u *GamePlayerHandHaiUpsertBulk) UpdateNewValues() *GamePlayerHandHaiUpsertBulk {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.ID(); exists {
+				s.SetIgnore(gameplayerhandhai.FieldID)
+			}
+			if _, exists := b.mutation.Hais(); exists {
+				s.SetIgnore(gameplayerhandhai.FieldHais)
+			}
+		}
+	}))
 	return u
 }
 

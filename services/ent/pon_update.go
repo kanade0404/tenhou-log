@@ -10,6 +10,8 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/call"
 	"github.com/kanade0404/tenhou-log/services/ent/pon"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 )
@@ -27,9 +29,34 @@ func (pu *PonUpdate) Where(ps ...predicate.Pon) *PonUpdate {
 	return pu
 }
 
+// SetCallID sets the "call" edge to the Call entity by ID.
+func (pu *PonUpdate) SetCallID(id uuid.UUID) *PonUpdate {
+	pu.mutation.SetCallID(id)
+	return pu
+}
+
+// SetNillableCallID sets the "call" edge to the Call entity by ID if the given value is not nil.
+func (pu *PonUpdate) SetNillableCallID(id *uuid.UUID) *PonUpdate {
+	if id != nil {
+		pu = pu.SetCallID(*id)
+	}
+	return pu
+}
+
+// SetCall sets the "call" edge to the Call entity.
+func (pu *PonUpdate) SetCall(c *Call) *PonUpdate {
+	return pu.SetCallID(c.ID)
+}
+
 // Mutation returns the PonMutation object of the builder.
 func (pu *PonUpdate) Mutation() *PonMutation {
 	return pu.mutation
+}
+
+// ClearCall clears the "call" edge to the Call entity.
+func (pu *PonUpdate) ClearCall() *PonUpdate {
+	pu.mutation.ClearCall()
+	return pu
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -92,7 +119,7 @@ func (pu *PonUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Table:   pon.Table,
 			Columns: pon.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: pon.FieldID,
 			},
 		},
@@ -103,6 +130,41 @@ func (pu *PonUpdate) sqlSave(ctx context.Context) (n int, err error) {
 				ps[i](selector)
 			}
 		}
+	}
+	if pu.mutation.CallCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   pon.CallTable,
+			Columns: []string{pon.CallColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: call.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := pu.mutation.CallIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   pon.CallTable,
+			Columns: []string{pon.CallColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: call.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, pu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -123,9 +185,34 @@ type PonUpdateOne struct {
 	mutation *PonMutation
 }
 
+// SetCallID sets the "call" edge to the Call entity by ID.
+func (puo *PonUpdateOne) SetCallID(id uuid.UUID) *PonUpdateOne {
+	puo.mutation.SetCallID(id)
+	return puo
+}
+
+// SetNillableCallID sets the "call" edge to the Call entity by ID if the given value is not nil.
+func (puo *PonUpdateOne) SetNillableCallID(id *uuid.UUID) *PonUpdateOne {
+	if id != nil {
+		puo = puo.SetCallID(*id)
+	}
+	return puo
+}
+
+// SetCall sets the "call" edge to the Call entity.
+func (puo *PonUpdateOne) SetCall(c *Call) *PonUpdateOne {
+	return puo.SetCallID(c.ID)
+}
+
 // Mutation returns the PonMutation object of the builder.
 func (puo *PonUpdateOne) Mutation() *PonMutation {
 	return puo.mutation
+}
+
+// ClearCall clears the "call" edge to the Call entity.
+func (puo *PonUpdateOne) ClearCall() *PonUpdateOne {
+	puo.mutation.ClearCall()
+	return puo
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -201,7 +288,7 @@ func (puo *PonUpdateOne) sqlSave(ctx context.Context) (_node *Pon, err error) {
 			Table:   pon.Table,
 			Columns: pon.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: pon.FieldID,
 			},
 		},
@@ -229,6 +316,41 @@ func (puo *PonUpdateOne) sqlSave(ctx context.Context) (_node *Pon, err error) {
 				ps[i](selector)
 			}
 		}
+	}
+	if puo.mutation.CallCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   pon.CallTable,
+			Columns: []string{pon.CallColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: call.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := puo.mutation.CallIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   pon.CallTable,
+			Columns: []string{pon.CallColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: call.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &Pon{config: puo.config}
 	_spec.Assign = _node.assignValues

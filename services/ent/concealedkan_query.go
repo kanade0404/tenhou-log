@@ -4,12 +4,15 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
+	"github.com/kanade0404/tenhou-log/services/ent/call"
 	"github.com/kanade0404/tenhou-log/services/ent/concealedkan"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
 )
@@ -23,6 +26,7 @@ type ConcealedKanQuery struct {
 	order      []OrderFunc
 	fields     []string
 	predicates []predicate.ConcealedKan
+	withCall   *CallQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -59,6 +63,28 @@ func (ckq *ConcealedKanQuery) Order(o ...OrderFunc) *ConcealedKanQuery {
 	return ckq
 }
 
+// QueryCall chains the current query on the "call" edge.
+func (ckq *ConcealedKanQuery) QueryCall() *CallQuery {
+	query := &CallQuery{config: ckq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := ckq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := ckq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(concealedkan.Table, concealedkan.FieldID, selector),
+			sqlgraph.To(call.Table, call.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, concealedkan.CallTable, concealedkan.CallColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(ckq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
 // First returns the first ConcealedKan entity from the query.
 // Returns a *NotFoundError when no ConcealedKan was found.
 func (ckq *ConcealedKanQuery) First(ctx context.Context) (*ConcealedKan, error) {
@@ -83,8 +109,8 @@ func (ckq *ConcealedKanQuery) FirstX(ctx context.Context) *ConcealedKan {
 
 // FirstID returns the first ConcealedKan ID from the query.
 // Returns a *NotFoundError when no ConcealedKan ID was found.
-func (ckq *ConcealedKanQuery) FirstID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (ckq *ConcealedKanQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = ckq.Limit(1).IDs(ctx); err != nil {
 		return
 	}
@@ -96,7 +122,7 @@ func (ckq *ConcealedKanQuery) FirstID(ctx context.Context) (id int, err error) {
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (ckq *ConcealedKanQuery) FirstIDX(ctx context.Context) int {
+func (ckq *ConcealedKanQuery) FirstIDX(ctx context.Context) uuid.UUID {
 	id, err := ckq.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -134,8 +160,8 @@ func (ckq *ConcealedKanQuery) OnlyX(ctx context.Context) *ConcealedKan {
 // OnlyID is like Only, but returns the only ConcealedKan ID in the query.
 // Returns a *NotSingularError when more than one ConcealedKan ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (ckq *ConcealedKanQuery) OnlyID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (ckq *ConcealedKanQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = ckq.Limit(2).IDs(ctx); err != nil {
 		return
 	}
@@ -151,7 +177,7 @@ func (ckq *ConcealedKanQuery) OnlyID(ctx context.Context) (id int, err error) {
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (ckq *ConcealedKanQuery) OnlyIDX(ctx context.Context) int {
+func (ckq *ConcealedKanQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 	id, err := ckq.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -177,8 +203,8 @@ func (ckq *ConcealedKanQuery) AllX(ctx context.Context) []*ConcealedKan {
 }
 
 // IDs executes the query and returns a list of ConcealedKan IDs.
-func (ckq *ConcealedKanQuery) IDs(ctx context.Context) ([]int, error) {
-	var ids []int
+func (ckq *ConcealedKanQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	var ids []uuid.UUID
 	if err := ckq.Select(concealedkan.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
@@ -186,7 +212,7 @@ func (ckq *ConcealedKanQuery) IDs(ctx context.Context) ([]int, error) {
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (ckq *ConcealedKanQuery) IDsX(ctx context.Context) []int {
+func (ckq *ConcealedKanQuery) IDsX(ctx context.Context) []uuid.UUID {
 	ids, err := ckq.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -240,11 +266,23 @@ func (ckq *ConcealedKanQuery) Clone() *ConcealedKanQuery {
 		offset:     ckq.offset,
 		order:      append([]OrderFunc{}, ckq.order...),
 		predicates: append([]predicate.ConcealedKan{}, ckq.predicates...),
+		withCall:   ckq.withCall.Clone(),
 		// clone intermediate query.
 		sql:    ckq.sql.Clone(),
 		path:   ckq.path,
 		unique: ckq.unique,
 	}
+}
+
+// WithCall tells the query-builder to eager-load the nodes that are connected to
+// the "call" edge. The optional arguments are used to configure the query builder of the edge.
+func (ckq *ConcealedKanQuery) WithCall(opts ...func(*CallQuery)) *ConcealedKanQuery {
+	query := &CallQuery{config: ckq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	ckq.withCall = query
+	return ckq
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -296,8 +334,11 @@ func (ckq *ConcealedKanQuery) prepareQuery(ctx context.Context) error {
 
 func (ckq *ConcealedKanQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*ConcealedKan, error) {
 	var (
-		nodes = []*ConcealedKan{}
-		_spec = ckq.querySpec()
+		nodes       = []*ConcealedKan{}
+		_spec       = ckq.querySpec()
+		loadedTypes = [1]bool{
+			ckq.withCall != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*ConcealedKan).scanValues(nil, columns)
@@ -305,6 +346,7 @@ func (ckq *ConcealedKanQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &ConcealedKan{config: ckq.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -316,7 +358,42 @@ func (ckq *ConcealedKanQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := ckq.withCall; query != nil {
+		if err := ckq.loadCall(ctx, query, nodes, nil,
+			func(n *ConcealedKan, e *Call) { n.Edges.Call = e }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (ckq *ConcealedKanQuery) loadCall(ctx context.Context, query *CallQuery, nodes []*ConcealedKan, init func(*ConcealedKan), assign func(*ConcealedKan, *Call)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*ConcealedKan)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+	}
+	query.withFKs = true
+	query.Where(predicate.Call(func(s *sql.Selector) {
+		s.Where(sql.InValues(concealedkan.CallColumn, fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.concealed_kan_call
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "concealed_kan_call" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "concealed_kan_call" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
 }
 
 func (ckq *ConcealedKanQuery) sqlCount(ctx context.Context) (int, error) {
@@ -345,7 +422,7 @@ func (ckq *ConcealedKanQuery) querySpec() *sqlgraph.QuerySpec {
 			Table:   concealedkan.Table,
 			Columns: concealedkan.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: concealedkan.FieldID,
 			},
 		},

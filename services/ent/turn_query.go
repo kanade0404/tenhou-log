@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/event"
+	"github.com/kanade0404/tenhou-log/services/ent/gameplayerhandhai"
 	"github.com/kanade0404/tenhou-log/services/ent/gameplayerpoint"
 	"github.com/kanade0404/tenhou-log/services/ent/hand"
 	"github.com/kanade0404/tenhou-log/services/ent/predicate"
@@ -22,15 +23,16 @@ import (
 // TurnQuery is the builder for querying Turn entities.
 type TurnQuery struct {
 	config
-	limit                *int
-	offset               *int
-	unique               *bool
-	order                []OrderFunc
-	fields               []string
-	predicates           []predicate.Turn
-	withHands            *HandQuery
-	withGamePlayerPoints *GamePlayerPointQuery
-	withEvent            *EventQuery
+	limit                 *int
+	offset                *int
+	unique                *bool
+	order                 []OrderFunc
+	fields                []string
+	predicates            []predicate.Turn
+	withHands             *HandQuery
+	withGamePlayerPoints  *GamePlayerPointQuery
+	withEvent             *EventQuery
+	withGameplayerhandhai *GamePlayerHandHaiQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -125,7 +127,29 @@ func (tq *TurnQuery) QueryEvent() *EventQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(turn.Table, turn.FieldID, selector),
 			sqlgraph.To(event.Table, event.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, turn.EventTable, turn.EventColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, turn.EventTable, turn.EventColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(tq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryGameplayerhandhai chains the current query on the "gameplayerhandhai" edge.
+func (tq *TurnQuery) QueryGameplayerhandhai() *GamePlayerHandHaiQuery {
+	query := &GamePlayerHandHaiQuery{config: tq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := tq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := tq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(turn.Table, turn.FieldID, selector),
+			sqlgraph.To(gameplayerhandhai.Table, gameplayerhandhai.FieldID),
+			sqlgraph.Edge(sqlgraph.O2O, false, turn.GameplayerhandhaiTable, turn.GameplayerhandhaiColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(tq.driver.Dialect(), step)
 		return fromU, nil
@@ -309,14 +333,15 @@ func (tq *TurnQuery) Clone() *TurnQuery {
 		return nil
 	}
 	return &TurnQuery{
-		config:               tq.config,
-		limit:                tq.limit,
-		offset:               tq.offset,
-		order:                append([]OrderFunc{}, tq.order...),
-		predicates:           append([]predicate.Turn{}, tq.predicates...),
-		withHands:            tq.withHands.Clone(),
-		withGamePlayerPoints: tq.withGamePlayerPoints.Clone(),
-		withEvent:            tq.withEvent.Clone(),
+		config:                tq.config,
+		limit:                 tq.limit,
+		offset:                tq.offset,
+		order:                 append([]OrderFunc{}, tq.order...),
+		predicates:            append([]predicate.Turn{}, tq.predicates...),
+		withHands:             tq.withHands.Clone(),
+		withGamePlayerPoints:  tq.withGamePlayerPoints.Clone(),
+		withEvent:             tq.withEvent.Clone(),
+		withGameplayerhandhai: tq.withGameplayerhandhai.Clone(),
 		// clone intermediate query.
 		sql:    tq.sql.Clone(),
 		path:   tq.path,
@@ -354,6 +379,17 @@ func (tq *TurnQuery) WithEvent(opts ...func(*EventQuery)) *TurnQuery {
 		opt(query)
 	}
 	tq.withEvent = query
+	return tq
+}
+
+// WithGameplayerhandhai tells the query-builder to eager-load the nodes that are connected to
+// the "gameplayerhandhai" edge. The optional arguments are used to configure the query builder of the edge.
+func (tq *TurnQuery) WithGameplayerhandhai(opts ...func(*GamePlayerHandHaiQuery)) *TurnQuery {
+	query := &GamePlayerHandHaiQuery{config: tq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	tq.withGameplayerhandhai = query
 	return tq
 }
 
@@ -430,10 +466,11 @@ func (tq *TurnQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Turn, e
 	var (
 		nodes       = []*Turn{}
 		_spec       = tq.querySpec()
-		loadedTypes = [3]bool{
+		loadedTypes = [4]bool{
 			tq.withHands != nil,
 			tq.withGamePlayerPoints != nil,
 			tq.withEvent != nil,
+			tq.withGameplayerhandhai != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -469,9 +506,14 @@ func (tq *TurnQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Turn, e
 		}
 	}
 	if query := tq.withEvent; query != nil {
-		if err := tq.loadEvent(ctx, query, nodes,
-			func(n *Turn) { n.Edges.Event = []*Event{} },
-			func(n *Turn, e *Event) { n.Edges.Event = append(n.Edges.Event, e) }); err != nil {
+		if err := tq.loadEvent(ctx, query, nodes, nil,
+			func(n *Turn, e *Event) { n.Edges.Event = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := tq.withGameplayerhandhai; query != nil {
+		if err := tq.loadGameplayerhandhai(ctx, query, nodes, nil,
+			func(n *Turn, e *GamePlayerHandHai) { n.Edges.Gameplayerhandhai = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -600,9 +642,6 @@ func (tq *TurnQuery) loadEvent(ctx context.Context, query *EventQuery, nodes []*
 	for i := range nodes {
 		fks = append(fks, nodes[i].ID)
 		nodeids[nodes[i].ID] = nodes[i]
-		if init != nil {
-			init(nodes[i])
-		}
 	}
 	query.withFKs = true
 	query.Where(predicate.Event(func(s *sql.Selector) {
@@ -620,6 +659,34 @@ func (tq *TurnQuery) loadEvent(ctx context.Context, query *EventQuery, nodes []*
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected foreign-key "turn_event" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (tq *TurnQuery) loadGameplayerhandhai(ctx context.Context, query *GamePlayerHandHaiQuery, nodes []*Turn, init func(*Turn), assign func(*Turn, *GamePlayerHandHai)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Turn)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+	}
+	query.withFKs = true
+	query.Where(predicate.GamePlayerHandHai(func(s *sql.Selector) {
+		s.Where(sql.InValues(turn.GameplayerhandhaiColumn, fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.turn_gameplayerhandhai
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "turn_gameplayerhandhai" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "turn_gameplayerhandhai" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}
