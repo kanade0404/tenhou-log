@@ -3,7 +3,6 @@ package config
 import (
 	"external/driver/secret_manager"
 	"fmt"
-	"github.com/joho/godotenv"
 	"os"
 )
 
@@ -51,9 +50,6 @@ func (c *Config) CompressedLogBucketName() string {
 }
 
 func NewLocalEnv() (*Config, error) {
-	if err := godotenv.Load(); err != nil {
-		return nil, fmt.Errorf("failed load env: %v", err)
-	}
 	return &Config{
 		isLocal:                 true,
 		appPort:                 os.Getenv("PORT"),

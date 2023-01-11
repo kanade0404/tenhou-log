@@ -4,7 +4,6 @@ go 1.18
 
 require (
 	cloud.google.com/go/secretmanager v1.9.0
-	github.com/joho/godotenv v1.4.0
 	google.golang.org/genproto v0.0.0-20221201164419-0e50fba7f41c
 )
 
