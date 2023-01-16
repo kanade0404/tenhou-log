@@ -6,7 +6,7 @@ on:
 defaults:
   run:
     shell: bash
-    working-directory: web
+    working-directory: services/web
 jobs:
   ci:
     runs-on: ubuntu-22.04
