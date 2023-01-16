@@ -2,19 +2,23 @@ package usecases
 
 import (
 	"context"
-	"database/sql"
-	"external/http_handler"
 	"github.com/PuerkitoBio/goquery"
-	"github.com/volatiletech/sqlboiler/v4/boil"
+	"github.com/kanade0404/tenhou-log/pkg/http_handler"
+	"github.com/kanade0404/tenhou-log/services/ent"
+	"github.com/kanade0404/tenhou-log/services/scraper/entities"
+	"github.com/kanade0404/tenhou-log/services/scraper/internal"
+	"io"
 	"log"
-	"scraper/entities"
-	"scraper/internal"
-	"scraper/models"
 )
 
-func ScrapingCompressedLog() ([]*entities.CompressedLogFile, error) {
+func ScrapingCompressedLog(count int) ([]*entities.CompressedLogFile, error) {
 	body, err := http_handler.RequestHTTP("https://tenhou.net/sc/raw/list.cgi")
-	defer body.Close()
+	defer func(body io.ReadCloser) {
+		err := body.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}(body)
 	doc, err := goquery.NewDocumentFromReader(body)
 	if err != nil {
 		return nil, err
@@ -24,7 +28,10 @@ func ScrapingCompressedLog() ([]*entities.CompressedLogFile, error) {
 	logFiles := internal.UnmarshalFileListText(doc.Text())
 	log.Printf("logs: \n%v", logFiles)
 	var fetchLogs []*entities.CompressedLogFile
-	for _, str := range logFiles {
+	for i, str := range logFiles {
+		if count != 0 && i == count {
+			break
+		}
 		log.Println("str: ", str)
 		l, err := entities.Unmarshal(str)
 		if err != nil {
@@ -35,48 +42,43 @@ func ScrapingCompressedLog() ([]*entities.CompressedLogFile, error) {
 	}
 	return fetchLogs, nil
 }
-func StoreCompressedLogFile(ctx context.Context, db *sql.DB, fetchLogFiles []*entities.CompressedLogFile) (models.CompressedLogFileSlice, error) {
+func StoreCompressedLogFile(ctx context.Context, db *ent.Client, fetchLogFiles []*entities.CompressedLogFile) ([]*entities.CompressedLogFile, error) {
+	var (
+		targetFiles []*entities.CompressedLogFile
+		queries     []*ent.CompressedMJLogCreate
+	)
 	// DBから圧縮されたファイルレコード取ってくる
-	currentLogFiles, err := models.CompressedLogFiles().All(ctx, db)
-	var newLogFiles models.CompressedLogFileSlice
-	var diffLogFileNames models.CompressedLogFileSlice
+	var latestFileMap = make(map[string]*ent.CompressedMJLog)
+	currentLogFiles, err := db.CompressedMJLog.Query().All(ctx)
+	for _, file := range currentLogFiles {
+		if _, ok := latestFileMap[file.Name]; ok {
+			if file.InsertedAt.After(latestFileMap[file.Name].InsertedAt) {
+				latestFileMap[file.Name] = file
+			}
+		} else {
+			latestFileMap[file.Name] = file
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
 	for _, fetchLog := range fetchLogFiles {
-		for _, current := range currentLogFiles {
+		for _, current := range latestFileMap {
+			// ファイル名が一致してサイズが違うなら
 			if fetchLog.File == current.Name {
 				if fetchLog.Size != current.Size {
-					diffLogFileNames = append(diffLogFileNames, fetchLog.Transformer())
+					targetFiles = append(targetFiles, fetchLog)
+					queries = append(queries, db.CompressedMJLog.Create().SetSize(fetchLog.Size).SetName(fetchLog.File))
 				}
 				break
 			}
 		}
 		// いずれにもヒットしなかった = 新規
-		diffLogFileNames = append(diffLogFileNames, fetchLog.Transformer())
-		newLogFiles = append(newLogFiles, fetchLog.Transformer())
+		targetFiles = append(targetFiles, fetchLog)
+		queries = append(queries, db.CompressedMJLog.Create().SetSize(fetchLog.Size).SetName(fetchLog.File))
 	}
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
+	if err := db.Debug().CompressedMJLog.CreateBulk(queries...).Exec(ctx); err != nil {
 		return nil, err
 	}
-	for _, file := range newLogFiles {
-		if err := file.Insert(ctx, tx, boil.Infer()); err != nil {
-			err := tx.Rollback()
-			if err != nil {
-				return nil, err
-			}
-			return nil, err
-		}
-	}
-	for _, diffLogFile := range diffLogFileNames {
-		if _, err := diffLogFile.Update(ctx, tx, boil.Infer()); err != nil {
-			err := tx.Rollback()
-			if err != nil {
-				return nil, err
-			}
-			return nil, err
-		}
-	}
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-	return diffLogFileNames, nil
+	return targetFiles, nil
 }

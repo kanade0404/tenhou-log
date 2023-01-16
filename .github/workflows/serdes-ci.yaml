@@ -2,7 +2,7 @@ name: Serdes CI
 on:
   push:
     paths:
-      - serdes/**
+      - pkg/serdes/**
       - .github/workflows/serdes-ci.yaml
 defaults:
   run:
