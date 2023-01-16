@@ -1,4 +1,4 @@
-import {generateRobotsTxt} from "./generateRobotsTxt"
-console.log("start prebuild")
+import { generateRobotsTxt } from './generateRobotsTxt'
+console.log('start prebuild')
 generateRobotsTxt()
-console.log("finish prebuild")
+console.log('finish prebuild')
