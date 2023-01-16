@@ -5,6 +5,7 @@ on:
       - services/scraper/**
       - pkg/**
       - .github/workflows/scraper-ci.yaml
+      - !pkg/serdes/**
 env:
   go-version: 1.18
 jobs:
