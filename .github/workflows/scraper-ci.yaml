@@ -1,6 +1,6 @@
 name: Scraper CI
 on:
-  push:
+  pull-request:
     paths:
       - services/scraper/**
       - pkg/**
