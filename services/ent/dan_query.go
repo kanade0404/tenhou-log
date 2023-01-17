@@ -25,6 +25,7 @@ type DanQuery struct {
 	unique          *bool
 	order           []OrderFunc
 	fields          []string
+	inters          []Interceptor
 	predicates      []predicate.Dan
 	withGamePlayers *GamePlayerQuery
 	// intermediate query (i.e. traversal path).
@@ -38,13 +39,13 @@ func (dq *DanQuery) Where(ps ...predicate.Dan) *DanQuery {
 	return dq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (dq *DanQuery) Limit(limit int) *DanQuery {
 	dq.limit = &limit
 	return dq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (dq *DanQuery) Offset(offset int) *DanQuery {
 	dq.offset = &offset
 	return dq
@@ -57,7 +58,7 @@ func (dq *DanQuery) Unique(unique bool) *DanQuery {
 	return dq
 }
 
-// Order adds an order step to the query.
+// Order specifies how the records should be ordered.
 func (dq *DanQuery) Order(o ...OrderFunc) *DanQuery {
 	dq.order = append(dq.order, o...)
 	return dq
@@ -65,7 +66,7 @@ func (dq *DanQuery) Order(o ...OrderFunc) *DanQuery {
 
 // QueryGamePlayers chains the current query on the "game_players" edge.
 func (dq *DanQuery) QueryGamePlayers() *GamePlayerQuery {
-	query := &GamePlayerQuery{config: dq.config}
+	query := (&GamePlayerClient{config: dq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := dq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -88,7 +89,7 @@ func (dq *DanQuery) QueryGamePlayers() *GamePlayerQuery {
 // First returns the first Dan entity from the query.
 // Returns a *NotFoundError when no Dan was found.
 func (dq *DanQuery) First(ctx context.Context) (*Dan, error) {
-	nodes, err := dq.Limit(1).All(ctx)
+	nodes, err := dq.Limit(1).All(newQueryContext(ctx, TypeDan, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +112,7 @@ func (dq *DanQuery) FirstX(ctx context.Context) *Dan {
 // Returns a *NotFoundError when no Dan ID was found.
 func (dq *DanQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = dq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = dq.Limit(1).IDs(newQueryContext(ctx, TypeDan, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -134,7 +135,7 @@ func (dq *DanQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one Dan entity is found.
 // Returns a *NotFoundError when no Dan entities are found.
 func (dq *DanQuery) Only(ctx context.Context) (*Dan, error) {
-	nodes, err := dq.Limit(2).All(ctx)
+	nodes, err := dq.Limit(2).All(newQueryContext(ctx, TypeDan, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +163,7 @@ func (dq *DanQuery) OnlyX(ctx context.Context) *Dan {
 // Returns a *NotFoundError when no entities are found.
 func (dq *DanQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = dq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = dq.Limit(2).IDs(newQueryContext(ctx, TypeDan, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -187,10 +188,12 @@ func (dq *DanQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of Dans.
 func (dq *DanQuery) All(ctx context.Context) ([]*Dan, error) {
+	ctx = newQueryContext(ctx, TypeDan, "All")
 	if err := dq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return dq.sqlAll(ctx)
+	qr := querierAll[[]*Dan, *DanQuery]()
+	return withInterceptors[[]*Dan](ctx, dq, qr, dq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -205,6 +208,7 @@ func (dq *DanQuery) AllX(ctx context.Context) []*Dan {
 // IDs executes the query and returns a list of Dan IDs.
 func (dq *DanQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	var ids []uuid.UUID
+	ctx = newQueryContext(ctx, TypeDan, "IDs")
 	if err := dq.Select(dan.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
@@ -222,10 +226,11 @@ func (dq *DanQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (dq *DanQuery) Count(ctx context.Context) (int, error) {
+	ctx = newQueryContext(ctx, TypeDan, "Count")
 	if err := dq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return dq.sqlCount(ctx)
+	return withInterceptors[int](ctx, dq, querierCount[*DanQuery](), dq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -239,10 +244,15 @@ func (dq *DanQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (dq *DanQuery) Exist(ctx context.Context) (bool, error) {
-	if err := dq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = newQueryContext(ctx, TypeDan, "Exist")
+	switch _, err := dq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return dq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -265,6 +275,7 @@ func (dq *DanQuery) Clone() *DanQuery {
 		limit:           dq.limit,
 		offset:          dq.offset,
 		order:           append([]OrderFunc{}, dq.order...),
+		inters:          append([]Interceptor{}, dq.inters...),
 		predicates:      append([]predicate.Dan{}, dq.predicates...),
 		withGamePlayers: dq.withGamePlayers.Clone(),
 		// clone intermediate query.
@@ -277,7 +288,7 @@ func (dq *DanQuery) Clone() *DanQuery {
 // WithGamePlayers tells the query-builder to eager-load the nodes that are connected to
 // the "game_players" edge. The optional arguments are used to configure the query builder of the edge.
 func (dq *DanQuery) WithGamePlayers(opts ...func(*GamePlayerQuery)) *DanQuery {
-	query := &GamePlayerQuery{config: dq.config}
+	query := (&GamePlayerClient{config: dq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -300,16 +311,11 @@ func (dq *DanQuery) WithGamePlayers(opts ...func(*GamePlayerQuery)) *DanQuery {
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (dq *DanQuery) GroupBy(field string, fields ...string) *DanGroupBy {
-	grbuild := &DanGroupBy{config: dq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := dq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return dq.sqlQuery(ctx), nil
-	}
+	dq.fields = append([]string{field}, fields...)
+	grbuild := &DanGroupBy{build: dq}
+	grbuild.flds = &dq.fields
 	grbuild.label = dan.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -327,10 +333,10 @@ func (dq *DanQuery) GroupBy(field string, fields ...string) *DanGroupBy {
 //		Scan(ctx, &v)
 func (dq *DanQuery) Select(fields ...string) *DanSelect {
 	dq.fields = append(dq.fields, fields...)
-	selbuild := &DanSelect{DanQuery: dq}
-	selbuild.label = dan.Label
-	selbuild.flds, selbuild.scan = &dq.fields, selbuild.Scan
-	return selbuild
+	sbuild := &DanSelect{DanQuery: dq}
+	sbuild.label = dan.Label
+	sbuild.flds, sbuild.scan = &dq.fields, sbuild.Scan
+	return sbuild
 }
 
 // Aggregate returns a DanSelect configured with the given aggregations.
@@ -339,6 +345,16 @@ func (dq *DanQuery) Aggregate(fns ...AggregateFunc) *DanSelect {
 }
 
 func (dq *DanQuery) prepareQuery(ctx context.Context) error {
+	for _, inter := range dq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, dq); err != nil {
+				return err
+			}
+		}
+	}
 	for _, f := range dq.fields {
 		if !dan.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
@@ -431,17 +447,6 @@ func (dq *DanQuery) sqlCount(ctx context.Context) (int, error) {
 	return sqlgraph.CountNodes(ctx, dq.driver, _spec)
 }
 
-func (dq *DanQuery) sqlExist(ctx context.Context) (bool, error) {
-	switch _, err := dq.FirstID(ctx); {
-	case IsNotFound(err):
-		return false, nil
-	case err != nil:
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	default:
-		return true, nil
-	}
-}
-
 func (dq *DanQuery) querySpec() *sqlgraph.QuerySpec {
 	_spec := &sqlgraph.QuerySpec{
 		Node: &sqlgraph.NodeSpec{
@@ -524,13 +529,8 @@ func (dq *DanQuery) sqlQuery(ctx context.Context) *sql.Selector {
 
 // DanGroupBy is the group-by builder for Dan entities.
 type DanGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *DanQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -539,58 +539,46 @@ func (dgb *DanGroupBy) Aggregate(fns ...AggregateFunc) *DanGroupBy {
 	return dgb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
+// Scan applies the selector query and scans the result into the given value.
 func (dgb *DanGroupBy) Scan(ctx context.Context, v any) error {
-	query, err := dgb.path(ctx)
-	if err != nil {
+	ctx = newQueryContext(ctx, TypeDan, "GroupBy")
+	if err := dgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	dgb.sql = query
-	return dgb.sqlScan(ctx, v)
+	return scanWithInterceptors[*DanQuery, *DanGroupBy](ctx, dgb.build, dgb, dgb.build.inters, v)
 }
 
-func (dgb *DanGroupBy) sqlScan(ctx context.Context, v any) error {
-	for _, f := range dgb.fields {
-		if !dan.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (dgb *DanGroupBy) sqlScan(ctx context.Context, root *DanQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(dgb.fns))
+	for _, fn := range dgb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := dgb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*dgb.flds)+len(dgb.fns))
+		for _, f := range *dgb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*dgb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := dgb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := dgb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (dgb *DanGroupBy) sqlQuery() *sql.Selector {
-	selector := dgb.sql.Select()
-	aggregation := make([]string, 0, len(dgb.fns))
-	for _, fn := range dgb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(dgb.fields)+len(dgb.fns))
-		for _, f := range dgb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(dgb.fields...)...)
-}
-
 // DanSelect is the builder for selecting fields of Dan entities.
 type DanSelect struct {
 	*DanQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
@@ -601,26 +589,27 @@ func (ds *DanSelect) Aggregate(fns ...AggregateFunc) *DanSelect {
 
 // Scan applies the selector query and scans the result into the given value.
 func (ds *DanSelect) Scan(ctx context.Context, v any) error {
+	ctx = newQueryContext(ctx, TypeDan, "Select")
 	if err := ds.prepareQuery(ctx); err != nil {
 		return err
 	}
-	ds.sql = ds.DanQuery.sqlQuery(ctx)
-	return ds.sqlScan(ctx, v)
+	return scanWithInterceptors[*DanQuery, *DanSelect](ctx, ds.DanQuery, ds, ds.inters, v)
 }
 
-func (ds *DanSelect) sqlScan(ctx context.Context, v any) error {
+func (ds *DanSelect) sqlScan(ctx context.Context, root *DanQuery, v any) error {
+	selector := root.sqlQuery(ctx)
 	aggregation := make([]string, 0, len(ds.fns))
 	for _, fn := range ds.fns {
-		aggregation = append(aggregation, fn(ds.sql))
+		aggregation = append(aggregation, fn(selector))
 	}
 	switch n := len(*ds.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
-		ds.sql.Select(aggregation...)
+		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
-		ds.sql.AppendSelect(aggregation...)
+		selector.AppendSelect(aggregation...)
 	}
 	rows := &sql.Rows{}
-	query, args := ds.sql.Query()
+	query, args := selector.Query()
 	if err := ds.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

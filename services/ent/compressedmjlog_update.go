@@ -74,34 +74,7 @@ func (cmlu *CompressedMJLogUpdate) ClearMjlogFiles() *CompressedMJLogUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (cmlu *CompressedMJLogUpdate) Save(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(cmlu.hooks) == 0 {
-		affected, err = cmlu.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*CompressedMJLogMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			cmlu.mutation = mutation
-			affected, err = cmlu.sqlSave(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(cmlu.hooks) - 1; i >= 0; i-- {
-			if cmlu.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = cmlu.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, cmlu.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks[int, CompressedMJLogMutation](ctx, cmlu.sqlSave, cmlu.mutation, cmlu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -193,6 +166,7 @@ func (cmlu *CompressedMJLogUpdate) sqlSave(ctx context.Context) (n int, err erro
 		}
 		return 0, err
 	}
+	cmlu.mutation.done = true
 	return n, nil
 }
 
@@ -256,40 +230,7 @@ func (cmluo *CompressedMJLogUpdateOne) Select(field string, fields ...string) *C
 
 // Save executes the query and returns the updated CompressedMJLog entity.
 func (cmluo *CompressedMJLogUpdateOne) Save(ctx context.Context) (*CompressedMJLog, error) {
-	var (
-		err  error
-		node *CompressedMJLog
-	)
-	if len(cmluo.hooks) == 0 {
-		node, err = cmluo.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*CompressedMJLogMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			cmluo.mutation = mutation
-			node, err = cmluo.sqlSave(ctx)
-			mutation.done = true
-			return node, err
-		})
-		for i := len(cmluo.hooks) - 1; i >= 0; i-- {
-			if cmluo.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = cmluo.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, cmluo.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*CompressedMJLog)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from CompressedMJLogMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks[*CompressedMJLog, CompressedMJLogMutation](ctx, cmluo.sqlSave, cmluo.mutation, cmluo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -401,5 +342,6 @@ func (cmluo *CompressedMJLogUpdateOne) sqlSave(ctx context.Context) (_node *Comp
 		}
 		return nil, err
 	}
+	cmluo.mutation.done = true
 	return _node, nil
 }

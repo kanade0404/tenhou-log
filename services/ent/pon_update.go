@@ -61,34 +61,7 @@ func (pu *PonUpdate) ClearCall() *PonUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (pu *PonUpdate) Save(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(pu.hooks) == 0 {
-		affected, err = pu.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*PonMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			pu.mutation = mutation
-			affected, err = pu.sqlSave(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(pu.hooks) - 1; i >= 0; i-- {
-			if pu.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = pu.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, pu.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks[int, PonMutation](ctx, pu.sqlSave, pu.mutation, pu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -174,6 +147,7 @@ func (pu *PonUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		return 0, err
 	}
+	pu.mutation.done = true
 	return n, nil
 }
 
@@ -224,40 +198,7 @@ func (puo *PonUpdateOne) Select(field string, fields ...string) *PonUpdateOne {
 
 // Save executes the query and returns the updated Pon entity.
 func (puo *PonUpdateOne) Save(ctx context.Context) (*Pon, error) {
-	var (
-		err  error
-		node *Pon
-	)
-	if len(puo.hooks) == 0 {
-		node, err = puo.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*PonMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			puo.mutation = mutation
-			node, err = puo.sqlSave(ctx)
-			mutation.done = true
-			return node, err
-		})
-		for i := len(puo.hooks) - 1; i >= 0; i-- {
-			if puo.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = puo.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, puo.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*Pon)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from PonMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks[*Pon, PonMutation](ctx, puo.sqlSave, puo.mutation, puo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -363,5 +304,6 @@ func (puo *PonUpdateOne) sqlSave(ctx context.Context) (_node *Pon, err error) {
 		}
 		return nil, err
 	}
+	puo.mutation.done = true
 	return _node, nil
 }

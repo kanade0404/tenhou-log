@@ -61,34 +61,7 @@ func (cku *ConcealedKanUpdate) ClearCall() *ConcealedKanUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (cku *ConcealedKanUpdate) Save(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(cku.hooks) == 0 {
-		affected, err = cku.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*ConcealedKanMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			cku.mutation = mutation
-			affected, err = cku.sqlSave(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(cku.hooks) - 1; i >= 0; i-- {
-			if cku.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = cku.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, cku.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks[int, ConcealedKanMutation](ctx, cku.sqlSave, cku.mutation, cku.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -174,6 +147,7 @@ func (cku *ConcealedKanUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		return 0, err
 	}
+	cku.mutation.done = true
 	return n, nil
 }
 
@@ -224,40 +198,7 @@ func (ckuo *ConcealedKanUpdateOne) Select(field string, fields ...string) *Conce
 
 // Save executes the query and returns the updated ConcealedKan entity.
 func (ckuo *ConcealedKanUpdateOne) Save(ctx context.Context) (*ConcealedKan, error) {
-	var (
-		err  error
-		node *ConcealedKan
-	)
-	if len(ckuo.hooks) == 0 {
-		node, err = ckuo.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*ConcealedKanMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			ckuo.mutation = mutation
-			node, err = ckuo.sqlSave(ctx)
-			mutation.done = true
-			return node, err
-		})
-		for i := len(ckuo.hooks) - 1; i >= 0; i-- {
-			if ckuo.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = ckuo.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, ckuo.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*ConcealedKan)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from ConcealedKanMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks[*ConcealedKan, ConcealedKanMutation](ctx, ckuo.sqlSave, ckuo.mutation, ckuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -363,5 +304,6 @@ func (ckuo *ConcealedKanUpdateOne) sqlSave(ctx context.Context) (_node *Conceale
 		}
 		return nil, err
 	}
+	ckuo.mutation.done = true
 	return _node, nil
 }

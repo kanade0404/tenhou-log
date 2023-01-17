@@ -61,34 +61,7 @@ func (cu *ChiiUpdate) ClearCall() *ChiiUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (cu *ChiiUpdate) Save(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(cu.hooks) == 0 {
-		affected, err = cu.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*ChiiMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			cu.mutation = mutation
-			affected, err = cu.sqlSave(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(cu.hooks) - 1; i >= 0; i-- {
-			if cu.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = cu.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, cu.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks[int, ChiiMutation](ctx, cu.sqlSave, cu.mutation, cu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -174,6 +147,7 @@ func (cu *ChiiUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		return 0, err
 	}
+	cu.mutation.done = true
 	return n, nil
 }
 
@@ -224,40 +198,7 @@ func (cuo *ChiiUpdateOne) Select(field string, fields ...string) *ChiiUpdateOne 
 
 // Save executes the query and returns the updated Chii entity.
 func (cuo *ChiiUpdateOne) Save(ctx context.Context) (*Chii, error) {
-	var (
-		err  error
-		node *Chii
-	)
-	if len(cuo.hooks) == 0 {
-		node, err = cuo.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*ChiiMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			cuo.mutation = mutation
-			node, err = cuo.sqlSave(ctx)
-			mutation.done = true
-			return node, err
-		})
-		for i := len(cuo.hooks) - 1; i >= 0; i-- {
-			if cuo.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = cuo.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, cuo.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*Chii)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from ChiiMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks[*Chii, ChiiMutation](ctx, cuo.sqlSave, cuo.mutation, cuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -363,5 +304,6 @@ func (cuo *ChiiUpdateOne) sqlSave(ctx context.Context) (_node *Chii, err error) 
 		}
 		return nil, err
 	}
+	cuo.mutation.done = true
 	return _node, nil
 }

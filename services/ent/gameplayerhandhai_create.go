@@ -62,50 +62,8 @@ func (gphhc *GamePlayerHandHaiCreate) Mutation() *GamePlayerHandHaiMutation {
 
 // Save creates the GamePlayerHandHai in the database.
 func (gphhc *GamePlayerHandHaiCreate) Save(ctx context.Context) (*GamePlayerHandHai, error) {
-	var (
-		err  error
-		node *GamePlayerHandHai
-	)
 	gphhc.defaults()
-	if len(gphhc.hooks) == 0 {
-		if err = gphhc.check(); err != nil {
-			return nil, err
-		}
-		node, err = gphhc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*GamePlayerHandHaiMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = gphhc.check(); err != nil {
-				return nil, err
-			}
-			gphhc.mutation = mutation
-			if node, err = gphhc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(gphhc.hooks) - 1; i >= 0; i-- {
-			if gphhc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = gphhc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, gphhc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*GamePlayerHandHai)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from GamePlayerHandHaiMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks[*GamePlayerHandHai, GamePlayerHandHaiMutation](ctx, gphhc.sqlSave, gphhc.mutation, gphhc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -150,6 +108,9 @@ func (gphhc *GamePlayerHandHaiCreate) check() error {
 }
 
 func (gphhc *GamePlayerHandHaiCreate) sqlSave(ctx context.Context) (*GamePlayerHandHai, error) {
+	if err := gphhc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := gphhc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, gphhc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -164,6 +125,8 @@ func (gphhc *GamePlayerHandHaiCreate) sqlSave(ctx context.Context) (*GamePlayerH
 			return nil, err
 		}
 	}
+	gphhc.mutation.id = &_node.ID
+	gphhc.mutation.done = true
 	return _node, nil
 }
 

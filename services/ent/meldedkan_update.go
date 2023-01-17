@@ -61,34 +61,7 @@ func (mku *MeldedKanUpdate) ClearCall() *MeldedKanUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (mku *MeldedKanUpdate) Save(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(mku.hooks) == 0 {
-		affected, err = mku.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*MeldedKanMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			mku.mutation = mutation
-			affected, err = mku.sqlSave(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(mku.hooks) - 1; i >= 0; i-- {
-			if mku.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = mku.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, mku.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks[int, MeldedKanMutation](ctx, mku.sqlSave, mku.mutation, mku.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -174,6 +147,7 @@ func (mku *MeldedKanUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		return 0, err
 	}
+	mku.mutation.done = true
 	return n, nil
 }
 
@@ -224,40 +198,7 @@ func (mkuo *MeldedKanUpdateOne) Select(field string, fields ...string) *MeldedKa
 
 // Save executes the query and returns the updated MeldedKan entity.
 func (mkuo *MeldedKanUpdateOne) Save(ctx context.Context) (*MeldedKan, error) {
-	var (
-		err  error
-		node *MeldedKan
-	)
-	if len(mkuo.hooks) == 0 {
-		node, err = mkuo.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*MeldedKanMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			mkuo.mutation = mutation
-			node, err = mkuo.sqlSave(ctx)
-			mutation.done = true
-			return node, err
-		})
-		for i := len(mkuo.hooks) - 1; i >= 0; i-- {
-			if mkuo.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = mkuo.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, mkuo.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*MeldedKan)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from MeldedKanMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks[*MeldedKan, MeldedKanMutation](ctx, mkuo.sqlSave, mkuo.mutation, mkuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -363,5 +304,6 @@ func (mkuo *MeldedKanUpdateOne) sqlSave(ctx context.Context) (_node *MeldedKan, 
 		}
 		return nil, err
 	}
+	mkuo.mutation.done = true
 	return _node, nil
 }

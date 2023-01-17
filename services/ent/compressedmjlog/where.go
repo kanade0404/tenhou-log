@@ -13,321 +13,207 @@ import (
 
 // ID filters vertices based on their ID field.
 func ID(id uuid.UUID) predicate.CompressedMJLog {
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.CompressedMJLog(sql.FieldEQ(FieldID, id))
 }
 
 // IDEQ applies the EQ predicate on the ID field.
 func IDEQ(id uuid.UUID) predicate.CompressedMJLog {
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.CompressedMJLog(sql.FieldEQ(FieldID, id))
 }
 
 // IDNEQ applies the NEQ predicate on the ID field.
 func IDNEQ(id uuid.UUID) predicate.CompressedMJLog {
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldID), id))
-	})
+	return predicate.CompressedMJLog(sql.FieldNEQ(FieldID, id))
 }
 
 // IDIn applies the In predicate on the ID field.
 func IDIn(ids ...uuid.UUID) predicate.CompressedMJLog {
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		v := make([]any, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.In(s.C(FieldID), v...))
-	})
+	return predicate.CompressedMJLog(sql.FieldIn(FieldID, ids...))
 }
 
 // IDNotIn applies the NotIn predicate on the ID field.
 func IDNotIn(ids ...uuid.UUID) predicate.CompressedMJLog {
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		v := make([]any, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.NotIn(s.C(FieldID), v...))
-	})
+	return predicate.CompressedMJLog(sql.FieldNotIn(FieldID, ids...))
 }
 
 // IDGT applies the GT predicate on the ID field.
 func IDGT(id uuid.UUID) predicate.CompressedMJLog {
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldID), id))
-	})
+	return predicate.CompressedMJLog(sql.FieldGT(FieldID, id))
 }
 
 // IDGTE applies the GTE predicate on the ID field.
 func IDGTE(id uuid.UUID) predicate.CompressedMJLog {
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldID), id))
-	})
+	return predicate.CompressedMJLog(sql.FieldGTE(FieldID, id))
 }
 
 // IDLT applies the LT predicate on the ID field.
 func IDLT(id uuid.UUID) predicate.CompressedMJLog {
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldID), id))
-	})
+	return predicate.CompressedMJLog(sql.FieldLT(FieldID, id))
 }
 
 // IDLTE applies the LTE predicate on the ID field.
 func IDLTE(id uuid.UUID) predicate.CompressedMJLog {
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldID), id))
-	})
+	return predicate.CompressedMJLog(sql.FieldLTE(FieldID, id))
 }
 
 // Name applies equality check predicate on the "name" field. It's identical to NameEQ.
 func Name(v string) predicate.CompressedMJLog {
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldName), v))
-	})
+	return predicate.CompressedMJLog(sql.FieldEQ(FieldName, v))
 }
 
 // Size applies equality check predicate on the "size" field. It's identical to SizeEQ.
 func Size(v uint) predicate.CompressedMJLog {
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldSize), v))
-	})
+	return predicate.CompressedMJLog(sql.FieldEQ(FieldSize, v))
 }
 
 // InsertedAt applies equality check predicate on the "inserted_at" field. It's identical to InsertedAtEQ.
 func InsertedAt(v time.Time) predicate.CompressedMJLog {
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldInsertedAt), v))
-	})
+	return predicate.CompressedMJLog(sql.FieldEQ(FieldInsertedAt, v))
 }
 
 // NameEQ applies the EQ predicate on the "name" field.
 func NameEQ(v string) predicate.CompressedMJLog {
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldName), v))
-	})
+	return predicate.CompressedMJLog(sql.FieldEQ(FieldName, v))
 }
 
 // NameNEQ applies the NEQ predicate on the "name" field.
 func NameNEQ(v string) predicate.CompressedMJLog {
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldName), v))
-	})
+	return predicate.CompressedMJLog(sql.FieldNEQ(FieldName, v))
 }
 
 // NameIn applies the In predicate on the "name" field.
 func NameIn(vs ...string) predicate.CompressedMJLog {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldName), v...))
-	})
+	return predicate.CompressedMJLog(sql.FieldIn(FieldName, vs...))
 }
 
 // NameNotIn applies the NotIn predicate on the "name" field.
 func NameNotIn(vs ...string) predicate.CompressedMJLog {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldName), v...))
-	})
+	return predicate.CompressedMJLog(sql.FieldNotIn(FieldName, vs...))
 }
 
 // NameGT applies the GT predicate on the "name" field.
 func NameGT(v string) predicate.CompressedMJLog {
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldName), v))
-	})
+	return predicate.CompressedMJLog(sql.FieldGT(FieldName, v))
 }
 
 // NameGTE applies the GTE predicate on the "name" field.
 func NameGTE(v string) predicate.CompressedMJLog {
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldName), v))
-	})
+	return predicate.CompressedMJLog(sql.FieldGTE(FieldName, v))
 }
 
 // NameLT applies the LT predicate on the "name" field.
 func NameLT(v string) predicate.CompressedMJLog {
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldName), v))
-	})
+	return predicate.CompressedMJLog(sql.FieldLT(FieldName, v))
 }
 
 // NameLTE applies the LTE predicate on the "name" field.
 func NameLTE(v string) predicate.CompressedMJLog {
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldName), v))
-	})
+	return predicate.CompressedMJLog(sql.FieldLTE(FieldName, v))
 }
 
 // NameContains applies the Contains predicate on the "name" field.
 func NameContains(v string) predicate.CompressedMJLog {
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldName), v))
-	})
+	return predicate.CompressedMJLog(sql.FieldContains(FieldName, v))
 }
 
 // NameHasPrefix applies the HasPrefix predicate on the "name" field.
 func NameHasPrefix(v string) predicate.CompressedMJLog {
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldName), v))
-	})
+	return predicate.CompressedMJLog(sql.FieldHasPrefix(FieldName, v))
 }
 
 // NameHasSuffix applies the HasSuffix predicate on the "name" field.
 func NameHasSuffix(v string) predicate.CompressedMJLog {
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldName), v))
-	})
+	return predicate.CompressedMJLog(sql.FieldHasSuffix(FieldName, v))
 }
 
 // NameEqualFold applies the EqualFold predicate on the "name" field.
 func NameEqualFold(v string) predicate.CompressedMJLog {
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldName), v))
-	})
+	return predicate.CompressedMJLog(sql.FieldEqualFold(FieldName, v))
 }
 
 // NameContainsFold applies the ContainsFold predicate on the "name" field.
 func NameContainsFold(v string) predicate.CompressedMJLog {
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldName), v))
-	})
+	return predicate.CompressedMJLog(sql.FieldContainsFold(FieldName, v))
 }
 
 // SizeEQ applies the EQ predicate on the "size" field.
 func SizeEQ(v uint) predicate.CompressedMJLog {
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldSize), v))
-	})
+	return predicate.CompressedMJLog(sql.FieldEQ(FieldSize, v))
 }
 
 // SizeNEQ applies the NEQ predicate on the "size" field.
 func SizeNEQ(v uint) predicate.CompressedMJLog {
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldSize), v))
-	})
+	return predicate.CompressedMJLog(sql.FieldNEQ(FieldSize, v))
 }
 
 // SizeIn applies the In predicate on the "size" field.
 func SizeIn(vs ...uint) predicate.CompressedMJLog {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldSize), v...))
-	})
+	return predicate.CompressedMJLog(sql.FieldIn(FieldSize, vs...))
 }
 
 // SizeNotIn applies the NotIn predicate on the "size" field.
 func SizeNotIn(vs ...uint) predicate.CompressedMJLog {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldSize), v...))
-	})
+	return predicate.CompressedMJLog(sql.FieldNotIn(FieldSize, vs...))
 }
 
 // SizeGT applies the GT predicate on the "size" field.
 func SizeGT(v uint) predicate.CompressedMJLog {
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldSize), v))
-	})
+	return predicate.CompressedMJLog(sql.FieldGT(FieldSize, v))
 }
 
 // SizeGTE applies the GTE predicate on the "size" field.
 func SizeGTE(v uint) predicate.CompressedMJLog {
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldSize), v))
-	})
+	return predicate.CompressedMJLog(sql.FieldGTE(FieldSize, v))
 }
 
 // SizeLT applies the LT predicate on the "size" field.
 func SizeLT(v uint) predicate.CompressedMJLog {
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldSize), v))
-	})
+	return predicate.CompressedMJLog(sql.FieldLT(FieldSize, v))
 }
 
 // SizeLTE applies the LTE predicate on the "size" field.
 func SizeLTE(v uint) predicate.CompressedMJLog {
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldSize), v))
-	})
+	return predicate.CompressedMJLog(sql.FieldLTE(FieldSize, v))
 }
 
 // InsertedAtEQ applies the EQ predicate on the "inserted_at" field.
 func InsertedAtEQ(v time.Time) predicate.CompressedMJLog {
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldInsertedAt), v))
-	})
+	return predicate.CompressedMJLog(sql.FieldEQ(FieldInsertedAt, v))
 }
 
 // InsertedAtNEQ applies the NEQ predicate on the "inserted_at" field.
 func InsertedAtNEQ(v time.Time) predicate.CompressedMJLog {
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldInsertedAt), v))
-	})
+	return predicate.CompressedMJLog(sql.FieldNEQ(FieldInsertedAt, v))
 }
 
 // InsertedAtIn applies the In predicate on the "inserted_at" field.
 func InsertedAtIn(vs ...time.Time) predicate.CompressedMJLog {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldInsertedAt), v...))
-	})
+	return predicate.CompressedMJLog(sql.FieldIn(FieldInsertedAt, vs...))
 }
 
 // InsertedAtNotIn applies the NotIn predicate on the "inserted_at" field.
 func InsertedAtNotIn(vs ...time.Time) predicate.CompressedMJLog {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldInsertedAt), v...))
-	})
+	return predicate.CompressedMJLog(sql.FieldNotIn(FieldInsertedAt, vs...))
 }
 
 // InsertedAtGT applies the GT predicate on the "inserted_at" field.
 func InsertedAtGT(v time.Time) predicate.CompressedMJLog {
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldInsertedAt), v))
-	})
+	return predicate.CompressedMJLog(sql.FieldGT(FieldInsertedAt, v))
 }
 
 // InsertedAtGTE applies the GTE predicate on the "inserted_at" field.
 func InsertedAtGTE(v time.Time) predicate.CompressedMJLog {
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldInsertedAt), v))
-	})
+	return predicate.CompressedMJLog(sql.FieldGTE(FieldInsertedAt, v))
 }
 
 // InsertedAtLT applies the LT predicate on the "inserted_at" field.
 func InsertedAtLT(v time.Time) predicate.CompressedMJLog {
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldInsertedAt), v))
-	})
+	return predicate.CompressedMJLog(sql.FieldLT(FieldInsertedAt, v))
 }
 
 // InsertedAtLTE applies the LTE predicate on the "inserted_at" field.
 func InsertedAtLTE(v time.Time) predicate.CompressedMJLog {
-	return predicate.CompressedMJLog(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldInsertedAt), v))
-	})
+	return predicate.CompressedMJLog(sql.FieldLTE(FieldInsertedAt, v))
 }
 
 // HasMjlogFiles applies the HasEdge predicate on the "mjlog_files" edge.
@@ -335,7 +221,6 @@ func HasMjlogFiles() predicate.CompressedMJLog {
 	return predicate.CompressedMJLog(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(MjlogFilesTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, false, MjlogFilesTable, MjlogFilesColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)

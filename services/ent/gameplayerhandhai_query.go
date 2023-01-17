@@ -24,6 +24,7 @@ type GamePlayerHandHaiQuery struct {
 	unique     *bool
 	order      []OrderFunc
 	fields     []string
+	inters     []Interceptor
 	predicates []predicate.GamePlayerHandHai
 	withTurn   *TurnQuery
 	withFKs    bool
@@ -38,13 +39,13 @@ func (gphhq *GamePlayerHandHaiQuery) Where(ps ...predicate.GamePlayerHandHai) *G
 	return gphhq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (gphhq *GamePlayerHandHaiQuery) Limit(limit int) *GamePlayerHandHaiQuery {
 	gphhq.limit = &limit
 	return gphhq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (gphhq *GamePlayerHandHaiQuery) Offset(offset int) *GamePlayerHandHaiQuery {
 	gphhq.offset = &offset
 	return gphhq
@@ -57,7 +58,7 @@ func (gphhq *GamePlayerHandHaiQuery) Unique(unique bool) *GamePlayerHandHaiQuery
 	return gphhq
 }
 
-// Order adds an order step to the query.
+// Order specifies how the records should be ordered.
 func (gphhq *GamePlayerHandHaiQuery) Order(o ...OrderFunc) *GamePlayerHandHaiQuery {
 	gphhq.order = append(gphhq.order, o...)
 	return gphhq
@@ -65,7 +66,7 @@ func (gphhq *GamePlayerHandHaiQuery) Order(o ...OrderFunc) *GamePlayerHandHaiQue
 
 // QueryTurn chains the current query on the "turn" edge.
 func (gphhq *GamePlayerHandHaiQuery) QueryTurn() *TurnQuery {
-	query := &TurnQuery{config: gphhq.config}
+	query := (&TurnClient{config: gphhq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := gphhq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -88,7 +89,7 @@ func (gphhq *GamePlayerHandHaiQuery) QueryTurn() *TurnQuery {
 // First returns the first GamePlayerHandHai entity from the query.
 // Returns a *NotFoundError when no GamePlayerHandHai was found.
 func (gphhq *GamePlayerHandHaiQuery) First(ctx context.Context) (*GamePlayerHandHai, error) {
-	nodes, err := gphhq.Limit(1).All(ctx)
+	nodes, err := gphhq.Limit(1).All(newQueryContext(ctx, TypeGamePlayerHandHai, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +112,7 @@ func (gphhq *GamePlayerHandHaiQuery) FirstX(ctx context.Context) *GamePlayerHand
 // Returns a *NotFoundError when no GamePlayerHandHai ID was found.
 func (gphhq *GamePlayerHandHaiQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = gphhq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = gphhq.Limit(1).IDs(newQueryContext(ctx, TypeGamePlayerHandHai, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -134,7 +135,7 @@ func (gphhq *GamePlayerHandHaiQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one GamePlayerHandHai entity is found.
 // Returns a *NotFoundError when no GamePlayerHandHai entities are found.
 func (gphhq *GamePlayerHandHaiQuery) Only(ctx context.Context) (*GamePlayerHandHai, error) {
-	nodes, err := gphhq.Limit(2).All(ctx)
+	nodes, err := gphhq.Limit(2).All(newQueryContext(ctx, TypeGamePlayerHandHai, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +163,7 @@ func (gphhq *GamePlayerHandHaiQuery) OnlyX(ctx context.Context) *GamePlayerHandH
 // Returns a *NotFoundError when no entities are found.
 func (gphhq *GamePlayerHandHaiQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = gphhq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = gphhq.Limit(2).IDs(newQueryContext(ctx, TypeGamePlayerHandHai, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -187,10 +188,12 @@ func (gphhq *GamePlayerHandHaiQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of GamePlayerHandHais.
 func (gphhq *GamePlayerHandHaiQuery) All(ctx context.Context) ([]*GamePlayerHandHai, error) {
+	ctx = newQueryContext(ctx, TypeGamePlayerHandHai, "All")
 	if err := gphhq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return gphhq.sqlAll(ctx)
+	qr := querierAll[[]*GamePlayerHandHai, *GamePlayerHandHaiQuery]()
+	return withInterceptors[[]*GamePlayerHandHai](ctx, gphhq, qr, gphhq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -205,6 +208,7 @@ func (gphhq *GamePlayerHandHaiQuery) AllX(ctx context.Context) []*GamePlayerHand
 // IDs executes the query and returns a list of GamePlayerHandHai IDs.
 func (gphhq *GamePlayerHandHaiQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	var ids []uuid.UUID
+	ctx = newQueryContext(ctx, TypeGamePlayerHandHai, "IDs")
 	if err := gphhq.Select(gameplayerhandhai.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
@@ -222,10 +226,11 @@ func (gphhq *GamePlayerHandHaiQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (gphhq *GamePlayerHandHaiQuery) Count(ctx context.Context) (int, error) {
+	ctx = newQueryContext(ctx, TypeGamePlayerHandHai, "Count")
 	if err := gphhq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return gphhq.sqlCount(ctx)
+	return withInterceptors[int](ctx, gphhq, querierCount[*GamePlayerHandHaiQuery](), gphhq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -239,10 +244,15 @@ func (gphhq *GamePlayerHandHaiQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (gphhq *GamePlayerHandHaiQuery) Exist(ctx context.Context) (bool, error) {
-	if err := gphhq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = newQueryContext(ctx, TypeGamePlayerHandHai, "Exist")
+	switch _, err := gphhq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return gphhq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -265,6 +275,7 @@ func (gphhq *GamePlayerHandHaiQuery) Clone() *GamePlayerHandHaiQuery {
 		limit:      gphhq.limit,
 		offset:     gphhq.offset,
 		order:      append([]OrderFunc{}, gphhq.order...),
+		inters:     append([]Interceptor{}, gphhq.inters...),
 		predicates: append([]predicate.GamePlayerHandHai{}, gphhq.predicates...),
 		withTurn:   gphhq.withTurn.Clone(),
 		// clone intermediate query.
@@ -277,7 +288,7 @@ func (gphhq *GamePlayerHandHaiQuery) Clone() *GamePlayerHandHaiQuery {
 // WithTurn tells the query-builder to eager-load the nodes that are connected to
 // the "turn" edge. The optional arguments are used to configure the query builder of the edge.
 func (gphhq *GamePlayerHandHaiQuery) WithTurn(opts ...func(*TurnQuery)) *GamePlayerHandHaiQuery {
-	query := &TurnQuery{config: gphhq.config}
+	query := (&TurnClient{config: gphhq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -300,16 +311,11 @@ func (gphhq *GamePlayerHandHaiQuery) WithTurn(opts ...func(*TurnQuery)) *GamePla
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (gphhq *GamePlayerHandHaiQuery) GroupBy(field string, fields ...string) *GamePlayerHandHaiGroupBy {
-	grbuild := &GamePlayerHandHaiGroupBy{config: gphhq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := gphhq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return gphhq.sqlQuery(ctx), nil
-	}
+	gphhq.fields = append([]string{field}, fields...)
+	grbuild := &GamePlayerHandHaiGroupBy{build: gphhq}
+	grbuild.flds = &gphhq.fields
 	grbuild.label = gameplayerhandhai.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -327,10 +333,10 @@ func (gphhq *GamePlayerHandHaiQuery) GroupBy(field string, fields ...string) *Ga
 //		Scan(ctx, &v)
 func (gphhq *GamePlayerHandHaiQuery) Select(fields ...string) *GamePlayerHandHaiSelect {
 	gphhq.fields = append(gphhq.fields, fields...)
-	selbuild := &GamePlayerHandHaiSelect{GamePlayerHandHaiQuery: gphhq}
-	selbuild.label = gameplayerhandhai.Label
-	selbuild.flds, selbuild.scan = &gphhq.fields, selbuild.Scan
-	return selbuild
+	sbuild := &GamePlayerHandHaiSelect{GamePlayerHandHaiQuery: gphhq}
+	sbuild.label = gameplayerhandhai.Label
+	sbuild.flds, sbuild.scan = &gphhq.fields, sbuild.Scan
+	return sbuild
 }
 
 // Aggregate returns a GamePlayerHandHaiSelect configured with the given aggregations.
@@ -339,6 +345,16 @@ func (gphhq *GamePlayerHandHaiQuery) Aggregate(fns ...AggregateFunc) *GamePlayer
 }
 
 func (gphhq *GamePlayerHandHaiQuery) prepareQuery(ctx context.Context) error {
+	for _, inter := range gphhq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, gphhq); err != nil {
+				return err
+			}
+		}
+	}
 	for _, f := range gphhq.fields {
 		if !gameplayerhandhai.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
@@ -435,17 +451,6 @@ func (gphhq *GamePlayerHandHaiQuery) sqlCount(ctx context.Context) (int, error) 
 	return sqlgraph.CountNodes(ctx, gphhq.driver, _spec)
 }
 
-func (gphhq *GamePlayerHandHaiQuery) sqlExist(ctx context.Context) (bool, error) {
-	switch _, err := gphhq.FirstID(ctx); {
-	case IsNotFound(err):
-		return false, nil
-	case err != nil:
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	default:
-		return true, nil
-	}
-}
-
 func (gphhq *GamePlayerHandHaiQuery) querySpec() *sqlgraph.QuerySpec {
 	_spec := &sqlgraph.QuerySpec{
 		Node: &sqlgraph.NodeSpec{
@@ -528,13 +533,8 @@ func (gphhq *GamePlayerHandHaiQuery) sqlQuery(ctx context.Context) *sql.Selector
 
 // GamePlayerHandHaiGroupBy is the group-by builder for GamePlayerHandHai entities.
 type GamePlayerHandHaiGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *GamePlayerHandHaiQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -543,58 +543,46 @@ func (gphhgb *GamePlayerHandHaiGroupBy) Aggregate(fns ...AggregateFunc) *GamePla
 	return gphhgb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
+// Scan applies the selector query and scans the result into the given value.
 func (gphhgb *GamePlayerHandHaiGroupBy) Scan(ctx context.Context, v any) error {
-	query, err := gphhgb.path(ctx)
-	if err != nil {
+	ctx = newQueryContext(ctx, TypeGamePlayerHandHai, "GroupBy")
+	if err := gphhgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	gphhgb.sql = query
-	return gphhgb.sqlScan(ctx, v)
+	return scanWithInterceptors[*GamePlayerHandHaiQuery, *GamePlayerHandHaiGroupBy](ctx, gphhgb.build, gphhgb, gphhgb.build.inters, v)
 }
 
-func (gphhgb *GamePlayerHandHaiGroupBy) sqlScan(ctx context.Context, v any) error {
-	for _, f := range gphhgb.fields {
-		if !gameplayerhandhai.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (gphhgb *GamePlayerHandHaiGroupBy) sqlScan(ctx context.Context, root *GamePlayerHandHaiQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(gphhgb.fns))
+	for _, fn := range gphhgb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := gphhgb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*gphhgb.flds)+len(gphhgb.fns))
+		for _, f := range *gphhgb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*gphhgb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := gphhgb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := gphhgb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (gphhgb *GamePlayerHandHaiGroupBy) sqlQuery() *sql.Selector {
-	selector := gphhgb.sql.Select()
-	aggregation := make([]string, 0, len(gphhgb.fns))
-	for _, fn := range gphhgb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(gphhgb.fields)+len(gphhgb.fns))
-		for _, f := range gphhgb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(gphhgb.fields...)...)
-}
-
 // GamePlayerHandHaiSelect is the builder for selecting fields of GamePlayerHandHai entities.
 type GamePlayerHandHaiSelect struct {
 	*GamePlayerHandHaiQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
@@ -605,26 +593,27 @@ func (gphhs *GamePlayerHandHaiSelect) Aggregate(fns ...AggregateFunc) *GamePlaye
 
 // Scan applies the selector query and scans the result into the given value.
 func (gphhs *GamePlayerHandHaiSelect) Scan(ctx context.Context, v any) error {
+	ctx = newQueryContext(ctx, TypeGamePlayerHandHai, "Select")
 	if err := gphhs.prepareQuery(ctx); err != nil {
 		return err
 	}
-	gphhs.sql = gphhs.GamePlayerHandHaiQuery.sqlQuery(ctx)
-	return gphhs.sqlScan(ctx, v)
+	return scanWithInterceptors[*GamePlayerHandHaiQuery, *GamePlayerHandHaiSelect](ctx, gphhs.GamePlayerHandHaiQuery, gphhs, gphhs.inters, v)
 }
 
-func (gphhs *GamePlayerHandHaiSelect) sqlScan(ctx context.Context, v any) error {
+func (gphhs *GamePlayerHandHaiSelect) sqlScan(ctx context.Context, root *GamePlayerHandHaiQuery, v any) error {
+	selector := root.sqlQuery(ctx)
 	aggregation := make([]string, 0, len(gphhs.fns))
 	for _, fn := range gphhs.fns {
-		aggregation = append(aggregation, fn(gphhs.sql))
+		aggregation = append(aggregation, fn(selector))
 	}
 	switch n := len(*gphhs.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
-		gphhs.sql.Select(aggregation...)
+		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
-		gphhs.sql.AppendSelect(aggregation...)
+		selector.AppendSelect(aggregation...)
 	}
 	rows := &sql.Rows{}
-	query, args := gphhs.sql.Query()
+	query, args := selector.Query()
 	if err := gphhs.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

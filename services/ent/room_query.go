@@ -25,6 +25,7 @@ type RoomQuery struct {
 	unique     *bool
 	order      []OrderFunc
 	fields     []string
+	inters     []Interceptor
 	predicates []predicate.Room
 	withGames  *GameQuery
 	// intermediate query (i.e. traversal path).
@@ -38,13 +39,13 @@ func (rq *RoomQuery) Where(ps ...predicate.Room) *RoomQuery {
 	return rq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (rq *RoomQuery) Limit(limit int) *RoomQuery {
 	rq.limit = &limit
 	return rq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (rq *RoomQuery) Offset(offset int) *RoomQuery {
 	rq.offset = &offset
 	return rq
@@ -57,7 +58,7 @@ func (rq *RoomQuery) Unique(unique bool) *RoomQuery {
 	return rq
 }
 
-// Order adds an order step to the query.
+// Order specifies how the records should be ordered.
 func (rq *RoomQuery) Order(o ...OrderFunc) *RoomQuery {
 	rq.order = append(rq.order, o...)
 	return rq
@@ -65,7 +66,7 @@ func (rq *RoomQuery) Order(o ...OrderFunc) *RoomQuery {
 
 // QueryGames chains the current query on the "games" edge.
 func (rq *RoomQuery) QueryGames() *GameQuery {
-	query := &GameQuery{config: rq.config}
+	query := (&GameClient{config: rq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := rq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -88,7 +89,7 @@ func (rq *RoomQuery) QueryGames() *GameQuery {
 // First returns the first Room entity from the query.
 // Returns a *NotFoundError when no Room was found.
 func (rq *RoomQuery) First(ctx context.Context) (*Room, error) {
-	nodes, err := rq.Limit(1).All(ctx)
+	nodes, err := rq.Limit(1).All(newQueryContext(ctx, TypeRoom, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +112,7 @@ func (rq *RoomQuery) FirstX(ctx context.Context) *Room {
 // Returns a *NotFoundError when no Room ID was found.
 func (rq *RoomQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = rq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = rq.Limit(1).IDs(newQueryContext(ctx, TypeRoom, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -134,7 +135,7 @@ func (rq *RoomQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one Room entity is found.
 // Returns a *NotFoundError when no Room entities are found.
 func (rq *RoomQuery) Only(ctx context.Context) (*Room, error) {
-	nodes, err := rq.Limit(2).All(ctx)
+	nodes, err := rq.Limit(2).All(newQueryContext(ctx, TypeRoom, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +163,7 @@ func (rq *RoomQuery) OnlyX(ctx context.Context) *Room {
 // Returns a *NotFoundError when no entities are found.
 func (rq *RoomQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = rq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = rq.Limit(2).IDs(newQueryContext(ctx, TypeRoom, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -187,10 +188,12 @@ func (rq *RoomQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of Rooms.
 func (rq *RoomQuery) All(ctx context.Context) ([]*Room, error) {
+	ctx = newQueryContext(ctx, TypeRoom, "All")
 	if err := rq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return rq.sqlAll(ctx)
+	qr := querierAll[[]*Room, *RoomQuery]()
+	return withInterceptors[[]*Room](ctx, rq, qr, rq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -205,6 +208,7 @@ func (rq *RoomQuery) AllX(ctx context.Context) []*Room {
 // IDs executes the query and returns a list of Room IDs.
 func (rq *RoomQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	var ids []uuid.UUID
+	ctx = newQueryContext(ctx, TypeRoom, "IDs")
 	if err := rq.Select(room.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
@@ -222,10 +226,11 @@ func (rq *RoomQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (rq *RoomQuery) Count(ctx context.Context) (int, error) {
+	ctx = newQueryContext(ctx, TypeRoom, "Count")
 	if err := rq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return rq.sqlCount(ctx)
+	return withInterceptors[int](ctx, rq, querierCount[*RoomQuery](), rq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -239,10 +244,15 @@ func (rq *RoomQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (rq *RoomQuery) Exist(ctx context.Context) (bool, error) {
-	if err := rq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = newQueryContext(ctx, TypeRoom, "Exist")
+	switch _, err := rq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return rq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -265,6 +275,7 @@ func (rq *RoomQuery) Clone() *RoomQuery {
 		limit:      rq.limit,
 		offset:     rq.offset,
 		order:      append([]OrderFunc{}, rq.order...),
+		inters:     append([]Interceptor{}, rq.inters...),
 		predicates: append([]predicate.Room{}, rq.predicates...),
 		withGames:  rq.withGames.Clone(),
 		// clone intermediate query.
@@ -277,7 +288,7 @@ func (rq *RoomQuery) Clone() *RoomQuery {
 // WithGames tells the query-builder to eager-load the nodes that are connected to
 // the "games" edge. The optional arguments are used to configure the query builder of the edge.
 func (rq *RoomQuery) WithGames(opts ...func(*GameQuery)) *RoomQuery {
-	query := &GameQuery{config: rq.config}
+	query := (&GameClient{config: rq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -300,16 +311,11 @@ func (rq *RoomQuery) WithGames(opts ...func(*GameQuery)) *RoomQuery {
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (rq *RoomQuery) GroupBy(field string, fields ...string) *RoomGroupBy {
-	grbuild := &RoomGroupBy{config: rq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := rq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return rq.sqlQuery(ctx), nil
-	}
+	rq.fields = append([]string{field}, fields...)
+	grbuild := &RoomGroupBy{build: rq}
+	grbuild.flds = &rq.fields
 	grbuild.label = room.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -327,10 +333,10 @@ func (rq *RoomQuery) GroupBy(field string, fields ...string) *RoomGroupBy {
 //		Scan(ctx, &v)
 func (rq *RoomQuery) Select(fields ...string) *RoomSelect {
 	rq.fields = append(rq.fields, fields...)
-	selbuild := &RoomSelect{RoomQuery: rq}
-	selbuild.label = room.Label
-	selbuild.flds, selbuild.scan = &rq.fields, selbuild.Scan
-	return selbuild
+	sbuild := &RoomSelect{RoomQuery: rq}
+	sbuild.label = room.Label
+	sbuild.flds, sbuild.scan = &rq.fields, sbuild.Scan
+	return sbuild
 }
 
 // Aggregate returns a RoomSelect configured with the given aggregations.
@@ -339,6 +345,16 @@ func (rq *RoomQuery) Aggregate(fns ...AggregateFunc) *RoomSelect {
 }
 
 func (rq *RoomQuery) prepareQuery(ctx context.Context) error {
+	for _, inter := range rq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, rq); err != nil {
+				return err
+			}
+		}
+	}
 	for _, f := range rq.fields {
 		if !room.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
@@ -431,17 +447,6 @@ func (rq *RoomQuery) sqlCount(ctx context.Context) (int, error) {
 	return sqlgraph.CountNodes(ctx, rq.driver, _spec)
 }
 
-func (rq *RoomQuery) sqlExist(ctx context.Context) (bool, error) {
-	switch _, err := rq.FirstID(ctx); {
-	case IsNotFound(err):
-		return false, nil
-	case err != nil:
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	default:
-		return true, nil
-	}
-}
-
 func (rq *RoomQuery) querySpec() *sqlgraph.QuerySpec {
 	_spec := &sqlgraph.QuerySpec{
 		Node: &sqlgraph.NodeSpec{
@@ -524,13 +529,8 @@ func (rq *RoomQuery) sqlQuery(ctx context.Context) *sql.Selector {
 
 // RoomGroupBy is the group-by builder for Room entities.
 type RoomGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *RoomQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -539,58 +539,46 @@ func (rgb *RoomGroupBy) Aggregate(fns ...AggregateFunc) *RoomGroupBy {
 	return rgb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
+// Scan applies the selector query and scans the result into the given value.
 func (rgb *RoomGroupBy) Scan(ctx context.Context, v any) error {
-	query, err := rgb.path(ctx)
-	if err != nil {
+	ctx = newQueryContext(ctx, TypeRoom, "GroupBy")
+	if err := rgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	rgb.sql = query
-	return rgb.sqlScan(ctx, v)
+	return scanWithInterceptors[*RoomQuery, *RoomGroupBy](ctx, rgb.build, rgb, rgb.build.inters, v)
 }
 
-func (rgb *RoomGroupBy) sqlScan(ctx context.Context, v any) error {
-	for _, f := range rgb.fields {
-		if !room.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (rgb *RoomGroupBy) sqlScan(ctx context.Context, root *RoomQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(rgb.fns))
+	for _, fn := range rgb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := rgb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*rgb.flds)+len(rgb.fns))
+		for _, f := range *rgb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*rgb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := rgb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := rgb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (rgb *RoomGroupBy) sqlQuery() *sql.Selector {
-	selector := rgb.sql.Select()
-	aggregation := make([]string, 0, len(rgb.fns))
-	for _, fn := range rgb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(rgb.fields)+len(rgb.fns))
-		for _, f := range rgb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(rgb.fields...)...)
-}
-
 // RoomSelect is the builder for selecting fields of Room entities.
 type RoomSelect struct {
 	*RoomQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
@@ -601,26 +589,27 @@ func (rs *RoomSelect) Aggregate(fns ...AggregateFunc) *RoomSelect {
 
 // Scan applies the selector query and scans the result into the given value.
 func (rs *RoomSelect) Scan(ctx context.Context, v any) error {
+	ctx = newQueryContext(ctx, TypeRoom, "Select")
 	if err := rs.prepareQuery(ctx); err != nil {
 		return err
 	}
-	rs.sql = rs.RoomQuery.sqlQuery(ctx)
-	return rs.sqlScan(ctx, v)
+	return scanWithInterceptors[*RoomQuery, *RoomSelect](ctx, rs.RoomQuery, rs, rs.inters, v)
 }
 
-func (rs *RoomSelect) sqlScan(ctx context.Context, v any) error {
+func (rs *RoomSelect) sqlScan(ctx context.Context, root *RoomQuery, v any) error {
+	selector := root.sqlQuery(ctx)
 	aggregation := make([]string, 0, len(rs.fns))
 	for _, fn := range rs.fns {
-		aggregation = append(aggregation, fn(rs.sql))
+		aggregation = append(aggregation, fn(selector))
 	}
 	switch n := len(*rs.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
-		rs.sql.Select(aggregation...)
+		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
-		rs.sql.AppendSelect(aggregation...)
+		selector.AppendSelect(aggregation...)
 	}
 	rows := &sql.Rows{}
-	query, args := rs.sql.Query()
+	query, args := selector.Query()
 	if err := rs.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

@@ -66,50 +66,8 @@ func (rc *RoomCreate) Mutation() *RoomMutation {
 
 // Save creates the Room in the database.
 func (rc *RoomCreate) Save(ctx context.Context) (*Room, error) {
-	var (
-		err  error
-		node *Room
-	)
 	rc.defaults()
-	if len(rc.hooks) == 0 {
-		if err = rc.check(); err != nil {
-			return nil, err
-		}
-		node, err = rc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*RoomMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = rc.check(); err != nil {
-				return nil, err
-			}
-			rc.mutation = mutation
-			if node, err = rc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(rc.hooks) - 1; i >= 0; i-- {
-			if rc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = rc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, rc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*Room)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from RoomMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks[*Room, RoomMutation](ctx, rc.sqlSave, rc.mutation, rc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -151,6 +109,9 @@ func (rc *RoomCreate) check() error {
 }
 
 func (rc *RoomCreate) sqlSave(ctx context.Context) (*Room, error) {
+	if err := rc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := rc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, rc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -165,6 +126,8 @@ func (rc *RoomCreate) sqlSave(ctx context.Context) (*Room, error) {
 			return nil, err
 		}
 	}
+	rc.mutation.id = &_node.ID
+	rc.mutation.done = true
 	return _node, nil
 }
 

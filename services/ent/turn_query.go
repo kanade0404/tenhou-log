@@ -28,6 +28,7 @@ type TurnQuery struct {
 	unique                *bool
 	order                 []OrderFunc
 	fields                []string
+	inters                []Interceptor
 	predicates            []predicate.Turn
 	withHands             *HandQuery
 	withGamePlayerPoints  *GamePlayerPointQuery
@@ -44,13 +45,13 @@ func (tq *TurnQuery) Where(ps ...predicate.Turn) *TurnQuery {
 	return tq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (tq *TurnQuery) Limit(limit int) *TurnQuery {
 	tq.limit = &limit
 	return tq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (tq *TurnQuery) Offset(offset int) *TurnQuery {
 	tq.offset = &offset
 	return tq
@@ -63,7 +64,7 @@ func (tq *TurnQuery) Unique(unique bool) *TurnQuery {
 	return tq
 }
 
-// Order adds an order step to the query.
+// Order specifies how the records should be ordered.
 func (tq *TurnQuery) Order(o ...OrderFunc) *TurnQuery {
 	tq.order = append(tq.order, o...)
 	return tq
@@ -71,7 +72,7 @@ func (tq *TurnQuery) Order(o ...OrderFunc) *TurnQuery {
 
 // QueryHands chains the current query on the "hands" edge.
 func (tq *TurnQuery) QueryHands() *HandQuery {
-	query := &HandQuery{config: tq.config}
+	query := (&HandClient{config: tq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := tq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -93,7 +94,7 @@ func (tq *TurnQuery) QueryHands() *HandQuery {
 
 // QueryGamePlayerPoints chains the current query on the "game_player_points" edge.
 func (tq *TurnQuery) QueryGamePlayerPoints() *GamePlayerPointQuery {
-	query := &GamePlayerPointQuery{config: tq.config}
+	query := (&GamePlayerPointClient{config: tq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := tq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -115,7 +116,7 @@ func (tq *TurnQuery) QueryGamePlayerPoints() *GamePlayerPointQuery {
 
 // QueryEvent chains the current query on the "event" edge.
 func (tq *TurnQuery) QueryEvent() *EventQuery {
-	query := &EventQuery{config: tq.config}
+	query := (&EventClient{config: tq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := tq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -137,7 +138,7 @@ func (tq *TurnQuery) QueryEvent() *EventQuery {
 
 // QueryGameplayerhandhai chains the current query on the "gameplayerhandhai" edge.
 func (tq *TurnQuery) QueryGameplayerhandhai() *GamePlayerHandHaiQuery {
-	query := &GamePlayerHandHaiQuery{config: tq.config}
+	query := (&GamePlayerHandHaiClient{config: tq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := tq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -160,7 +161,7 @@ func (tq *TurnQuery) QueryGameplayerhandhai() *GamePlayerHandHaiQuery {
 // First returns the first Turn entity from the query.
 // Returns a *NotFoundError when no Turn was found.
 func (tq *TurnQuery) First(ctx context.Context) (*Turn, error) {
-	nodes, err := tq.Limit(1).All(ctx)
+	nodes, err := tq.Limit(1).All(newQueryContext(ctx, TypeTurn, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +184,7 @@ func (tq *TurnQuery) FirstX(ctx context.Context) *Turn {
 // Returns a *NotFoundError when no Turn ID was found.
 func (tq *TurnQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = tq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = tq.Limit(1).IDs(newQueryContext(ctx, TypeTurn, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -206,7 +207,7 @@ func (tq *TurnQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one Turn entity is found.
 // Returns a *NotFoundError when no Turn entities are found.
 func (tq *TurnQuery) Only(ctx context.Context) (*Turn, error) {
-	nodes, err := tq.Limit(2).All(ctx)
+	nodes, err := tq.Limit(2).All(newQueryContext(ctx, TypeTurn, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +235,7 @@ func (tq *TurnQuery) OnlyX(ctx context.Context) *Turn {
 // Returns a *NotFoundError when no entities are found.
 func (tq *TurnQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = tq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = tq.Limit(2).IDs(newQueryContext(ctx, TypeTurn, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -259,10 +260,12 @@ func (tq *TurnQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of Turns.
 func (tq *TurnQuery) All(ctx context.Context) ([]*Turn, error) {
+	ctx = newQueryContext(ctx, TypeTurn, "All")
 	if err := tq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return tq.sqlAll(ctx)
+	qr := querierAll[[]*Turn, *TurnQuery]()
+	return withInterceptors[[]*Turn](ctx, tq, qr, tq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -277,6 +280,7 @@ func (tq *TurnQuery) AllX(ctx context.Context) []*Turn {
 // IDs executes the query and returns a list of Turn IDs.
 func (tq *TurnQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	var ids []uuid.UUID
+	ctx = newQueryContext(ctx, TypeTurn, "IDs")
 	if err := tq.Select(turn.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
@@ -294,10 +298,11 @@ func (tq *TurnQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (tq *TurnQuery) Count(ctx context.Context) (int, error) {
+	ctx = newQueryContext(ctx, TypeTurn, "Count")
 	if err := tq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return tq.sqlCount(ctx)
+	return withInterceptors[int](ctx, tq, querierCount[*TurnQuery](), tq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -311,10 +316,15 @@ func (tq *TurnQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (tq *TurnQuery) Exist(ctx context.Context) (bool, error) {
-	if err := tq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = newQueryContext(ctx, TypeTurn, "Exist")
+	switch _, err := tq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return tq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -337,6 +347,7 @@ func (tq *TurnQuery) Clone() *TurnQuery {
 		limit:                 tq.limit,
 		offset:                tq.offset,
 		order:                 append([]OrderFunc{}, tq.order...),
+		inters:                append([]Interceptor{}, tq.inters...),
 		predicates:            append([]predicate.Turn{}, tq.predicates...),
 		withHands:             tq.withHands.Clone(),
 		withGamePlayerPoints:  tq.withGamePlayerPoints.Clone(),
@@ -352,7 +363,7 @@ func (tq *TurnQuery) Clone() *TurnQuery {
 // WithHands tells the query-builder to eager-load the nodes that are connected to
 // the "hands" edge. The optional arguments are used to configure the query builder of the edge.
 func (tq *TurnQuery) WithHands(opts ...func(*HandQuery)) *TurnQuery {
-	query := &HandQuery{config: tq.config}
+	query := (&HandClient{config: tq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -363,7 +374,7 @@ func (tq *TurnQuery) WithHands(opts ...func(*HandQuery)) *TurnQuery {
 // WithGamePlayerPoints tells the query-builder to eager-load the nodes that are connected to
 // the "game_player_points" edge. The optional arguments are used to configure the query builder of the edge.
 func (tq *TurnQuery) WithGamePlayerPoints(opts ...func(*GamePlayerPointQuery)) *TurnQuery {
-	query := &GamePlayerPointQuery{config: tq.config}
+	query := (&GamePlayerPointClient{config: tq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -374,7 +385,7 @@ func (tq *TurnQuery) WithGamePlayerPoints(opts ...func(*GamePlayerPointQuery)) *
 // WithEvent tells the query-builder to eager-load the nodes that are connected to
 // the "event" edge. The optional arguments are used to configure the query builder of the edge.
 func (tq *TurnQuery) WithEvent(opts ...func(*EventQuery)) *TurnQuery {
-	query := &EventQuery{config: tq.config}
+	query := (&EventClient{config: tq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -385,7 +396,7 @@ func (tq *TurnQuery) WithEvent(opts ...func(*EventQuery)) *TurnQuery {
 // WithGameplayerhandhai tells the query-builder to eager-load the nodes that are connected to
 // the "gameplayerhandhai" edge. The optional arguments are used to configure the query builder of the edge.
 func (tq *TurnQuery) WithGameplayerhandhai(opts ...func(*GamePlayerHandHaiQuery)) *TurnQuery {
-	query := &GamePlayerHandHaiQuery{config: tq.config}
+	query := (&GamePlayerHandHaiClient{config: tq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -408,16 +419,11 @@ func (tq *TurnQuery) WithGameplayerhandhai(opts ...func(*GamePlayerHandHaiQuery)
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (tq *TurnQuery) GroupBy(field string, fields ...string) *TurnGroupBy {
-	grbuild := &TurnGroupBy{config: tq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := tq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return tq.sqlQuery(ctx), nil
-	}
+	tq.fields = append([]string{field}, fields...)
+	grbuild := &TurnGroupBy{build: tq}
+	grbuild.flds = &tq.fields
 	grbuild.label = turn.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -435,10 +441,10 @@ func (tq *TurnQuery) GroupBy(field string, fields ...string) *TurnGroupBy {
 //		Scan(ctx, &v)
 func (tq *TurnQuery) Select(fields ...string) *TurnSelect {
 	tq.fields = append(tq.fields, fields...)
-	selbuild := &TurnSelect{TurnQuery: tq}
-	selbuild.label = turn.Label
-	selbuild.flds, selbuild.scan = &tq.fields, selbuild.Scan
-	return selbuild
+	sbuild := &TurnSelect{TurnQuery: tq}
+	sbuild.label = turn.Label
+	sbuild.flds, sbuild.scan = &tq.fields, sbuild.Scan
+	return sbuild
 }
 
 // Aggregate returns a TurnSelect configured with the given aggregations.
@@ -447,6 +453,16 @@ func (tq *TurnQuery) Aggregate(fns ...AggregateFunc) *TurnSelect {
 }
 
 func (tq *TurnQuery) prepareQuery(ctx context.Context) error {
+	for _, inter := range tq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, tq); err != nil {
+				return err
+			}
+		}
+	}
 	for _, f := range tq.fields {
 		if !turn.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
@@ -702,17 +718,6 @@ func (tq *TurnQuery) sqlCount(ctx context.Context) (int, error) {
 	return sqlgraph.CountNodes(ctx, tq.driver, _spec)
 }
 
-func (tq *TurnQuery) sqlExist(ctx context.Context) (bool, error) {
-	switch _, err := tq.FirstID(ctx); {
-	case IsNotFound(err):
-		return false, nil
-	case err != nil:
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	default:
-		return true, nil
-	}
-}
-
 func (tq *TurnQuery) querySpec() *sqlgraph.QuerySpec {
 	_spec := &sqlgraph.QuerySpec{
 		Node: &sqlgraph.NodeSpec{
@@ -795,13 +800,8 @@ func (tq *TurnQuery) sqlQuery(ctx context.Context) *sql.Selector {
 
 // TurnGroupBy is the group-by builder for Turn entities.
 type TurnGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *TurnQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -810,58 +810,46 @@ func (tgb *TurnGroupBy) Aggregate(fns ...AggregateFunc) *TurnGroupBy {
 	return tgb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
+// Scan applies the selector query and scans the result into the given value.
 func (tgb *TurnGroupBy) Scan(ctx context.Context, v any) error {
-	query, err := tgb.path(ctx)
-	if err != nil {
+	ctx = newQueryContext(ctx, TypeTurn, "GroupBy")
+	if err := tgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	tgb.sql = query
-	return tgb.sqlScan(ctx, v)
+	return scanWithInterceptors[*TurnQuery, *TurnGroupBy](ctx, tgb.build, tgb, tgb.build.inters, v)
 }
 
-func (tgb *TurnGroupBy) sqlScan(ctx context.Context, v any) error {
-	for _, f := range tgb.fields {
-		if !turn.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (tgb *TurnGroupBy) sqlScan(ctx context.Context, root *TurnQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(tgb.fns))
+	for _, fn := range tgb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := tgb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*tgb.flds)+len(tgb.fns))
+		for _, f := range *tgb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*tgb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := tgb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := tgb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (tgb *TurnGroupBy) sqlQuery() *sql.Selector {
-	selector := tgb.sql.Select()
-	aggregation := make([]string, 0, len(tgb.fns))
-	for _, fn := range tgb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(tgb.fields)+len(tgb.fns))
-		for _, f := range tgb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(tgb.fields...)...)
-}
-
 // TurnSelect is the builder for selecting fields of Turn entities.
 type TurnSelect struct {
 	*TurnQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
@@ -872,26 +860,27 @@ func (ts *TurnSelect) Aggregate(fns ...AggregateFunc) *TurnSelect {
 
 // Scan applies the selector query and scans the result into the given value.
 func (ts *TurnSelect) Scan(ctx context.Context, v any) error {
+	ctx = newQueryContext(ctx, TypeTurn, "Select")
 	if err := ts.prepareQuery(ctx); err != nil {
 		return err
 	}
-	ts.sql = ts.TurnQuery.sqlQuery(ctx)
-	return ts.sqlScan(ctx, v)
+	return scanWithInterceptors[*TurnQuery, *TurnSelect](ctx, ts.TurnQuery, ts, ts.inters, v)
 }
 
-func (ts *TurnSelect) sqlScan(ctx context.Context, v any) error {
+func (ts *TurnSelect) sqlScan(ctx context.Context, root *TurnQuery, v any) error {
+	selector := root.sqlQuery(ctx)
 	aggregation := make([]string, 0, len(ts.fns))
 	for _, fn := range ts.fns {
-		aggregation = append(aggregation, fn(ts.sql))
+		aggregation = append(aggregation, fn(selector))
 	}
 	switch n := len(*ts.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
-		ts.sql.Select(aggregation...)
+		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
-		ts.sql.AppendSelect(aggregation...)
+		selector.AppendSelect(aggregation...)
 	}
 	rows := &sql.Rows{}
-	query, args := ts.sql.Query()
+	query, args := selector.Query()
 	if err := ts.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

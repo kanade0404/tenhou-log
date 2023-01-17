@@ -72,34 +72,7 @@ func (gppu *GamePlayerPointUpdate) RemoveTurns(t ...*Turn) *GamePlayerPointUpdat
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (gppu *GamePlayerPointUpdate) Save(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(gppu.hooks) == 0 {
-		affected, err = gppu.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*GamePlayerPointMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			gppu.mutation = mutation
-			affected, err = gppu.sqlSave(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(gppu.hooks) - 1; i >= 0; i-- {
-			if gppu.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = gppu.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, gppu.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks[int, GamePlayerPointMutation](ctx, gppu.sqlSave, gppu.mutation, gppu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -204,6 +177,7 @@ func (gppu *GamePlayerPointUpdate) sqlSave(ctx context.Context) (n int, err erro
 		}
 		return 0, err
 	}
+	gppu.mutation.done = true
 	return n, nil
 }
 
@@ -265,40 +239,7 @@ func (gppuo *GamePlayerPointUpdateOne) Select(field string, fields ...string) *G
 
 // Save executes the query and returns the updated GamePlayerPoint entity.
 func (gppuo *GamePlayerPointUpdateOne) Save(ctx context.Context) (*GamePlayerPoint, error) {
-	var (
-		err  error
-		node *GamePlayerPoint
-	)
-	if len(gppuo.hooks) == 0 {
-		node, err = gppuo.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*GamePlayerPointMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			gppuo.mutation = mutation
-			node, err = gppuo.sqlSave(ctx)
-			mutation.done = true
-			return node, err
-		})
-		for i := len(gppuo.hooks) - 1; i >= 0; i-- {
-			if gppuo.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = gppuo.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, gppuo.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*GamePlayerPoint)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from GamePlayerPointMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks[*GamePlayerPoint, GamePlayerPointMutation](ctx, gppuo.sqlSave, gppuo.mutation, gppuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -423,5 +364,6 @@ func (gppuo *GamePlayerPointUpdateOne) sqlSave(ctx context.Context) (_node *Game
 		}
 		return nil, err
 	}
+	gppuo.mutation.done = true
 	return _node, nil
 }

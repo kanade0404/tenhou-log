@@ -26,6 +26,7 @@ type RoundQuery struct {
 	unique     *bool
 	order      []OrderFunc
 	fields     []string
+	inters     []Interceptor
 	predicates []predicate.Round
 	withGames  *GameQuery
 	withHands  *HandQuery
@@ -41,13 +42,13 @@ func (rq *RoundQuery) Where(ps ...predicate.Round) *RoundQuery {
 	return rq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (rq *RoundQuery) Limit(limit int) *RoundQuery {
 	rq.limit = &limit
 	return rq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (rq *RoundQuery) Offset(offset int) *RoundQuery {
 	rq.offset = &offset
 	return rq
@@ -60,7 +61,7 @@ func (rq *RoundQuery) Unique(unique bool) *RoundQuery {
 	return rq
 }
 
-// Order adds an order step to the query.
+// Order specifies how the records should be ordered.
 func (rq *RoundQuery) Order(o ...OrderFunc) *RoundQuery {
 	rq.order = append(rq.order, o...)
 	return rq
@@ -68,7 +69,7 @@ func (rq *RoundQuery) Order(o ...OrderFunc) *RoundQuery {
 
 // QueryGames chains the current query on the "games" edge.
 func (rq *RoundQuery) QueryGames() *GameQuery {
-	query := &GameQuery{config: rq.config}
+	query := (&GameClient{config: rq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := rq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -90,7 +91,7 @@ func (rq *RoundQuery) QueryGames() *GameQuery {
 
 // QueryHands chains the current query on the "hands" edge.
 func (rq *RoundQuery) QueryHands() *HandQuery {
-	query := &HandQuery{config: rq.config}
+	query := (&HandClient{config: rq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := rq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -113,7 +114,7 @@ func (rq *RoundQuery) QueryHands() *HandQuery {
 // First returns the first Round entity from the query.
 // Returns a *NotFoundError when no Round was found.
 func (rq *RoundQuery) First(ctx context.Context) (*Round, error) {
-	nodes, err := rq.Limit(1).All(ctx)
+	nodes, err := rq.Limit(1).All(newQueryContext(ctx, TypeRound, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +137,7 @@ func (rq *RoundQuery) FirstX(ctx context.Context) *Round {
 // Returns a *NotFoundError when no Round ID was found.
 func (rq *RoundQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = rq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = rq.Limit(1).IDs(newQueryContext(ctx, TypeRound, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -159,7 +160,7 @@ func (rq *RoundQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one Round entity is found.
 // Returns a *NotFoundError when no Round entities are found.
 func (rq *RoundQuery) Only(ctx context.Context) (*Round, error) {
-	nodes, err := rq.Limit(2).All(ctx)
+	nodes, err := rq.Limit(2).All(newQueryContext(ctx, TypeRound, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +188,7 @@ func (rq *RoundQuery) OnlyX(ctx context.Context) *Round {
 // Returns a *NotFoundError when no entities are found.
 func (rq *RoundQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = rq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = rq.Limit(2).IDs(newQueryContext(ctx, TypeRound, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -212,10 +213,12 @@ func (rq *RoundQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of Rounds.
 func (rq *RoundQuery) All(ctx context.Context) ([]*Round, error) {
+	ctx = newQueryContext(ctx, TypeRound, "All")
 	if err := rq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return rq.sqlAll(ctx)
+	qr := querierAll[[]*Round, *RoundQuery]()
+	return withInterceptors[[]*Round](ctx, rq, qr, rq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -230,6 +233,7 @@ func (rq *RoundQuery) AllX(ctx context.Context) []*Round {
 // IDs executes the query and returns a list of Round IDs.
 func (rq *RoundQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	var ids []uuid.UUID
+	ctx = newQueryContext(ctx, TypeRound, "IDs")
 	if err := rq.Select(round.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
@@ -247,10 +251,11 @@ func (rq *RoundQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (rq *RoundQuery) Count(ctx context.Context) (int, error) {
+	ctx = newQueryContext(ctx, TypeRound, "Count")
 	if err := rq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return rq.sqlCount(ctx)
+	return withInterceptors[int](ctx, rq, querierCount[*RoundQuery](), rq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -264,10 +269,15 @@ func (rq *RoundQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (rq *RoundQuery) Exist(ctx context.Context) (bool, error) {
-	if err := rq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = newQueryContext(ctx, TypeRound, "Exist")
+	switch _, err := rq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return rq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -290,6 +300,7 @@ func (rq *RoundQuery) Clone() *RoundQuery {
 		limit:      rq.limit,
 		offset:     rq.offset,
 		order:      append([]OrderFunc{}, rq.order...),
+		inters:     append([]Interceptor{}, rq.inters...),
 		predicates: append([]predicate.Round{}, rq.predicates...),
 		withGames:  rq.withGames.Clone(),
 		withHands:  rq.withHands.Clone(),
@@ -303,7 +314,7 @@ func (rq *RoundQuery) Clone() *RoundQuery {
 // WithGames tells the query-builder to eager-load the nodes that are connected to
 // the "games" edge. The optional arguments are used to configure the query builder of the edge.
 func (rq *RoundQuery) WithGames(opts ...func(*GameQuery)) *RoundQuery {
-	query := &GameQuery{config: rq.config}
+	query := (&GameClient{config: rq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -314,7 +325,7 @@ func (rq *RoundQuery) WithGames(opts ...func(*GameQuery)) *RoundQuery {
 // WithHands tells the query-builder to eager-load the nodes that are connected to
 // the "hands" edge. The optional arguments are used to configure the query builder of the edge.
 func (rq *RoundQuery) WithHands(opts ...func(*HandQuery)) *RoundQuery {
-	query := &HandQuery{config: rq.config}
+	query := (&HandClient{config: rq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -337,16 +348,11 @@ func (rq *RoundQuery) WithHands(opts ...func(*HandQuery)) *RoundQuery {
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (rq *RoundQuery) GroupBy(field string, fields ...string) *RoundGroupBy {
-	grbuild := &RoundGroupBy{config: rq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := rq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return rq.sqlQuery(ctx), nil
-	}
+	rq.fields = append([]string{field}, fields...)
+	grbuild := &RoundGroupBy{build: rq}
+	grbuild.flds = &rq.fields
 	grbuild.label = round.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -364,10 +370,10 @@ func (rq *RoundQuery) GroupBy(field string, fields ...string) *RoundGroupBy {
 //		Scan(ctx, &v)
 func (rq *RoundQuery) Select(fields ...string) *RoundSelect {
 	rq.fields = append(rq.fields, fields...)
-	selbuild := &RoundSelect{RoundQuery: rq}
-	selbuild.label = round.Label
-	selbuild.flds, selbuild.scan = &rq.fields, selbuild.Scan
-	return selbuild
+	sbuild := &RoundSelect{RoundQuery: rq}
+	sbuild.label = round.Label
+	sbuild.flds, sbuild.scan = &rq.fields, sbuild.Scan
+	return sbuild
 }
 
 // Aggregate returns a RoundSelect configured with the given aggregations.
@@ -376,6 +382,16 @@ func (rq *RoundQuery) Aggregate(fns ...AggregateFunc) *RoundSelect {
 }
 
 func (rq *RoundQuery) prepareQuery(ctx context.Context) error {
+	for _, inter := range rq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, rq); err != nil {
+				return err
+			}
+		}
+	}
 	for _, f := range rq.fields {
 		if !round.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
@@ -511,17 +527,6 @@ func (rq *RoundQuery) sqlCount(ctx context.Context) (int, error) {
 	return sqlgraph.CountNodes(ctx, rq.driver, _spec)
 }
 
-func (rq *RoundQuery) sqlExist(ctx context.Context) (bool, error) {
-	switch _, err := rq.FirstID(ctx); {
-	case IsNotFound(err):
-		return false, nil
-	case err != nil:
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	default:
-		return true, nil
-	}
-}
-
 func (rq *RoundQuery) querySpec() *sqlgraph.QuerySpec {
 	_spec := &sqlgraph.QuerySpec{
 		Node: &sqlgraph.NodeSpec{
@@ -604,13 +609,8 @@ func (rq *RoundQuery) sqlQuery(ctx context.Context) *sql.Selector {
 
 // RoundGroupBy is the group-by builder for Round entities.
 type RoundGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *RoundQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -619,58 +619,46 @@ func (rgb *RoundGroupBy) Aggregate(fns ...AggregateFunc) *RoundGroupBy {
 	return rgb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
+// Scan applies the selector query and scans the result into the given value.
 func (rgb *RoundGroupBy) Scan(ctx context.Context, v any) error {
-	query, err := rgb.path(ctx)
-	if err != nil {
+	ctx = newQueryContext(ctx, TypeRound, "GroupBy")
+	if err := rgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	rgb.sql = query
-	return rgb.sqlScan(ctx, v)
+	return scanWithInterceptors[*RoundQuery, *RoundGroupBy](ctx, rgb.build, rgb, rgb.build.inters, v)
 }
 
-func (rgb *RoundGroupBy) sqlScan(ctx context.Context, v any) error {
-	for _, f := range rgb.fields {
-		if !round.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (rgb *RoundGroupBy) sqlScan(ctx context.Context, root *RoundQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(rgb.fns))
+	for _, fn := range rgb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := rgb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*rgb.flds)+len(rgb.fns))
+		for _, f := range *rgb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*rgb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := rgb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := rgb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (rgb *RoundGroupBy) sqlQuery() *sql.Selector {
-	selector := rgb.sql.Select()
-	aggregation := make([]string, 0, len(rgb.fns))
-	for _, fn := range rgb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(rgb.fields)+len(rgb.fns))
-		for _, f := range rgb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(rgb.fields...)...)
-}
-
 // RoundSelect is the builder for selecting fields of Round entities.
 type RoundSelect struct {
 	*RoundQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
@@ -681,26 +669,27 @@ func (rs *RoundSelect) Aggregate(fns ...AggregateFunc) *RoundSelect {
 
 // Scan applies the selector query and scans the result into the given value.
 func (rs *RoundSelect) Scan(ctx context.Context, v any) error {
+	ctx = newQueryContext(ctx, TypeRound, "Select")
 	if err := rs.prepareQuery(ctx); err != nil {
 		return err
 	}
-	rs.sql = rs.RoundQuery.sqlQuery(ctx)
-	return rs.sqlScan(ctx, v)
+	return scanWithInterceptors[*RoundQuery, *RoundSelect](ctx, rs.RoundQuery, rs, rs.inters, v)
 }
 
-func (rs *RoundSelect) sqlScan(ctx context.Context, v any) error {
+func (rs *RoundSelect) sqlScan(ctx context.Context, root *RoundQuery, v any) error {
+	selector := root.sqlQuery(ctx)
 	aggregation := make([]string, 0, len(rs.fns))
 	for _, fn := range rs.fns {
-		aggregation = append(aggregation, fn(rs.sql))
+		aggregation = append(aggregation, fn(selector))
 	}
 	switch n := len(*rs.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
-		rs.sql.Select(aggregation...)
+		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
-		rs.sql.AppendSelect(aggregation...)
+		selector.AppendSelect(aggregation...)
 	}
 	rows := &sql.Rows{}
-	query, args := rs.sql.Query()
+	query, args := selector.Query()
 	if err := rs.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

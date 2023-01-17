@@ -104,50 +104,8 @@ func (dc *DiscardCreate) Mutation() *DiscardMutation {
 
 // Save creates the Discard in the database.
 func (dc *DiscardCreate) Save(ctx context.Context) (*Discard, error) {
-	var (
-		err  error
-		node *Discard
-	)
 	dc.defaults()
-	if len(dc.hooks) == 0 {
-		if err = dc.check(); err != nil {
-			return nil, err
-		}
-		node, err = dc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*DiscardMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = dc.check(); err != nil {
-				return nil, err
-			}
-			dc.mutation = mutation
-			if node, err = dc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(dc.hooks) - 1; i >= 0; i-- {
-			if dc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = dc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, dc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*Discard)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from DiscardMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks[*Discard, DiscardMutation](ctx, dc.sqlSave, dc.mutation, dc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -186,6 +144,9 @@ func (dc *DiscardCreate) check() error {
 }
 
 func (dc *DiscardCreate) sqlSave(ctx context.Context) (*Discard, error) {
+	if err := dc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := dc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, dc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -200,6 +161,8 @@ func (dc *DiscardCreate) sqlSave(ctx context.Context) (*Discard, error) {
 			return nil, err
 		}
 	}
+	dc.mutation.id = &_node.ID
+	dc.mutation.done = true
 	return _node, nil
 }
 

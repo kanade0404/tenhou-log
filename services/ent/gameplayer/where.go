@@ -11,250 +11,162 @@ import (
 
 // ID filters vertices based on their ID field.
 func ID(id uuid.UUID) predicate.GamePlayer {
-	return predicate.GamePlayer(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.GamePlayer(sql.FieldEQ(FieldID, id))
 }
 
 // IDEQ applies the EQ predicate on the ID field.
 func IDEQ(id uuid.UUID) predicate.GamePlayer {
-	return predicate.GamePlayer(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.GamePlayer(sql.FieldEQ(FieldID, id))
 }
 
 // IDNEQ applies the NEQ predicate on the ID field.
 func IDNEQ(id uuid.UUID) predicate.GamePlayer {
-	return predicate.GamePlayer(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldID), id))
-	})
+	return predicate.GamePlayer(sql.FieldNEQ(FieldID, id))
 }
 
 // IDIn applies the In predicate on the ID field.
 func IDIn(ids ...uuid.UUID) predicate.GamePlayer {
-	return predicate.GamePlayer(func(s *sql.Selector) {
-		v := make([]any, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.In(s.C(FieldID), v...))
-	})
+	return predicate.GamePlayer(sql.FieldIn(FieldID, ids...))
 }
 
 // IDNotIn applies the NotIn predicate on the ID field.
 func IDNotIn(ids ...uuid.UUID) predicate.GamePlayer {
-	return predicate.GamePlayer(func(s *sql.Selector) {
-		v := make([]any, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.NotIn(s.C(FieldID), v...))
-	})
+	return predicate.GamePlayer(sql.FieldNotIn(FieldID, ids...))
 }
 
 // IDGT applies the GT predicate on the ID field.
 func IDGT(id uuid.UUID) predicate.GamePlayer {
-	return predicate.GamePlayer(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldID), id))
-	})
+	return predicate.GamePlayer(sql.FieldGT(FieldID, id))
 }
 
 // IDGTE applies the GTE predicate on the ID field.
 func IDGTE(id uuid.UUID) predicate.GamePlayer {
-	return predicate.GamePlayer(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldID), id))
-	})
+	return predicate.GamePlayer(sql.FieldGTE(FieldID, id))
 }
 
 // IDLT applies the LT predicate on the ID field.
 func IDLT(id uuid.UUID) predicate.GamePlayer {
-	return predicate.GamePlayer(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldID), id))
-	})
+	return predicate.GamePlayer(sql.FieldLT(FieldID, id))
 }
 
 // IDLTE applies the LTE predicate on the ID field.
 func IDLTE(id uuid.UUID) predicate.GamePlayer {
-	return predicate.GamePlayer(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldID), id))
-	})
+	return predicate.GamePlayer(sql.FieldLTE(FieldID, id))
 }
 
 // Rate applies equality check predicate on the "rate" field. It's identical to RateEQ.
 func Rate(v float64) predicate.GamePlayer {
-	return predicate.GamePlayer(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldRate), v))
-	})
+	return predicate.GamePlayer(sql.FieldEQ(FieldRate, v))
 }
 
 // StartPosition applies equality check predicate on the "start_position" field. It's identical to StartPositionEQ.
 func StartPosition(v string) predicate.GamePlayer {
-	return predicate.GamePlayer(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldStartPosition), v))
-	})
+	return predicate.GamePlayer(sql.FieldEQ(FieldStartPosition, v))
 }
 
 // RateEQ applies the EQ predicate on the "rate" field.
 func RateEQ(v float64) predicate.GamePlayer {
-	return predicate.GamePlayer(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldRate), v))
-	})
+	return predicate.GamePlayer(sql.FieldEQ(FieldRate, v))
 }
 
 // RateNEQ applies the NEQ predicate on the "rate" field.
 func RateNEQ(v float64) predicate.GamePlayer {
-	return predicate.GamePlayer(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldRate), v))
-	})
+	return predicate.GamePlayer(sql.FieldNEQ(FieldRate, v))
 }
 
 // RateIn applies the In predicate on the "rate" field.
 func RateIn(vs ...float64) predicate.GamePlayer {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.GamePlayer(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldRate), v...))
-	})
+	return predicate.GamePlayer(sql.FieldIn(FieldRate, vs...))
 }
 
 // RateNotIn applies the NotIn predicate on the "rate" field.
 func RateNotIn(vs ...float64) predicate.GamePlayer {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.GamePlayer(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldRate), v...))
-	})
+	return predicate.GamePlayer(sql.FieldNotIn(FieldRate, vs...))
 }
 
 // RateGT applies the GT predicate on the "rate" field.
 func RateGT(v float64) predicate.GamePlayer {
-	return predicate.GamePlayer(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldRate), v))
-	})
+	return predicate.GamePlayer(sql.FieldGT(FieldRate, v))
 }
 
 // RateGTE applies the GTE predicate on the "rate" field.
 func RateGTE(v float64) predicate.GamePlayer {
-	return predicate.GamePlayer(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldRate), v))
-	})
+	return predicate.GamePlayer(sql.FieldGTE(FieldRate, v))
 }
 
 // RateLT applies the LT predicate on the "rate" field.
 func RateLT(v float64) predicate.GamePlayer {
-	return predicate.GamePlayer(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldRate), v))
-	})
+	return predicate.GamePlayer(sql.FieldLT(FieldRate, v))
 }
 
 // RateLTE applies the LTE predicate on the "rate" field.
 func RateLTE(v float64) predicate.GamePlayer {
-	return predicate.GamePlayer(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldRate), v))
-	})
+	return predicate.GamePlayer(sql.FieldLTE(FieldRate, v))
 }
 
 // StartPositionEQ applies the EQ predicate on the "start_position" field.
 func StartPositionEQ(v string) predicate.GamePlayer {
-	return predicate.GamePlayer(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldStartPosition), v))
-	})
+	return predicate.GamePlayer(sql.FieldEQ(FieldStartPosition, v))
 }
 
 // StartPositionNEQ applies the NEQ predicate on the "start_position" field.
 func StartPositionNEQ(v string) predicate.GamePlayer {
-	return predicate.GamePlayer(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldStartPosition), v))
-	})
+	return predicate.GamePlayer(sql.FieldNEQ(FieldStartPosition, v))
 }
 
 // StartPositionIn applies the In predicate on the "start_position" field.
 func StartPositionIn(vs ...string) predicate.GamePlayer {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.GamePlayer(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldStartPosition), v...))
-	})
+	return predicate.GamePlayer(sql.FieldIn(FieldStartPosition, vs...))
 }
 
 // StartPositionNotIn applies the NotIn predicate on the "start_position" field.
 func StartPositionNotIn(vs ...string) predicate.GamePlayer {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.GamePlayer(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldStartPosition), v...))
-	})
+	return predicate.GamePlayer(sql.FieldNotIn(FieldStartPosition, vs...))
 }
 
 // StartPositionGT applies the GT predicate on the "start_position" field.
 func StartPositionGT(v string) predicate.GamePlayer {
-	return predicate.GamePlayer(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldStartPosition), v))
-	})
+	return predicate.GamePlayer(sql.FieldGT(FieldStartPosition, v))
 }
 
 // StartPositionGTE applies the GTE predicate on the "start_position" field.
 func StartPositionGTE(v string) predicate.GamePlayer {
-	return predicate.GamePlayer(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldStartPosition), v))
-	})
+	return predicate.GamePlayer(sql.FieldGTE(FieldStartPosition, v))
 }
 
 // StartPositionLT applies the LT predicate on the "start_position" field.
 func StartPositionLT(v string) predicate.GamePlayer {
-	return predicate.GamePlayer(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldStartPosition), v))
-	})
+	return predicate.GamePlayer(sql.FieldLT(FieldStartPosition, v))
 }
 
 // StartPositionLTE applies the LTE predicate on the "start_position" field.
 func StartPositionLTE(v string) predicate.GamePlayer {
-	return predicate.GamePlayer(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldStartPosition), v))
-	})
+	return predicate.GamePlayer(sql.FieldLTE(FieldStartPosition, v))
 }
 
 // StartPositionContains applies the Contains predicate on the "start_position" field.
 func StartPositionContains(v string) predicate.GamePlayer {
-	return predicate.GamePlayer(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldStartPosition), v))
-	})
+	return predicate.GamePlayer(sql.FieldContains(FieldStartPosition, v))
 }
 
 // StartPositionHasPrefix applies the HasPrefix predicate on the "start_position" field.
 func StartPositionHasPrefix(v string) predicate.GamePlayer {
-	return predicate.GamePlayer(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldStartPosition), v))
-	})
+	return predicate.GamePlayer(sql.FieldHasPrefix(FieldStartPosition, v))
 }
 
 // StartPositionHasSuffix applies the HasSuffix predicate on the "start_position" field.
 func StartPositionHasSuffix(v string) predicate.GamePlayer {
-	return predicate.GamePlayer(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldStartPosition), v))
-	})
+	return predicate.GamePlayer(sql.FieldHasSuffix(FieldStartPosition, v))
 }
 
 // StartPositionEqualFold applies the EqualFold predicate on the "start_position" field.
 func StartPositionEqualFold(v string) predicate.GamePlayer {
-	return predicate.GamePlayer(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldStartPosition), v))
-	})
+	return predicate.GamePlayer(sql.FieldEqualFold(FieldStartPosition, v))
 }
 
 // StartPositionContainsFold applies the ContainsFold predicate on the "start_position" field.
 func StartPositionContainsFold(v string) predicate.GamePlayer {
-	return predicate.GamePlayer(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldStartPosition), v))
-	})
+	return predicate.GamePlayer(sql.FieldContainsFold(FieldStartPosition, v))
 }
 
 // HasGames applies the HasEdge predicate on the "games" edge.
@@ -262,7 +174,6 @@ func HasGames() predicate.GamePlayer {
 	return predicate.GamePlayer(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(GamesTable, FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, true, GamesTable, GamesPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -290,7 +201,6 @@ func HasPlayers() predicate.GamePlayer {
 	return predicate.GamePlayer(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(PlayersTable, FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, PlayersTable, PlayersColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -318,7 +228,6 @@ func HasDans() predicate.GamePlayer {
 	return predicate.GamePlayer(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(DansTable, FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, DansTable, DansColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)

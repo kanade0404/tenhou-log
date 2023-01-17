@@ -53,40 +53,7 @@ func (gphhu *GamePlayerHandHaiUpdate) ClearTurn() *GamePlayerHandHaiUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (gphhu *GamePlayerHandHaiUpdate) Save(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(gphhu.hooks) == 0 {
-		if err = gphhu.check(); err != nil {
-			return 0, err
-		}
-		affected, err = gphhu.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*GamePlayerHandHaiMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = gphhu.check(); err != nil {
-				return 0, err
-			}
-			gphhu.mutation = mutation
-			affected, err = gphhu.sqlSave(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(gphhu.hooks) - 1; i >= 0; i-- {
-			if gphhu.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = gphhu.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, gphhu.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks[int, GamePlayerHandHaiMutation](ctx, gphhu.sqlSave, gphhu.mutation, gphhu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -120,6 +87,9 @@ func (gphhu *GamePlayerHandHaiUpdate) check() error {
 }
 
 func (gphhu *GamePlayerHandHaiUpdate) sqlSave(ctx context.Context) (n int, err error) {
+	if err := gphhu.check(); err != nil {
+		return n, err
+	}
 	_spec := &sqlgraph.UpdateSpec{
 		Node: &sqlgraph.NodeSpec{
 			Table:   gameplayerhandhai.Table,
@@ -180,6 +150,7 @@ func (gphhu *GamePlayerHandHaiUpdate) sqlSave(ctx context.Context) (n int, err e
 		}
 		return 0, err
 	}
+	gphhu.mutation.done = true
 	return n, nil
 }
 
@@ -222,46 +193,7 @@ func (gphhuo *GamePlayerHandHaiUpdateOne) Select(field string, fields ...string)
 
 // Save executes the query and returns the updated GamePlayerHandHai entity.
 func (gphhuo *GamePlayerHandHaiUpdateOne) Save(ctx context.Context) (*GamePlayerHandHai, error) {
-	var (
-		err  error
-		node *GamePlayerHandHai
-	)
-	if len(gphhuo.hooks) == 0 {
-		if err = gphhuo.check(); err != nil {
-			return nil, err
-		}
-		node, err = gphhuo.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*GamePlayerHandHaiMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = gphhuo.check(); err != nil {
-				return nil, err
-			}
-			gphhuo.mutation = mutation
-			node, err = gphhuo.sqlSave(ctx)
-			mutation.done = true
-			return node, err
-		})
-		for i := len(gphhuo.hooks) - 1; i >= 0; i-- {
-			if gphhuo.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = gphhuo.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, gphhuo.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*GamePlayerHandHai)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from GamePlayerHandHaiMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks[*GamePlayerHandHai, GamePlayerHandHaiMutation](ctx, gphhuo.sqlSave, gphhuo.mutation, gphhuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -295,6 +227,9 @@ func (gphhuo *GamePlayerHandHaiUpdateOne) check() error {
 }
 
 func (gphhuo *GamePlayerHandHaiUpdateOne) sqlSave(ctx context.Context) (_node *GamePlayerHandHai, err error) {
+	if err := gphhuo.check(); err != nil {
+		return _node, err
+	}
 	_spec := &sqlgraph.UpdateSpec{
 		Node: &sqlgraph.NodeSpec{
 			Table:   gameplayerhandhai.Table,
@@ -375,5 +310,6 @@ func (gphhuo *GamePlayerHandHaiUpdateOne) sqlSave(ctx context.Context) (_node *G
 		}
 		return nil, err
 	}
+	gphhuo.mutation.done = true
 	return _node, nil
 }

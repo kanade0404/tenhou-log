@@ -98,7 +98,7 @@ type Client struct {
 
 // NewClient creates a new client configured with the given options.
 func NewClient(opts ...Option) *Client {
-	cfg := config{log: log.Println, hooks: &hooks{}}
+	cfg := config{log: log.Println, hooks: &hooks{}, inters: &inters{}}
 	cfg.options(opts...)
 	client := &Client{config: cfg}
 	client.init()
@@ -285,6 +285,91 @@ func (c *Client) Use(hooks ...Hook) {
 	c.Win.Use(hooks...)
 }
 
+// Intercept adds the query interceptors to all the entity clients.
+// In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
+func (c *Client) Intercept(interceptors ...Interceptor) {
+	c.Call.Intercept(interceptors...)
+	c.Chakan.Intercept(interceptors...)
+	c.Chii.Intercept(interceptors...)
+	c.CompressedMJLog.Intercept(interceptors...)
+	c.ConcealedKan.Intercept(interceptors...)
+	c.Dan.Intercept(interceptors...)
+	c.Discard.Intercept(interceptors...)
+	c.Drawn.Intercept(interceptors...)
+	c.Event.Intercept(interceptors...)
+	c.Game.Intercept(interceptors...)
+	c.GamePlayer.Intercept(interceptors...)
+	c.GamePlayerHandHai.Intercept(interceptors...)
+	c.GamePlayerPoint.Intercept(interceptors...)
+	c.Hand.Intercept(interceptors...)
+	c.MJLog.Intercept(interceptors...)
+	c.MJLogFile.Intercept(interceptors...)
+	c.MeldedKan.Intercept(interceptors...)
+	c.Player.Intercept(interceptors...)
+	c.Pon.Intercept(interceptors...)
+	c.Reach.Intercept(interceptors...)
+	c.Room.Intercept(interceptors...)
+	c.Round.Intercept(interceptors...)
+	c.Turn.Intercept(interceptors...)
+	c.Win.Intercept(interceptors...)
+}
+
+// Mutate implements the ent.Mutator interface.
+func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
+	switch m := m.(type) {
+	case *CallMutation:
+		return c.Call.mutate(ctx, m)
+	case *ChakanMutation:
+		return c.Chakan.mutate(ctx, m)
+	case *ChiiMutation:
+		return c.Chii.mutate(ctx, m)
+	case *CompressedMJLogMutation:
+		return c.CompressedMJLog.mutate(ctx, m)
+	case *ConcealedKanMutation:
+		return c.ConcealedKan.mutate(ctx, m)
+	case *DanMutation:
+		return c.Dan.mutate(ctx, m)
+	case *DiscardMutation:
+		return c.Discard.mutate(ctx, m)
+	case *DrawnMutation:
+		return c.Drawn.mutate(ctx, m)
+	case *EventMutation:
+		return c.Event.mutate(ctx, m)
+	case *GameMutation:
+		return c.Game.mutate(ctx, m)
+	case *GamePlayerMutation:
+		return c.GamePlayer.mutate(ctx, m)
+	case *GamePlayerHandHaiMutation:
+		return c.GamePlayerHandHai.mutate(ctx, m)
+	case *GamePlayerPointMutation:
+		return c.GamePlayerPoint.mutate(ctx, m)
+	case *HandMutation:
+		return c.Hand.mutate(ctx, m)
+	case *MJLogMutation:
+		return c.MJLog.mutate(ctx, m)
+	case *MJLogFileMutation:
+		return c.MJLogFile.mutate(ctx, m)
+	case *MeldedKanMutation:
+		return c.MeldedKan.mutate(ctx, m)
+	case *PlayerMutation:
+		return c.Player.mutate(ctx, m)
+	case *PonMutation:
+		return c.Pon.mutate(ctx, m)
+	case *ReachMutation:
+		return c.Reach.mutate(ctx, m)
+	case *RoomMutation:
+		return c.Room.mutate(ctx, m)
+	case *RoundMutation:
+		return c.Round.mutate(ctx, m)
+	case *TurnMutation:
+		return c.Turn.mutate(ctx, m)
+	case *WinMutation:
+		return c.Win.mutate(ctx, m)
+	default:
+		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
+	}
+}
+
 // CallClient is a client for the Call schema.
 type CallClient struct {
 	config
@@ -299,6 +384,12 @@ func NewCallClient(c config) *CallClient {
 // A call to `Use(f, g, h)` equals to `call.Hooks(f(g(h())))`.
 func (c *CallClient) Use(hooks ...Hook) {
 	c.hooks.Call = append(c.hooks.Call, hooks...)
+}
+
+// Use adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `call.Intercept(f(g(h())))`.
+func (c *CallClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Call = append(c.inters.Call, interceptors...)
 }
 
 // Create returns a builder for creating a Call entity.
@@ -353,6 +444,7 @@ func (c *CallClient) DeleteOneID(id uuid.UUID) *CallDeleteOne {
 func (c *CallClient) Query() *CallQuery {
 	return &CallQuery{
 		config: c.config,
+		inters: c.Interceptors(),
 	}
 }
 
@@ -372,7 +464,7 @@ func (c *CallClient) GetX(ctx context.Context, id uuid.UUID) *Call {
 
 // QueryEvent queries the event edge of a Call.
 func (c *CallClient) QueryEvent(ca *Call) *EventQuery {
-	query := &EventQuery{config: c.config}
+	query := (&EventClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := ca.ID
 		step := sqlgraph.NewStep(
@@ -388,7 +480,7 @@ func (c *CallClient) QueryEvent(ca *Call) *EventQuery {
 
 // QueryDiscard queries the discard edge of a Call.
 func (c *CallClient) QueryDiscard(ca *Call) *DiscardQuery {
-	query := &DiscardQuery{config: c.config}
+	query := (&DiscardClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := ca.ID
 		step := sqlgraph.NewStep(
@@ -404,7 +496,7 @@ func (c *CallClient) QueryDiscard(ca *Call) *DiscardQuery {
 
 // QueryChii queries the chii edge of a Call.
 func (c *CallClient) QueryChii(ca *Call) *ChiiQuery {
-	query := &ChiiQuery{config: c.config}
+	query := (&ChiiClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := ca.ID
 		step := sqlgraph.NewStep(
@@ -420,7 +512,7 @@ func (c *CallClient) QueryChii(ca *Call) *ChiiQuery {
 
 // QueryChakan queries the chakan edge of a Call.
 func (c *CallClient) QueryChakan(ca *Call) *ChakanQuery {
-	query := &ChakanQuery{config: c.config}
+	query := (&ChakanClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := ca.ID
 		step := sqlgraph.NewStep(
@@ -436,7 +528,7 @@ func (c *CallClient) QueryChakan(ca *Call) *ChakanQuery {
 
 // QueryConcealedkan queries the concealedkan edge of a Call.
 func (c *CallClient) QueryConcealedkan(ca *Call) *ConcealedKanQuery {
-	query := &ConcealedKanQuery{config: c.config}
+	query := (&ConcealedKanClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := ca.ID
 		step := sqlgraph.NewStep(
@@ -452,7 +544,7 @@ func (c *CallClient) QueryConcealedkan(ca *Call) *ConcealedKanQuery {
 
 // QueryMeldedkan queries the meldedkan edge of a Call.
 func (c *CallClient) QueryMeldedkan(ca *Call) *MeldedKanQuery {
-	query := &MeldedKanQuery{config: c.config}
+	query := (&MeldedKanClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := ca.ID
 		step := sqlgraph.NewStep(
@@ -468,7 +560,7 @@ func (c *CallClient) QueryMeldedkan(ca *Call) *MeldedKanQuery {
 
 // QueryPon queries the pon edge of a Call.
 func (c *CallClient) QueryPon(ca *Call) *PonQuery {
-	query := &PonQuery{config: c.config}
+	query := (&PonClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := ca.ID
 		step := sqlgraph.NewStep(
@@ -487,6 +579,26 @@ func (c *CallClient) Hooks() []Hook {
 	return c.hooks.Call
 }
 
+// Interceptors returns the client interceptors.
+func (c *CallClient) Interceptors() []Interceptor {
+	return c.inters.Call
+}
+
+func (c *CallClient) mutate(ctx context.Context, m *CallMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&CallCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&CallUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&CallUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&CallDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Call mutation op: %q", m.Op())
+	}
+}
+
 // ChakanClient is a client for the Chakan schema.
 type ChakanClient struct {
 	config
@@ -501,6 +613,12 @@ func NewChakanClient(c config) *ChakanClient {
 // A call to `Use(f, g, h)` equals to `chakan.Hooks(f(g(h())))`.
 func (c *ChakanClient) Use(hooks ...Hook) {
 	c.hooks.Chakan = append(c.hooks.Chakan, hooks...)
+}
+
+// Use adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `chakan.Intercept(f(g(h())))`.
+func (c *ChakanClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Chakan = append(c.inters.Chakan, interceptors...)
 }
 
 // Create returns a builder for creating a Chakan entity.
@@ -555,6 +673,7 @@ func (c *ChakanClient) DeleteOneID(id uuid.UUID) *ChakanDeleteOne {
 func (c *ChakanClient) Query() *ChakanQuery {
 	return &ChakanQuery{
 		config: c.config,
+		inters: c.Interceptors(),
 	}
 }
 
@@ -574,7 +693,7 @@ func (c *ChakanClient) GetX(ctx context.Context, id uuid.UUID) *Chakan {
 
 // QueryCall queries the call edge of a Chakan.
 func (c *ChakanClient) QueryCall(ch *Chakan) *CallQuery {
-	query := &CallQuery{config: c.config}
+	query := (&CallClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := ch.ID
 		step := sqlgraph.NewStep(
@@ -593,6 +712,26 @@ func (c *ChakanClient) Hooks() []Hook {
 	return c.hooks.Chakan
 }
 
+// Interceptors returns the client interceptors.
+func (c *ChakanClient) Interceptors() []Interceptor {
+	return c.inters.Chakan
+}
+
+func (c *ChakanClient) mutate(ctx context.Context, m *ChakanMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ChakanCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ChakanUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ChakanUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ChakanDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Chakan mutation op: %q", m.Op())
+	}
+}
+
 // ChiiClient is a client for the Chii schema.
 type ChiiClient struct {
 	config
@@ -607,6 +746,12 @@ func NewChiiClient(c config) *ChiiClient {
 // A call to `Use(f, g, h)` equals to `chii.Hooks(f(g(h())))`.
 func (c *ChiiClient) Use(hooks ...Hook) {
 	c.hooks.Chii = append(c.hooks.Chii, hooks...)
+}
+
+// Use adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `chii.Intercept(f(g(h())))`.
+func (c *ChiiClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Chii = append(c.inters.Chii, interceptors...)
 }
 
 // Create returns a builder for creating a Chii entity.
@@ -661,6 +806,7 @@ func (c *ChiiClient) DeleteOneID(id uuid.UUID) *ChiiDeleteOne {
 func (c *ChiiClient) Query() *ChiiQuery {
 	return &ChiiQuery{
 		config: c.config,
+		inters: c.Interceptors(),
 	}
 }
 
@@ -680,7 +826,7 @@ func (c *ChiiClient) GetX(ctx context.Context, id uuid.UUID) *Chii {
 
 // QueryCall queries the call edge of a Chii.
 func (c *ChiiClient) QueryCall(ch *Chii) *CallQuery {
-	query := &CallQuery{config: c.config}
+	query := (&CallClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := ch.ID
 		step := sqlgraph.NewStep(
@@ -699,6 +845,26 @@ func (c *ChiiClient) Hooks() []Hook {
 	return c.hooks.Chii
 }
 
+// Interceptors returns the client interceptors.
+func (c *ChiiClient) Interceptors() []Interceptor {
+	return c.inters.Chii
+}
+
+func (c *ChiiClient) mutate(ctx context.Context, m *ChiiMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ChiiCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ChiiUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ChiiUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ChiiDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Chii mutation op: %q", m.Op())
+	}
+}
+
 // CompressedMJLogClient is a client for the CompressedMJLog schema.
 type CompressedMJLogClient struct {
 	config
@@ -713,6 +879,12 @@ func NewCompressedMJLogClient(c config) *CompressedMJLogClient {
 // A call to `Use(f, g, h)` equals to `compressedmjlog.Hooks(f(g(h())))`.
 func (c *CompressedMJLogClient) Use(hooks ...Hook) {
 	c.hooks.CompressedMJLog = append(c.hooks.CompressedMJLog, hooks...)
+}
+
+// Use adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `compressedmjlog.Intercept(f(g(h())))`.
+func (c *CompressedMJLogClient) Intercept(interceptors ...Interceptor) {
+	c.inters.CompressedMJLog = append(c.inters.CompressedMJLog, interceptors...)
 }
 
 // Create returns a builder for creating a CompressedMJLog entity.
@@ -767,6 +939,7 @@ func (c *CompressedMJLogClient) DeleteOneID(id uuid.UUID) *CompressedMJLogDelete
 func (c *CompressedMJLogClient) Query() *CompressedMJLogQuery {
 	return &CompressedMJLogQuery{
 		config: c.config,
+		inters: c.Interceptors(),
 	}
 }
 
@@ -786,7 +959,7 @@ func (c *CompressedMJLogClient) GetX(ctx context.Context, id uuid.UUID) *Compres
 
 // QueryMjlogFiles queries the mjlog_files edge of a CompressedMJLog.
 func (c *CompressedMJLogClient) QueryMjlogFiles(cml *CompressedMJLog) *MJLogFileQuery {
-	query := &MJLogFileQuery{config: c.config}
+	query := (&MJLogFileClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := cml.ID
 		step := sqlgraph.NewStep(
@@ -805,6 +978,26 @@ func (c *CompressedMJLogClient) Hooks() []Hook {
 	return c.hooks.CompressedMJLog
 }
 
+// Interceptors returns the client interceptors.
+func (c *CompressedMJLogClient) Interceptors() []Interceptor {
+	return c.inters.CompressedMJLog
+}
+
+func (c *CompressedMJLogClient) mutate(ctx context.Context, m *CompressedMJLogMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&CompressedMJLogCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&CompressedMJLogUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&CompressedMJLogUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&CompressedMJLogDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown CompressedMJLog mutation op: %q", m.Op())
+	}
+}
+
 // ConcealedKanClient is a client for the ConcealedKan schema.
 type ConcealedKanClient struct {
 	config
@@ -819,6 +1012,12 @@ func NewConcealedKanClient(c config) *ConcealedKanClient {
 // A call to `Use(f, g, h)` equals to `concealedkan.Hooks(f(g(h())))`.
 func (c *ConcealedKanClient) Use(hooks ...Hook) {
 	c.hooks.ConcealedKan = append(c.hooks.ConcealedKan, hooks...)
+}
+
+// Use adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `concealedkan.Intercept(f(g(h())))`.
+func (c *ConcealedKanClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ConcealedKan = append(c.inters.ConcealedKan, interceptors...)
 }
 
 // Create returns a builder for creating a ConcealedKan entity.
@@ -873,6 +1072,7 @@ func (c *ConcealedKanClient) DeleteOneID(id uuid.UUID) *ConcealedKanDeleteOne {
 func (c *ConcealedKanClient) Query() *ConcealedKanQuery {
 	return &ConcealedKanQuery{
 		config: c.config,
+		inters: c.Interceptors(),
 	}
 }
 
@@ -892,7 +1092,7 @@ func (c *ConcealedKanClient) GetX(ctx context.Context, id uuid.UUID) *ConcealedK
 
 // QueryCall queries the call edge of a ConcealedKan.
 func (c *ConcealedKanClient) QueryCall(ck *ConcealedKan) *CallQuery {
-	query := &CallQuery{config: c.config}
+	query := (&CallClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := ck.ID
 		step := sqlgraph.NewStep(
@@ -911,6 +1111,26 @@ func (c *ConcealedKanClient) Hooks() []Hook {
 	return c.hooks.ConcealedKan
 }
 
+// Interceptors returns the client interceptors.
+func (c *ConcealedKanClient) Interceptors() []Interceptor {
+	return c.inters.ConcealedKan
+}
+
+func (c *ConcealedKanClient) mutate(ctx context.Context, m *ConcealedKanMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ConcealedKanCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ConcealedKanUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ConcealedKanUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ConcealedKanDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ConcealedKan mutation op: %q", m.Op())
+	}
+}
+
 // DanClient is a client for the Dan schema.
 type DanClient struct {
 	config
@@ -925,6 +1145,12 @@ func NewDanClient(c config) *DanClient {
 // A call to `Use(f, g, h)` equals to `dan.Hooks(f(g(h())))`.
 func (c *DanClient) Use(hooks ...Hook) {
 	c.hooks.Dan = append(c.hooks.Dan, hooks...)
+}
+
+// Use adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `dan.Intercept(f(g(h())))`.
+func (c *DanClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Dan = append(c.inters.Dan, interceptors...)
 }
 
 // Create returns a builder for creating a Dan entity.
@@ -979,6 +1205,7 @@ func (c *DanClient) DeleteOneID(id uuid.UUID) *DanDeleteOne {
 func (c *DanClient) Query() *DanQuery {
 	return &DanQuery{
 		config: c.config,
+		inters: c.Interceptors(),
 	}
 }
 
@@ -998,7 +1225,7 @@ func (c *DanClient) GetX(ctx context.Context, id uuid.UUID) *Dan {
 
 // QueryGamePlayers queries the game_players edge of a Dan.
 func (c *DanClient) QueryGamePlayers(d *Dan) *GamePlayerQuery {
-	query := &GamePlayerQuery{config: c.config}
+	query := (&GamePlayerClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := d.ID
 		step := sqlgraph.NewStep(
@@ -1017,6 +1244,26 @@ func (c *DanClient) Hooks() []Hook {
 	return c.hooks.Dan
 }
 
+// Interceptors returns the client interceptors.
+func (c *DanClient) Interceptors() []Interceptor {
+	return c.inters.Dan
+}
+
+func (c *DanClient) mutate(ctx context.Context, m *DanMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&DanCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&DanUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&DanUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&DanDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Dan mutation op: %q", m.Op())
+	}
+}
+
 // DiscardClient is a client for the Discard schema.
 type DiscardClient struct {
 	config
@@ -1031,6 +1278,12 @@ func NewDiscardClient(c config) *DiscardClient {
 // A call to `Use(f, g, h)` equals to `discard.Hooks(f(g(h())))`.
 func (c *DiscardClient) Use(hooks ...Hook) {
 	c.hooks.Discard = append(c.hooks.Discard, hooks...)
+}
+
+// Use adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `discard.Intercept(f(g(h())))`.
+func (c *DiscardClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Discard = append(c.inters.Discard, interceptors...)
 }
 
 // Create returns a builder for creating a Discard entity.
@@ -1085,6 +1338,7 @@ func (c *DiscardClient) DeleteOneID(id uuid.UUID) *DiscardDeleteOne {
 func (c *DiscardClient) Query() *DiscardQuery {
 	return &DiscardQuery{
 		config: c.config,
+		inters: c.Interceptors(),
 	}
 }
 
@@ -1104,7 +1358,7 @@ func (c *DiscardClient) GetX(ctx context.Context, id uuid.UUID) *Discard {
 
 // QueryReach queries the reach edge of a Discard.
 func (c *DiscardClient) QueryReach(d *Discard) *ReachQuery {
-	query := &ReachQuery{config: c.config}
+	query := (&ReachClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := d.ID
 		step := sqlgraph.NewStep(
@@ -1120,7 +1374,7 @@ func (c *DiscardClient) QueryReach(d *Discard) *ReachQuery {
 
 // QueryCall queries the call edge of a Discard.
 func (c *DiscardClient) QueryCall(d *Discard) *CallQuery {
-	query := &CallQuery{config: c.config}
+	query := (&CallClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := d.ID
 		step := sqlgraph.NewStep(
@@ -1136,7 +1390,7 @@ func (c *DiscardClient) QueryCall(d *Discard) *CallQuery {
 
 // QueryDraw queries the draw edge of a Discard.
 func (c *DiscardClient) QueryDraw(d *Discard) *DrawnQuery {
-	query := &DrawnQuery{config: c.config}
+	query := (&DrawnClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := d.ID
 		step := sqlgraph.NewStep(
@@ -1155,6 +1409,26 @@ func (c *DiscardClient) Hooks() []Hook {
 	return c.hooks.Discard
 }
 
+// Interceptors returns the client interceptors.
+func (c *DiscardClient) Interceptors() []Interceptor {
+	return c.inters.Discard
+}
+
+func (c *DiscardClient) mutate(ctx context.Context, m *DiscardMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&DiscardCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&DiscardUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&DiscardUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&DiscardDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Discard mutation op: %q", m.Op())
+	}
+}
+
 // DrawnClient is a client for the Drawn schema.
 type DrawnClient struct {
 	config
@@ -1169,6 +1443,12 @@ func NewDrawnClient(c config) *DrawnClient {
 // A call to `Use(f, g, h)` equals to `drawn.Hooks(f(g(h())))`.
 func (c *DrawnClient) Use(hooks ...Hook) {
 	c.hooks.Drawn = append(c.hooks.Drawn, hooks...)
+}
+
+// Use adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `drawn.Intercept(f(g(h())))`.
+func (c *DrawnClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Drawn = append(c.inters.Drawn, interceptors...)
 }
 
 // Create returns a builder for creating a Drawn entity.
@@ -1223,6 +1503,7 @@ func (c *DrawnClient) DeleteOneID(id uuid.UUID) *DrawnDeleteOne {
 func (c *DrawnClient) Query() *DrawnQuery {
 	return &DrawnQuery{
 		config: c.config,
+		inters: c.Interceptors(),
 	}
 }
 
@@ -1242,7 +1523,7 @@ func (c *DrawnClient) GetX(ctx context.Context, id uuid.UUID) *Drawn {
 
 // QueryEvent queries the event edge of a Drawn.
 func (c *DrawnClient) QueryEvent(d *Drawn) *EventQuery {
-	query := &EventQuery{config: c.config}
+	query := (&EventClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := d.ID
 		step := sqlgraph.NewStep(
@@ -1258,7 +1539,7 @@ func (c *DrawnClient) QueryEvent(d *Drawn) *EventQuery {
 
 // QueryDiscard queries the discard edge of a Drawn.
 func (c *DrawnClient) QueryDiscard(d *Drawn) *DiscardQuery {
-	query := &DiscardQuery{config: c.config}
+	query := (&DiscardClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := d.ID
 		step := sqlgraph.NewStep(
@@ -1277,6 +1558,26 @@ func (c *DrawnClient) Hooks() []Hook {
 	return c.hooks.Drawn
 }
 
+// Interceptors returns the client interceptors.
+func (c *DrawnClient) Interceptors() []Interceptor {
+	return c.inters.Drawn
+}
+
+func (c *DrawnClient) mutate(ctx context.Context, m *DrawnMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&DrawnCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&DrawnUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&DrawnUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&DrawnDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Drawn mutation op: %q", m.Op())
+	}
+}
+
 // EventClient is a client for the Event schema.
 type EventClient struct {
 	config
@@ -1291,6 +1592,12 @@ func NewEventClient(c config) *EventClient {
 // A call to `Use(f, g, h)` equals to `event.Hooks(f(g(h())))`.
 func (c *EventClient) Use(hooks ...Hook) {
 	c.hooks.Event = append(c.hooks.Event, hooks...)
+}
+
+// Use adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `event.Intercept(f(g(h())))`.
+func (c *EventClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Event = append(c.inters.Event, interceptors...)
 }
 
 // Create returns a builder for creating a Event entity.
@@ -1345,6 +1652,7 @@ func (c *EventClient) DeleteOneID(id uuid.UUID) *EventDeleteOne {
 func (c *EventClient) Query() *EventQuery {
 	return &EventQuery{
 		config: c.config,
+		inters: c.Interceptors(),
 	}
 }
 
@@ -1364,7 +1672,7 @@ func (c *EventClient) GetX(ctx context.Context, id uuid.UUID) *Event {
 
 // QueryTurn queries the turn edge of a Event.
 func (c *EventClient) QueryTurn(e *Event) *TurnQuery {
-	query := &TurnQuery{config: c.config}
+	query := (&TurnClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := e.ID
 		step := sqlgraph.NewStep(
@@ -1380,7 +1688,7 @@ func (c *EventClient) QueryTurn(e *Event) *TurnQuery {
 
 // QueryWin queries the win edge of a Event.
 func (c *EventClient) QueryWin(e *Event) *WinQuery {
-	query := &WinQuery{config: c.config}
+	query := (&WinClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := e.ID
 		step := sqlgraph.NewStep(
@@ -1396,7 +1704,7 @@ func (c *EventClient) QueryWin(e *Event) *WinQuery {
 
 // QueryCall queries the call edge of a Event.
 func (c *EventClient) QueryCall(e *Event) *CallQuery {
-	query := &CallQuery{config: c.config}
+	query := (&CallClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := e.ID
 		step := sqlgraph.NewStep(
@@ -1412,7 +1720,7 @@ func (c *EventClient) QueryCall(e *Event) *CallQuery {
 
 // QueryDraw queries the draw edge of a Event.
 func (c *EventClient) QueryDraw(e *Event) *DrawnQuery {
-	query := &DrawnQuery{config: c.config}
+	query := (&DrawnClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := e.ID
 		step := sqlgraph.NewStep(
@@ -1428,7 +1736,7 @@ func (c *EventClient) QueryDraw(e *Event) *DrawnQuery {
 
 // QueryReach queries the reach edge of a Event.
 func (c *EventClient) QueryReach(e *Event) *ReachQuery {
-	query := &ReachQuery{config: c.config}
+	query := (&ReachClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := e.ID
 		step := sqlgraph.NewStep(
@@ -1447,6 +1755,26 @@ func (c *EventClient) Hooks() []Hook {
 	return c.hooks.Event
 }
 
+// Interceptors returns the client interceptors.
+func (c *EventClient) Interceptors() []Interceptor {
+	return c.inters.Event
+}
+
+func (c *EventClient) mutate(ctx context.Context, m *EventMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&EventCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&EventUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&EventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&EventDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Event mutation op: %q", m.Op())
+	}
+}
+
 // GameClient is a client for the Game schema.
 type GameClient struct {
 	config
@@ -1461,6 +1789,12 @@ func NewGameClient(c config) *GameClient {
 // A call to `Use(f, g, h)` equals to `game.Hooks(f(g(h())))`.
 func (c *GameClient) Use(hooks ...Hook) {
 	c.hooks.Game = append(c.hooks.Game, hooks...)
+}
+
+// Use adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `game.Intercept(f(g(h())))`.
+func (c *GameClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Game = append(c.inters.Game, interceptors...)
 }
 
 // Create returns a builder for creating a Game entity.
@@ -1515,6 +1849,7 @@ func (c *GameClient) DeleteOneID(id uuid.UUID) *GameDeleteOne {
 func (c *GameClient) Query() *GameQuery {
 	return &GameQuery{
 		config: c.config,
+		inters: c.Interceptors(),
 	}
 }
 
@@ -1534,7 +1869,7 @@ func (c *GameClient) GetX(ctx context.Context, id uuid.UUID) *Game {
 
 // QueryMjlogs queries the mjlogs edge of a Game.
 func (c *GameClient) QueryMjlogs(ga *Game) *MJLogQuery {
-	query := &MJLogQuery{config: c.config}
+	query := (&MJLogClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := ga.ID
 		step := sqlgraph.NewStep(
@@ -1550,7 +1885,7 @@ func (c *GameClient) QueryMjlogs(ga *Game) *MJLogQuery {
 
 // QueryGamePlayers queries the game_players edge of a Game.
 func (c *GameClient) QueryGamePlayers(ga *Game) *GamePlayerQuery {
-	query := &GamePlayerQuery{config: c.config}
+	query := (&GamePlayerClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := ga.ID
 		step := sqlgraph.NewStep(
@@ -1566,7 +1901,7 @@ func (c *GameClient) QueryGamePlayers(ga *Game) *GamePlayerQuery {
 
 // QueryRooms queries the rooms edge of a Game.
 func (c *GameClient) QueryRooms(ga *Game) *RoomQuery {
-	query := &RoomQuery{config: c.config}
+	query := (&RoomClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := ga.ID
 		step := sqlgraph.NewStep(
@@ -1582,7 +1917,7 @@ func (c *GameClient) QueryRooms(ga *Game) *RoomQuery {
 
 // QueryRounds queries the rounds edge of a Game.
 func (c *GameClient) QueryRounds(ga *Game) *RoundQuery {
-	query := &RoundQuery{config: c.config}
+	query := (&RoundClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := ga.ID
 		step := sqlgraph.NewStep(
@@ -1601,6 +1936,26 @@ func (c *GameClient) Hooks() []Hook {
 	return c.hooks.Game
 }
 
+// Interceptors returns the client interceptors.
+func (c *GameClient) Interceptors() []Interceptor {
+	return c.inters.Game
+}
+
+func (c *GameClient) mutate(ctx context.Context, m *GameMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&GameCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&GameUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&GameUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&GameDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Game mutation op: %q", m.Op())
+	}
+}
+
 // GamePlayerClient is a client for the GamePlayer schema.
 type GamePlayerClient struct {
 	config
@@ -1615,6 +1970,12 @@ func NewGamePlayerClient(c config) *GamePlayerClient {
 // A call to `Use(f, g, h)` equals to `gameplayer.Hooks(f(g(h())))`.
 func (c *GamePlayerClient) Use(hooks ...Hook) {
 	c.hooks.GamePlayer = append(c.hooks.GamePlayer, hooks...)
+}
+
+// Use adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `gameplayer.Intercept(f(g(h())))`.
+func (c *GamePlayerClient) Intercept(interceptors ...Interceptor) {
+	c.inters.GamePlayer = append(c.inters.GamePlayer, interceptors...)
 }
 
 // Create returns a builder for creating a GamePlayer entity.
@@ -1669,6 +2030,7 @@ func (c *GamePlayerClient) DeleteOneID(id uuid.UUID) *GamePlayerDeleteOne {
 func (c *GamePlayerClient) Query() *GamePlayerQuery {
 	return &GamePlayerQuery{
 		config: c.config,
+		inters: c.Interceptors(),
 	}
 }
 
@@ -1688,7 +2050,7 @@ func (c *GamePlayerClient) GetX(ctx context.Context, id uuid.UUID) *GamePlayer {
 
 // QueryGames queries the games edge of a GamePlayer.
 func (c *GamePlayerClient) QueryGames(gp *GamePlayer) *GameQuery {
-	query := &GameQuery{config: c.config}
+	query := (&GameClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := gp.ID
 		step := sqlgraph.NewStep(
@@ -1704,7 +2066,7 @@ func (c *GamePlayerClient) QueryGames(gp *GamePlayer) *GameQuery {
 
 // QueryPlayers queries the players edge of a GamePlayer.
 func (c *GamePlayerClient) QueryPlayers(gp *GamePlayer) *PlayerQuery {
-	query := &PlayerQuery{config: c.config}
+	query := (&PlayerClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := gp.ID
 		step := sqlgraph.NewStep(
@@ -1720,7 +2082,7 @@ func (c *GamePlayerClient) QueryPlayers(gp *GamePlayer) *PlayerQuery {
 
 // QueryDans queries the dans edge of a GamePlayer.
 func (c *GamePlayerClient) QueryDans(gp *GamePlayer) *DanQuery {
-	query := &DanQuery{config: c.config}
+	query := (&DanClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := gp.ID
 		step := sqlgraph.NewStep(
@@ -1739,6 +2101,26 @@ func (c *GamePlayerClient) Hooks() []Hook {
 	return c.hooks.GamePlayer
 }
 
+// Interceptors returns the client interceptors.
+func (c *GamePlayerClient) Interceptors() []Interceptor {
+	return c.inters.GamePlayer
+}
+
+func (c *GamePlayerClient) mutate(ctx context.Context, m *GamePlayerMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&GamePlayerCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&GamePlayerUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&GamePlayerUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&GamePlayerDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown GamePlayer mutation op: %q", m.Op())
+	}
+}
+
 // GamePlayerHandHaiClient is a client for the GamePlayerHandHai schema.
 type GamePlayerHandHaiClient struct {
 	config
@@ -1753,6 +2135,12 @@ func NewGamePlayerHandHaiClient(c config) *GamePlayerHandHaiClient {
 // A call to `Use(f, g, h)` equals to `gameplayerhandhai.Hooks(f(g(h())))`.
 func (c *GamePlayerHandHaiClient) Use(hooks ...Hook) {
 	c.hooks.GamePlayerHandHai = append(c.hooks.GamePlayerHandHai, hooks...)
+}
+
+// Use adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `gameplayerhandhai.Intercept(f(g(h())))`.
+func (c *GamePlayerHandHaiClient) Intercept(interceptors ...Interceptor) {
+	c.inters.GamePlayerHandHai = append(c.inters.GamePlayerHandHai, interceptors...)
 }
 
 // Create returns a builder for creating a GamePlayerHandHai entity.
@@ -1807,6 +2195,7 @@ func (c *GamePlayerHandHaiClient) DeleteOneID(id uuid.UUID) *GamePlayerHandHaiDe
 func (c *GamePlayerHandHaiClient) Query() *GamePlayerHandHaiQuery {
 	return &GamePlayerHandHaiQuery{
 		config: c.config,
+		inters: c.Interceptors(),
 	}
 }
 
@@ -1826,7 +2215,7 @@ func (c *GamePlayerHandHaiClient) GetX(ctx context.Context, id uuid.UUID) *GameP
 
 // QueryTurn queries the turn edge of a GamePlayerHandHai.
 func (c *GamePlayerHandHaiClient) QueryTurn(gphh *GamePlayerHandHai) *TurnQuery {
-	query := &TurnQuery{config: c.config}
+	query := (&TurnClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := gphh.ID
 		step := sqlgraph.NewStep(
@@ -1845,6 +2234,26 @@ func (c *GamePlayerHandHaiClient) Hooks() []Hook {
 	return c.hooks.GamePlayerHandHai
 }
 
+// Interceptors returns the client interceptors.
+func (c *GamePlayerHandHaiClient) Interceptors() []Interceptor {
+	return c.inters.GamePlayerHandHai
+}
+
+func (c *GamePlayerHandHaiClient) mutate(ctx context.Context, m *GamePlayerHandHaiMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&GamePlayerHandHaiCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&GamePlayerHandHaiUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&GamePlayerHandHaiUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&GamePlayerHandHaiDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown GamePlayerHandHai mutation op: %q", m.Op())
+	}
+}
+
 // GamePlayerPointClient is a client for the GamePlayerPoint schema.
 type GamePlayerPointClient struct {
 	config
@@ -1859,6 +2268,12 @@ func NewGamePlayerPointClient(c config) *GamePlayerPointClient {
 // A call to `Use(f, g, h)` equals to `gameplayerpoint.Hooks(f(g(h())))`.
 func (c *GamePlayerPointClient) Use(hooks ...Hook) {
 	c.hooks.GamePlayerPoint = append(c.hooks.GamePlayerPoint, hooks...)
+}
+
+// Use adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `gameplayerpoint.Intercept(f(g(h())))`.
+func (c *GamePlayerPointClient) Intercept(interceptors ...Interceptor) {
+	c.inters.GamePlayerPoint = append(c.inters.GamePlayerPoint, interceptors...)
 }
 
 // Create returns a builder for creating a GamePlayerPoint entity.
@@ -1913,6 +2328,7 @@ func (c *GamePlayerPointClient) DeleteOneID(id uuid.UUID) *GamePlayerPointDelete
 func (c *GamePlayerPointClient) Query() *GamePlayerPointQuery {
 	return &GamePlayerPointQuery{
 		config: c.config,
+		inters: c.Interceptors(),
 	}
 }
 
@@ -1932,7 +2348,7 @@ func (c *GamePlayerPointClient) GetX(ctx context.Context, id uuid.UUID) *GamePla
 
 // QueryTurns queries the turns edge of a GamePlayerPoint.
 func (c *GamePlayerPointClient) QueryTurns(gpp *GamePlayerPoint) *TurnQuery {
-	query := &TurnQuery{config: c.config}
+	query := (&TurnClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := gpp.ID
 		step := sqlgraph.NewStep(
@@ -1951,6 +2367,26 @@ func (c *GamePlayerPointClient) Hooks() []Hook {
 	return c.hooks.GamePlayerPoint
 }
 
+// Interceptors returns the client interceptors.
+func (c *GamePlayerPointClient) Interceptors() []Interceptor {
+	return c.inters.GamePlayerPoint
+}
+
+func (c *GamePlayerPointClient) mutate(ctx context.Context, m *GamePlayerPointMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&GamePlayerPointCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&GamePlayerPointUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&GamePlayerPointUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&GamePlayerPointDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown GamePlayerPoint mutation op: %q", m.Op())
+	}
+}
+
 // HandClient is a client for the Hand schema.
 type HandClient struct {
 	config
@@ -1965,6 +2401,12 @@ func NewHandClient(c config) *HandClient {
 // A call to `Use(f, g, h)` equals to `hand.Hooks(f(g(h())))`.
 func (c *HandClient) Use(hooks ...Hook) {
 	c.hooks.Hand = append(c.hooks.Hand, hooks...)
+}
+
+// Use adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `hand.Intercept(f(g(h())))`.
+func (c *HandClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Hand = append(c.inters.Hand, interceptors...)
 }
 
 // Create returns a builder for creating a Hand entity.
@@ -2019,6 +2461,7 @@ func (c *HandClient) DeleteOneID(id uuid.UUID) *HandDeleteOne {
 func (c *HandClient) Query() *HandQuery {
 	return &HandQuery{
 		config: c.config,
+		inters: c.Interceptors(),
 	}
 }
 
@@ -2038,7 +2481,7 @@ func (c *HandClient) GetX(ctx context.Context, id uuid.UUID) *Hand {
 
 // QueryRounds queries the rounds edge of a Hand.
 func (c *HandClient) QueryRounds(h *Hand) *RoundQuery {
-	query := &RoundQuery{config: c.config}
+	query := (&RoundClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := h.ID
 		step := sqlgraph.NewStep(
@@ -2054,7 +2497,7 @@ func (c *HandClient) QueryRounds(h *Hand) *RoundQuery {
 
 // QueryTurns queries the turns edge of a Hand.
 func (c *HandClient) QueryTurns(h *Hand) *TurnQuery {
-	query := &TurnQuery{config: c.config}
+	query := (&TurnClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := h.ID
 		step := sqlgraph.NewStep(
@@ -2073,6 +2516,26 @@ func (c *HandClient) Hooks() []Hook {
 	return c.hooks.Hand
 }
 
+// Interceptors returns the client interceptors.
+func (c *HandClient) Interceptors() []Interceptor {
+	return c.inters.Hand
+}
+
+func (c *HandClient) mutate(ctx context.Context, m *HandMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&HandCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&HandUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&HandUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&HandDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Hand mutation op: %q", m.Op())
+	}
+}
+
 // MJLogClient is a client for the MJLog schema.
 type MJLogClient struct {
 	config
@@ -2087,6 +2550,12 @@ func NewMJLogClient(c config) *MJLogClient {
 // A call to `Use(f, g, h)` equals to `mjlog.Hooks(f(g(h())))`.
 func (c *MJLogClient) Use(hooks ...Hook) {
 	c.hooks.MJLog = append(c.hooks.MJLog, hooks...)
+}
+
+// Use adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `mjlog.Intercept(f(g(h())))`.
+func (c *MJLogClient) Intercept(interceptors ...Interceptor) {
+	c.inters.MJLog = append(c.inters.MJLog, interceptors...)
 }
 
 // Create returns a builder for creating a MJLog entity.
@@ -2141,6 +2610,7 @@ func (c *MJLogClient) DeleteOneID(id uuid.UUID) *MJLogDeleteOne {
 func (c *MJLogClient) Query() *MJLogQuery {
 	return &MJLogQuery{
 		config: c.config,
+		inters: c.Interceptors(),
 	}
 }
 
@@ -2160,7 +2630,7 @@ func (c *MJLogClient) GetX(ctx context.Context, id uuid.UUID) *MJLog {
 
 // QueryMjlogFiles queries the mjlog_files edge of a MJLog.
 func (c *MJLogClient) QueryMjlogFiles(ml *MJLog) *MJLogFileQuery {
-	query := &MJLogFileQuery{config: c.config}
+	query := (&MJLogFileClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := ml.ID
 		step := sqlgraph.NewStep(
@@ -2176,7 +2646,7 @@ func (c *MJLogClient) QueryMjlogFiles(ml *MJLog) *MJLogFileQuery {
 
 // QueryGames queries the games edge of a MJLog.
 func (c *MJLogClient) QueryGames(ml *MJLog) *GameQuery {
-	query := &GameQuery{config: c.config}
+	query := (&GameClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := ml.ID
 		step := sqlgraph.NewStep(
@@ -2195,6 +2665,26 @@ func (c *MJLogClient) Hooks() []Hook {
 	return c.hooks.MJLog
 }
 
+// Interceptors returns the client interceptors.
+func (c *MJLogClient) Interceptors() []Interceptor {
+	return c.inters.MJLog
+}
+
+func (c *MJLogClient) mutate(ctx context.Context, m *MJLogMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&MJLogCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&MJLogUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&MJLogUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&MJLogDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown MJLog mutation op: %q", m.Op())
+	}
+}
+
 // MJLogFileClient is a client for the MJLogFile schema.
 type MJLogFileClient struct {
 	config
@@ -2209,6 +2699,12 @@ func NewMJLogFileClient(c config) *MJLogFileClient {
 // A call to `Use(f, g, h)` equals to `mjlogfile.Hooks(f(g(h())))`.
 func (c *MJLogFileClient) Use(hooks ...Hook) {
 	c.hooks.MJLogFile = append(c.hooks.MJLogFile, hooks...)
+}
+
+// Use adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `mjlogfile.Intercept(f(g(h())))`.
+func (c *MJLogFileClient) Intercept(interceptors ...Interceptor) {
+	c.inters.MJLogFile = append(c.inters.MJLogFile, interceptors...)
 }
 
 // Create returns a builder for creating a MJLogFile entity.
@@ -2263,6 +2759,7 @@ func (c *MJLogFileClient) DeleteOneID(id uuid.UUID) *MJLogFileDeleteOne {
 func (c *MJLogFileClient) Query() *MJLogFileQuery {
 	return &MJLogFileQuery{
 		config: c.config,
+		inters: c.Interceptors(),
 	}
 }
 
@@ -2282,7 +2779,7 @@ func (c *MJLogFileClient) GetX(ctx context.Context, id uuid.UUID) *MJLogFile {
 
 // QueryCompressedMjlogFiles queries the compressed_mjlog_files edge of a MJLogFile.
 func (c *MJLogFileClient) QueryCompressedMjlogFiles(mlf *MJLogFile) *CompressedMJLogQuery {
-	query := &CompressedMJLogQuery{config: c.config}
+	query := (&CompressedMJLogClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := mlf.ID
 		step := sqlgraph.NewStep(
@@ -2298,7 +2795,7 @@ func (c *MJLogFileClient) QueryCompressedMjlogFiles(mlf *MJLogFile) *CompressedM
 
 // QueryMjlogs queries the mjlogs edge of a MJLogFile.
 func (c *MJLogFileClient) QueryMjlogs(mlf *MJLogFile) *MJLogQuery {
-	query := &MJLogQuery{config: c.config}
+	query := (&MJLogClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := mlf.ID
 		step := sqlgraph.NewStep(
@@ -2317,6 +2814,26 @@ func (c *MJLogFileClient) Hooks() []Hook {
 	return c.hooks.MJLogFile
 }
 
+// Interceptors returns the client interceptors.
+func (c *MJLogFileClient) Interceptors() []Interceptor {
+	return c.inters.MJLogFile
+}
+
+func (c *MJLogFileClient) mutate(ctx context.Context, m *MJLogFileMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&MJLogFileCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&MJLogFileUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&MJLogFileUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&MJLogFileDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown MJLogFile mutation op: %q", m.Op())
+	}
+}
+
 // MeldedKanClient is a client for the MeldedKan schema.
 type MeldedKanClient struct {
 	config
@@ -2331,6 +2848,12 @@ func NewMeldedKanClient(c config) *MeldedKanClient {
 // A call to `Use(f, g, h)` equals to `meldedkan.Hooks(f(g(h())))`.
 func (c *MeldedKanClient) Use(hooks ...Hook) {
 	c.hooks.MeldedKan = append(c.hooks.MeldedKan, hooks...)
+}
+
+// Use adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `meldedkan.Intercept(f(g(h())))`.
+func (c *MeldedKanClient) Intercept(interceptors ...Interceptor) {
+	c.inters.MeldedKan = append(c.inters.MeldedKan, interceptors...)
 }
 
 // Create returns a builder for creating a MeldedKan entity.
@@ -2385,6 +2908,7 @@ func (c *MeldedKanClient) DeleteOneID(id uuid.UUID) *MeldedKanDeleteOne {
 func (c *MeldedKanClient) Query() *MeldedKanQuery {
 	return &MeldedKanQuery{
 		config: c.config,
+		inters: c.Interceptors(),
 	}
 }
 
@@ -2404,7 +2928,7 @@ func (c *MeldedKanClient) GetX(ctx context.Context, id uuid.UUID) *MeldedKan {
 
 // QueryCall queries the call edge of a MeldedKan.
 func (c *MeldedKanClient) QueryCall(mk *MeldedKan) *CallQuery {
-	query := &CallQuery{config: c.config}
+	query := (&CallClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := mk.ID
 		step := sqlgraph.NewStep(
@@ -2423,6 +2947,26 @@ func (c *MeldedKanClient) Hooks() []Hook {
 	return c.hooks.MeldedKan
 }
 
+// Interceptors returns the client interceptors.
+func (c *MeldedKanClient) Interceptors() []Interceptor {
+	return c.inters.MeldedKan
+}
+
+func (c *MeldedKanClient) mutate(ctx context.Context, m *MeldedKanMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&MeldedKanCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&MeldedKanUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&MeldedKanUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&MeldedKanDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown MeldedKan mutation op: %q", m.Op())
+	}
+}
+
 // PlayerClient is a client for the Player schema.
 type PlayerClient struct {
 	config
@@ -2437,6 +2981,12 @@ func NewPlayerClient(c config) *PlayerClient {
 // A call to `Use(f, g, h)` equals to `player.Hooks(f(g(h())))`.
 func (c *PlayerClient) Use(hooks ...Hook) {
 	c.hooks.Player = append(c.hooks.Player, hooks...)
+}
+
+// Use adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `player.Intercept(f(g(h())))`.
+func (c *PlayerClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Player = append(c.inters.Player, interceptors...)
 }
 
 // Create returns a builder for creating a Player entity.
@@ -2491,6 +3041,7 @@ func (c *PlayerClient) DeleteOneID(id uuid.UUID) *PlayerDeleteOne {
 func (c *PlayerClient) Query() *PlayerQuery {
 	return &PlayerQuery{
 		config: c.config,
+		inters: c.Interceptors(),
 	}
 }
 
@@ -2510,7 +3061,7 @@ func (c *PlayerClient) GetX(ctx context.Context, id uuid.UUID) *Player {
 
 // QueryGamePlayers queries the game_players edge of a Player.
 func (c *PlayerClient) QueryGamePlayers(pl *Player) *GamePlayerQuery {
-	query := &GamePlayerQuery{config: c.config}
+	query := (&GamePlayerClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := pl.ID
 		step := sqlgraph.NewStep(
@@ -2529,6 +3080,26 @@ func (c *PlayerClient) Hooks() []Hook {
 	return c.hooks.Player
 }
 
+// Interceptors returns the client interceptors.
+func (c *PlayerClient) Interceptors() []Interceptor {
+	return c.inters.Player
+}
+
+func (c *PlayerClient) mutate(ctx context.Context, m *PlayerMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&PlayerCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&PlayerUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&PlayerUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&PlayerDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Player mutation op: %q", m.Op())
+	}
+}
+
 // PonClient is a client for the Pon schema.
 type PonClient struct {
 	config
@@ -2543,6 +3114,12 @@ func NewPonClient(c config) *PonClient {
 // A call to `Use(f, g, h)` equals to `pon.Hooks(f(g(h())))`.
 func (c *PonClient) Use(hooks ...Hook) {
 	c.hooks.Pon = append(c.hooks.Pon, hooks...)
+}
+
+// Use adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `pon.Intercept(f(g(h())))`.
+func (c *PonClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Pon = append(c.inters.Pon, interceptors...)
 }
 
 // Create returns a builder for creating a Pon entity.
@@ -2597,6 +3174,7 @@ func (c *PonClient) DeleteOneID(id uuid.UUID) *PonDeleteOne {
 func (c *PonClient) Query() *PonQuery {
 	return &PonQuery{
 		config: c.config,
+		inters: c.Interceptors(),
 	}
 }
 
@@ -2616,7 +3194,7 @@ func (c *PonClient) GetX(ctx context.Context, id uuid.UUID) *Pon {
 
 // QueryCall queries the call edge of a Pon.
 func (c *PonClient) QueryCall(po *Pon) *CallQuery {
-	query := &CallQuery{config: c.config}
+	query := (&CallClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := po.ID
 		step := sqlgraph.NewStep(
@@ -2635,6 +3213,26 @@ func (c *PonClient) Hooks() []Hook {
 	return c.hooks.Pon
 }
 
+// Interceptors returns the client interceptors.
+func (c *PonClient) Interceptors() []Interceptor {
+	return c.inters.Pon
+}
+
+func (c *PonClient) mutate(ctx context.Context, m *PonMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&PonCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&PonUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&PonUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&PonDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Pon mutation op: %q", m.Op())
+	}
+}
+
 // ReachClient is a client for the Reach schema.
 type ReachClient struct {
 	config
@@ -2649,6 +3247,12 @@ func NewReachClient(c config) *ReachClient {
 // A call to `Use(f, g, h)` equals to `reach.Hooks(f(g(h())))`.
 func (c *ReachClient) Use(hooks ...Hook) {
 	c.hooks.Reach = append(c.hooks.Reach, hooks...)
+}
+
+// Use adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `reach.Intercept(f(g(h())))`.
+func (c *ReachClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Reach = append(c.inters.Reach, interceptors...)
 }
 
 // Create returns a builder for creating a Reach entity.
@@ -2703,6 +3307,7 @@ func (c *ReachClient) DeleteOneID(id uuid.UUID) *ReachDeleteOne {
 func (c *ReachClient) Query() *ReachQuery {
 	return &ReachQuery{
 		config: c.config,
+		inters: c.Interceptors(),
 	}
 }
 
@@ -2722,7 +3327,7 @@ func (c *ReachClient) GetX(ctx context.Context, id uuid.UUID) *Reach {
 
 // QueryEvent queries the event edge of a Reach.
 func (c *ReachClient) QueryEvent(r *Reach) *EventQuery {
-	query := &EventQuery{config: c.config}
+	query := (&EventClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := r.ID
 		step := sqlgraph.NewStep(
@@ -2738,7 +3343,7 @@ func (c *ReachClient) QueryEvent(r *Reach) *EventQuery {
 
 // QueryDiscard queries the discard edge of a Reach.
 func (c *ReachClient) QueryDiscard(r *Reach) *DiscardQuery {
-	query := &DiscardQuery{config: c.config}
+	query := (&DiscardClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := r.ID
 		step := sqlgraph.NewStep(
@@ -2757,6 +3362,26 @@ func (c *ReachClient) Hooks() []Hook {
 	return c.hooks.Reach
 }
 
+// Interceptors returns the client interceptors.
+func (c *ReachClient) Interceptors() []Interceptor {
+	return c.inters.Reach
+}
+
+func (c *ReachClient) mutate(ctx context.Context, m *ReachMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ReachCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ReachUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ReachUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ReachDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Reach mutation op: %q", m.Op())
+	}
+}
+
 // RoomClient is a client for the Room schema.
 type RoomClient struct {
 	config
@@ -2771,6 +3396,12 @@ func NewRoomClient(c config) *RoomClient {
 // A call to `Use(f, g, h)` equals to `room.Hooks(f(g(h())))`.
 func (c *RoomClient) Use(hooks ...Hook) {
 	c.hooks.Room = append(c.hooks.Room, hooks...)
+}
+
+// Use adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `room.Intercept(f(g(h())))`.
+func (c *RoomClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Room = append(c.inters.Room, interceptors...)
 }
 
 // Create returns a builder for creating a Room entity.
@@ -2825,6 +3456,7 @@ func (c *RoomClient) DeleteOneID(id uuid.UUID) *RoomDeleteOne {
 func (c *RoomClient) Query() *RoomQuery {
 	return &RoomQuery{
 		config: c.config,
+		inters: c.Interceptors(),
 	}
 }
 
@@ -2844,7 +3476,7 @@ func (c *RoomClient) GetX(ctx context.Context, id uuid.UUID) *Room {
 
 // QueryGames queries the games edge of a Room.
 func (c *RoomClient) QueryGames(r *Room) *GameQuery {
-	query := &GameQuery{config: c.config}
+	query := (&GameClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := r.ID
 		step := sqlgraph.NewStep(
@@ -2863,6 +3495,26 @@ func (c *RoomClient) Hooks() []Hook {
 	return c.hooks.Room
 }
 
+// Interceptors returns the client interceptors.
+func (c *RoomClient) Interceptors() []Interceptor {
+	return c.inters.Room
+}
+
+func (c *RoomClient) mutate(ctx context.Context, m *RoomMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&RoomCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&RoomUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&RoomUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&RoomDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Room mutation op: %q", m.Op())
+	}
+}
+
 // RoundClient is a client for the Round schema.
 type RoundClient struct {
 	config
@@ -2877,6 +3529,12 @@ func NewRoundClient(c config) *RoundClient {
 // A call to `Use(f, g, h)` equals to `round.Hooks(f(g(h())))`.
 func (c *RoundClient) Use(hooks ...Hook) {
 	c.hooks.Round = append(c.hooks.Round, hooks...)
+}
+
+// Use adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `round.Intercept(f(g(h())))`.
+func (c *RoundClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Round = append(c.inters.Round, interceptors...)
 }
 
 // Create returns a builder for creating a Round entity.
@@ -2931,6 +3589,7 @@ func (c *RoundClient) DeleteOneID(id uuid.UUID) *RoundDeleteOne {
 func (c *RoundClient) Query() *RoundQuery {
 	return &RoundQuery{
 		config: c.config,
+		inters: c.Interceptors(),
 	}
 }
 
@@ -2950,7 +3609,7 @@ func (c *RoundClient) GetX(ctx context.Context, id uuid.UUID) *Round {
 
 // QueryGames queries the games edge of a Round.
 func (c *RoundClient) QueryGames(r *Round) *GameQuery {
-	query := &GameQuery{config: c.config}
+	query := (&GameClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := r.ID
 		step := sqlgraph.NewStep(
@@ -2966,7 +3625,7 @@ func (c *RoundClient) QueryGames(r *Round) *GameQuery {
 
 // QueryHands queries the hands edge of a Round.
 func (c *RoundClient) QueryHands(r *Round) *HandQuery {
-	query := &HandQuery{config: c.config}
+	query := (&HandClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := r.ID
 		step := sqlgraph.NewStep(
@@ -2985,6 +3644,26 @@ func (c *RoundClient) Hooks() []Hook {
 	return c.hooks.Round
 }
 
+// Interceptors returns the client interceptors.
+func (c *RoundClient) Interceptors() []Interceptor {
+	return c.inters.Round
+}
+
+func (c *RoundClient) mutate(ctx context.Context, m *RoundMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&RoundCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&RoundUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&RoundUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&RoundDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Round mutation op: %q", m.Op())
+	}
+}
+
 // TurnClient is a client for the Turn schema.
 type TurnClient struct {
 	config
@@ -2999,6 +3678,12 @@ func NewTurnClient(c config) *TurnClient {
 // A call to `Use(f, g, h)` equals to `turn.Hooks(f(g(h())))`.
 func (c *TurnClient) Use(hooks ...Hook) {
 	c.hooks.Turn = append(c.hooks.Turn, hooks...)
+}
+
+// Use adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `turn.Intercept(f(g(h())))`.
+func (c *TurnClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Turn = append(c.inters.Turn, interceptors...)
 }
 
 // Create returns a builder for creating a Turn entity.
@@ -3053,6 +3738,7 @@ func (c *TurnClient) DeleteOneID(id uuid.UUID) *TurnDeleteOne {
 func (c *TurnClient) Query() *TurnQuery {
 	return &TurnQuery{
 		config: c.config,
+		inters: c.Interceptors(),
 	}
 }
 
@@ -3072,7 +3758,7 @@ func (c *TurnClient) GetX(ctx context.Context, id uuid.UUID) *Turn {
 
 // QueryHands queries the hands edge of a Turn.
 func (c *TurnClient) QueryHands(t *Turn) *HandQuery {
-	query := &HandQuery{config: c.config}
+	query := (&HandClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := t.ID
 		step := sqlgraph.NewStep(
@@ -3088,7 +3774,7 @@ func (c *TurnClient) QueryHands(t *Turn) *HandQuery {
 
 // QueryGamePlayerPoints queries the game_player_points edge of a Turn.
 func (c *TurnClient) QueryGamePlayerPoints(t *Turn) *GamePlayerPointQuery {
-	query := &GamePlayerPointQuery{config: c.config}
+	query := (&GamePlayerPointClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := t.ID
 		step := sqlgraph.NewStep(
@@ -3104,7 +3790,7 @@ func (c *TurnClient) QueryGamePlayerPoints(t *Turn) *GamePlayerPointQuery {
 
 // QueryEvent queries the event edge of a Turn.
 func (c *TurnClient) QueryEvent(t *Turn) *EventQuery {
-	query := &EventQuery{config: c.config}
+	query := (&EventClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := t.ID
 		step := sqlgraph.NewStep(
@@ -3120,7 +3806,7 @@ func (c *TurnClient) QueryEvent(t *Turn) *EventQuery {
 
 // QueryGameplayerhandhai queries the gameplayerhandhai edge of a Turn.
 func (c *TurnClient) QueryGameplayerhandhai(t *Turn) *GamePlayerHandHaiQuery {
-	query := &GamePlayerHandHaiQuery{config: c.config}
+	query := (&GamePlayerHandHaiClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := t.ID
 		step := sqlgraph.NewStep(
@@ -3139,6 +3825,26 @@ func (c *TurnClient) Hooks() []Hook {
 	return c.hooks.Turn
 }
 
+// Interceptors returns the client interceptors.
+func (c *TurnClient) Interceptors() []Interceptor {
+	return c.inters.Turn
+}
+
+func (c *TurnClient) mutate(ctx context.Context, m *TurnMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&TurnCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&TurnUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&TurnUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&TurnDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Turn mutation op: %q", m.Op())
+	}
+}
+
 // WinClient is a client for the Win schema.
 type WinClient struct {
 	config
@@ -3153,6 +3859,12 @@ func NewWinClient(c config) *WinClient {
 // A call to `Use(f, g, h)` equals to `win.Hooks(f(g(h())))`.
 func (c *WinClient) Use(hooks ...Hook) {
 	c.hooks.Win = append(c.hooks.Win, hooks...)
+}
+
+// Use adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `win.Intercept(f(g(h())))`.
+func (c *WinClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Win = append(c.inters.Win, interceptors...)
 }
 
 // Create returns a builder for creating a Win entity.
@@ -3207,6 +3919,7 @@ func (c *WinClient) DeleteOneID(id uuid.UUID) *WinDeleteOne {
 func (c *WinClient) Query() *WinQuery {
 	return &WinQuery{
 		config: c.config,
+		inters: c.Interceptors(),
 	}
 }
 
@@ -3226,7 +3939,7 @@ func (c *WinClient) GetX(ctx context.Context, id uuid.UUID) *Win {
 
 // QueryEvent queries the event edge of a Win.
 func (c *WinClient) QueryEvent(w *Win) *EventQuery {
-	query := &EventQuery{config: c.config}
+	query := (&EventClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := w.ID
 		step := sqlgraph.NewStep(
@@ -3243,4 +3956,24 @@ func (c *WinClient) QueryEvent(w *Win) *EventQuery {
 // Hooks returns the client hooks.
 func (c *WinClient) Hooks() []Hook {
 	return c.hooks.Win
+}
+
+// Interceptors returns the client interceptors.
+func (c *WinClient) Interceptors() []Interceptor {
+	return c.inters.Win
+}
+
+func (c *WinClient) mutate(ctx context.Context, m *WinMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&WinCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&WinUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&WinUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&WinDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Win mutation op: %q", m.Op())
+	}
 }

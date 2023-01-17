@@ -25,6 +25,7 @@ type ChiiQuery struct {
 	unique     *bool
 	order      []OrderFunc
 	fields     []string
+	inters     []Interceptor
 	predicates []predicate.Chii
 	withCall   *CallQuery
 	// intermediate query (i.e. traversal path).
@@ -38,13 +39,13 @@ func (cq *ChiiQuery) Where(ps ...predicate.Chii) *ChiiQuery {
 	return cq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (cq *ChiiQuery) Limit(limit int) *ChiiQuery {
 	cq.limit = &limit
 	return cq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (cq *ChiiQuery) Offset(offset int) *ChiiQuery {
 	cq.offset = &offset
 	return cq
@@ -57,7 +58,7 @@ func (cq *ChiiQuery) Unique(unique bool) *ChiiQuery {
 	return cq
 }
 
-// Order adds an order step to the query.
+// Order specifies how the records should be ordered.
 func (cq *ChiiQuery) Order(o ...OrderFunc) *ChiiQuery {
 	cq.order = append(cq.order, o...)
 	return cq
@@ -65,7 +66,7 @@ func (cq *ChiiQuery) Order(o ...OrderFunc) *ChiiQuery {
 
 // QueryCall chains the current query on the "call" edge.
 func (cq *ChiiQuery) QueryCall() *CallQuery {
-	query := &CallQuery{config: cq.config}
+	query := (&CallClient{config: cq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := cq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -88,7 +89,7 @@ func (cq *ChiiQuery) QueryCall() *CallQuery {
 // First returns the first Chii entity from the query.
 // Returns a *NotFoundError when no Chii was found.
 func (cq *ChiiQuery) First(ctx context.Context) (*Chii, error) {
-	nodes, err := cq.Limit(1).All(ctx)
+	nodes, err := cq.Limit(1).All(newQueryContext(ctx, TypeChii, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +112,7 @@ func (cq *ChiiQuery) FirstX(ctx context.Context) *Chii {
 // Returns a *NotFoundError when no Chii ID was found.
 func (cq *ChiiQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = cq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = cq.Limit(1).IDs(newQueryContext(ctx, TypeChii, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -134,7 +135,7 @@ func (cq *ChiiQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one Chii entity is found.
 // Returns a *NotFoundError when no Chii entities are found.
 func (cq *ChiiQuery) Only(ctx context.Context) (*Chii, error) {
-	nodes, err := cq.Limit(2).All(ctx)
+	nodes, err := cq.Limit(2).All(newQueryContext(ctx, TypeChii, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +163,7 @@ func (cq *ChiiQuery) OnlyX(ctx context.Context) *Chii {
 // Returns a *NotFoundError when no entities are found.
 func (cq *ChiiQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = cq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = cq.Limit(2).IDs(newQueryContext(ctx, TypeChii, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -187,10 +188,12 @@ func (cq *ChiiQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of Chiis.
 func (cq *ChiiQuery) All(ctx context.Context) ([]*Chii, error) {
+	ctx = newQueryContext(ctx, TypeChii, "All")
 	if err := cq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return cq.sqlAll(ctx)
+	qr := querierAll[[]*Chii, *ChiiQuery]()
+	return withInterceptors[[]*Chii](ctx, cq, qr, cq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -205,6 +208,7 @@ func (cq *ChiiQuery) AllX(ctx context.Context) []*Chii {
 // IDs executes the query and returns a list of Chii IDs.
 func (cq *ChiiQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	var ids []uuid.UUID
+	ctx = newQueryContext(ctx, TypeChii, "IDs")
 	if err := cq.Select(chii.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
@@ -222,10 +226,11 @@ func (cq *ChiiQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (cq *ChiiQuery) Count(ctx context.Context) (int, error) {
+	ctx = newQueryContext(ctx, TypeChii, "Count")
 	if err := cq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return cq.sqlCount(ctx)
+	return withInterceptors[int](ctx, cq, querierCount[*ChiiQuery](), cq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -239,10 +244,15 @@ func (cq *ChiiQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (cq *ChiiQuery) Exist(ctx context.Context) (bool, error) {
-	if err := cq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = newQueryContext(ctx, TypeChii, "Exist")
+	switch _, err := cq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return cq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -265,6 +275,7 @@ func (cq *ChiiQuery) Clone() *ChiiQuery {
 		limit:      cq.limit,
 		offset:     cq.offset,
 		order:      append([]OrderFunc{}, cq.order...),
+		inters:     append([]Interceptor{}, cq.inters...),
 		predicates: append([]predicate.Chii{}, cq.predicates...),
 		withCall:   cq.withCall.Clone(),
 		// clone intermediate query.
@@ -277,7 +288,7 @@ func (cq *ChiiQuery) Clone() *ChiiQuery {
 // WithCall tells the query-builder to eager-load the nodes that are connected to
 // the "call" edge. The optional arguments are used to configure the query builder of the edge.
 func (cq *ChiiQuery) WithCall(opts ...func(*CallQuery)) *ChiiQuery {
-	query := &CallQuery{config: cq.config}
+	query := (&CallClient{config: cq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -288,16 +299,11 @@ func (cq *ChiiQuery) WithCall(opts ...func(*CallQuery)) *ChiiQuery {
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
 func (cq *ChiiQuery) GroupBy(field string, fields ...string) *ChiiGroupBy {
-	grbuild := &ChiiGroupBy{config: cq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := cq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return cq.sqlQuery(ctx), nil
-	}
+	cq.fields = append([]string{field}, fields...)
+	grbuild := &ChiiGroupBy{build: cq}
+	grbuild.flds = &cq.fields
 	grbuild.label = chii.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -305,10 +311,10 @@ func (cq *ChiiQuery) GroupBy(field string, fields ...string) *ChiiGroupBy {
 // instead of selecting all fields in the entity.
 func (cq *ChiiQuery) Select(fields ...string) *ChiiSelect {
 	cq.fields = append(cq.fields, fields...)
-	selbuild := &ChiiSelect{ChiiQuery: cq}
-	selbuild.label = chii.Label
-	selbuild.flds, selbuild.scan = &cq.fields, selbuild.Scan
-	return selbuild
+	sbuild := &ChiiSelect{ChiiQuery: cq}
+	sbuild.label = chii.Label
+	sbuild.flds, sbuild.scan = &cq.fields, sbuild.Scan
+	return sbuild
 }
 
 // Aggregate returns a ChiiSelect configured with the given aggregations.
@@ -317,6 +323,16 @@ func (cq *ChiiQuery) Aggregate(fns ...AggregateFunc) *ChiiSelect {
 }
 
 func (cq *ChiiQuery) prepareQuery(ctx context.Context) error {
+	for _, inter := range cq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, cq); err != nil {
+				return err
+			}
+		}
+	}
 	for _, f := range cq.fields {
 		if !chii.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
@@ -405,17 +421,6 @@ func (cq *ChiiQuery) sqlCount(ctx context.Context) (int, error) {
 	return sqlgraph.CountNodes(ctx, cq.driver, _spec)
 }
 
-func (cq *ChiiQuery) sqlExist(ctx context.Context) (bool, error) {
-	switch _, err := cq.FirstID(ctx); {
-	case IsNotFound(err):
-		return false, nil
-	case err != nil:
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	default:
-		return true, nil
-	}
-}
-
 func (cq *ChiiQuery) querySpec() *sqlgraph.QuerySpec {
 	_spec := &sqlgraph.QuerySpec{
 		Node: &sqlgraph.NodeSpec{
@@ -498,13 +503,8 @@ func (cq *ChiiQuery) sqlQuery(ctx context.Context) *sql.Selector {
 
 // ChiiGroupBy is the group-by builder for Chii entities.
 type ChiiGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *ChiiQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -513,58 +513,46 @@ func (cgb *ChiiGroupBy) Aggregate(fns ...AggregateFunc) *ChiiGroupBy {
 	return cgb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
+// Scan applies the selector query and scans the result into the given value.
 func (cgb *ChiiGroupBy) Scan(ctx context.Context, v any) error {
-	query, err := cgb.path(ctx)
-	if err != nil {
+	ctx = newQueryContext(ctx, TypeChii, "GroupBy")
+	if err := cgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	cgb.sql = query
-	return cgb.sqlScan(ctx, v)
+	return scanWithInterceptors[*ChiiQuery, *ChiiGroupBy](ctx, cgb.build, cgb, cgb.build.inters, v)
 }
 
-func (cgb *ChiiGroupBy) sqlScan(ctx context.Context, v any) error {
-	for _, f := range cgb.fields {
-		if !chii.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (cgb *ChiiGroupBy) sqlScan(ctx context.Context, root *ChiiQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(cgb.fns))
+	for _, fn := range cgb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := cgb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*cgb.flds)+len(cgb.fns))
+		for _, f := range *cgb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*cgb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := cgb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := cgb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (cgb *ChiiGroupBy) sqlQuery() *sql.Selector {
-	selector := cgb.sql.Select()
-	aggregation := make([]string, 0, len(cgb.fns))
-	for _, fn := range cgb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(cgb.fields)+len(cgb.fns))
-		for _, f := range cgb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(cgb.fields...)...)
-}
-
 // ChiiSelect is the builder for selecting fields of Chii entities.
 type ChiiSelect struct {
 	*ChiiQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
@@ -575,26 +563,27 @@ func (cs *ChiiSelect) Aggregate(fns ...AggregateFunc) *ChiiSelect {
 
 // Scan applies the selector query and scans the result into the given value.
 func (cs *ChiiSelect) Scan(ctx context.Context, v any) error {
+	ctx = newQueryContext(ctx, TypeChii, "Select")
 	if err := cs.prepareQuery(ctx); err != nil {
 		return err
 	}
-	cs.sql = cs.ChiiQuery.sqlQuery(ctx)
-	return cs.sqlScan(ctx, v)
+	return scanWithInterceptors[*ChiiQuery, *ChiiSelect](ctx, cs.ChiiQuery, cs, cs.inters, v)
 }
 
-func (cs *ChiiSelect) sqlScan(ctx context.Context, v any) error {
+func (cs *ChiiSelect) sqlScan(ctx context.Context, root *ChiiQuery, v any) error {
+	selector := root.sqlQuery(ctx)
 	aggregation := make([]string, 0, len(cs.fns))
 	for _, fn := range cs.fns {
-		aggregation = append(aggregation, fn(cs.sql))
+		aggregation = append(aggregation, fn(selector))
 	}
 	switch n := len(*cs.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
-		cs.sql.Select(aggregation...)
+		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
-		cs.sql.AppendSelect(aggregation...)
+		selector.AppendSelect(aggregation...)
 	}
 	rows := &sql.Rows{}
-	query, args := cs.sql.Query()
+	query, args := selector.Query()
 	if err := cs.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

@@ -25,6 +25,7 @@ type MJLogQuery struct {
 	unique         *bool
 	order          []OrderFunc
 	fields         []string
+	inters         []Interceptor
 	predicates     []predicate.MJLog
 	withMjlogFiles *MJLogFileQuery
 	withGames      *GameQuery
@@ -40,13 +41,13 @@ func (mlq *MJLogQuery) Where(ps ...predicate.MJLog) *MJLogQuery {
 	return mlq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (mlq *MJLogQuery) Limit(limit int) *MJLogQuery {
 	mlq.limit = &limit
 	return mlq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (mlq *MJLogQuery) Offset(offset int) *MJLogQuery {
 	mlq.offset = &offset
 	return mlq
@@ -59,7 +60,7 @@ func (mlq *MJLogQuery) Unique(unique bool) *MJLogQuery {
 	return mlq
 }
 
-// Order adds an order step to the query.
+// Order specifies how the records should be ordered.
 func (mlq *MJLogQuery) Order(o ...OrderFunc) *MJLogQuery {
 	mlq.order = append(mlq.order, o...)
 	return mlq
@@ -67,7 +68,7 @@ func (mlq *MJLogQuery) Order(o ...OrderFunc) *MJLogQuery {
 
 // QueryMjlogFiles chains the current query on the "mjlog_files" edge.
 func (mlq *MJLogQuery) QueryMjlogFiles() *MJLogFileQuery {
-	query := &MJLogFileQuery{config: mlq.config}
+	query := (&MJLogFileClient{config: mlq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := mlq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -89,7 +90,7 @@ func (mlq *MJLogQuery) QueryMjlogFiles() *MJLogFileQuery {
 
 // QueryGames chains the current query on the "games" edge.
 func (mlq *MJLogQuery) QueryGames() *GameQuery {
-	query := &GameQuery{config: mlq.config}
+	query := (&GameClient{config: mlq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := mlq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -112,7 +113,7 @@ func (mlq *MJLogQuery) QueryGames() *GameQuery {
 // First returns the first MJLog entity from the query.
 // Returns a *NotFoundError when no MJLog was found.
 func (mlq *MJLogQuery) First(ctx context.Context) (*MJLog, error) {
-	nodes, err := mlq.Limit(1).All(ctx)
+	nodes, err := mlq.Limit(1).All(newQueryContext(ctx, TypeMJLog, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +136,7 @@ func (mlq *MJLogQuery) FirstX(ctx context.Context) *MJLog {
 // Returns a *NotFoundError when no MJLog ID was found.
 func (mlq *MJLogQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = mlq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = mlq.Limit(1).IDs(newQueryContext(ctx, TypeMJLog, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -158,7 +159,7 @@ func (mlq *MJLogQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one MJLog entity is found.
 // Returns a *NotFoundError when no MJLog entities are found.
 func (mlq *MJLogQuery) Only(ctx context.Context) (*MJLog, error) {
-	nodes, err := mlq.Limit(2).All(ctx)
+	nodes, err := mlq.Limit(2).All(newQueryContext(ctx, TypeMJLog, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +187,7 @@ func (mlq *MJLogQuery) OnlyX(ctx context.Context) *MJLog {
 // Returns a *NotFoundError when no entities are found.
 func (mlq *MJLogQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = mlq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = mlq.Limit(2).IDs(newQueryContext(ctx, TypeMJLog, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -211,10 +212,12 @@ func (mlq *MJLogQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of MJLogs.
 func (mlq *MJLogQuery) All(ctx context.Context) ([]*MJLog, error) {
+	ctx = newQueryContext(ctx, TypeMJLog, "All")
 	if err := mlq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return mlq.sqlAll(ctx)
+	qr := querierAll[[]*MJLog, *MJLogQuery]()
+	return withInterceptors[[]*MJLog](ctx, mlq, qr, mlq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -229,6 +232,7 @@ func (mlq *MJLogQuery) AllX(ctx context.Context) []*MJLog {
 // IDs executes the query and returns a list of MJLog IDs.
 func (mlq *MJLogQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	var ids []uuid.UUID
+	ctx = newQueryContext(ctx, TypeMJLog, "IDs")
 	if err := mlq.Select(mjlog.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
@@ -246,10 +250,11 @@ func (mlq *MJLogQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (mlq *MJLogQuery) Count(ctx context.Context) (int, error) {
+	ctx = newQueryContext(ctx, TypeMJLog, "Count")
 	if err := mlq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return mlq.sqlCount(ctx)
+	return withInterceptors[int](ctx, mlq, querierCount[*MJLogQuery](), mlq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -263,10 +268,15 @@ func (mlq *MJLogQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (mlq *MJLogQuery) Exist(ctx context.Context) (bool, error) {
-	if err := mlq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = newQueryContext(ctx, TypeMJLog, "Exist")
+	switch _, err := mlq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return mlq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -289,6 +299,7 @@ func (mlq *MJLogQuery) Clone() *MJLogQuery {
 		limit:          mlq.limit,
 		offset:         mlq.offset,
 		order:          append([]OrderFunc{}, mlq.order...),
+		inters:         append([]Interceptor{}, mlq.inters...),
 		predicates:     append([]predicate.MJLog{}, mlq.predicates...),
 		withMjlogFiles: mlq.withMjlogFiles.Clone(),
 		withGames:      mlq.withGames.Clone(),
@@ -302,7 +313,7 @@ func (mlq *MJLogQuery) Clone() *MJLogQuery {
 // WithMjlogFiles tells the query-builder to eager-load the nodes that are connected to
 // the "mjlog_files" edge. The optional arguments are used to configure the query builder of the edge.
 func (mlq *MJLogQuery) WithMjlogFiles(opts ...func(*MJLogFileQuery)) *MJLogQuery {
-	query := &MJLogFileQuery{config: mlq.config}
+	query := (&MJLogFileClient{config: mlq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -313,7 +324,7 @@ func (mlq *MJLogQuery) WithMjlogFiles(opts ...func(*MJLogFileQuery)) *MJLogQuery
 // WithGames tells the query-builder to eager-load the nodes that are connected to
 // the "games" edge. The optional arguments are used to configure the query builder of the edge.
 func (mlq *MJLogQuery) WithGames(opts ...func(*GameQuery)) *MJLogQuery {
-	query := &GameQuery{config: mlq.config}
+	query := (&GameClient{config: mlq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -336,16 +347,11 @@ func (mlq *MJLogQuery) WithGames(opts ...func(*GameQuery)) *MJLogQuery {
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (mlq *MJLogQuery) GroupBy(field string, fields ...string) *MJLogGroupBy {
-	grbuild := &MJLogGroupBy{config: mlq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := mlq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return mlq.sqlQuery(ctx), nil
-	}
+	mlq.fields = append([]string{field}, fields...)
+	grbuild := &MJLogGroupBy{build: mlq}
+	grbuild.flds = &mlq.fields
 	grbuild.label = mjlog.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -363,10 +369,10 @@ func (mlq *MJLogQuery) GroupBy(field string, fields ...string) *MJLogGroupBy {
 //		Scan(ctx, &v)
 func (mlq *MJLogQuery) Select(fields ...string) *MJLogSelect {
 	mlq.fields = append(mlq.fields, fields...)
-	selbuild := &MJLogSelect{MJLogQuery: mlq}
-	selbuild.label = mjlog.Label
-	selbuild.flds, selbuild.scan = &mlq.fields, selbuild.Scan
-	return selbuild
+	sbuild := &MJLogSelect{MJLogQuery: mlq}
+	sbuild.label = mjlog.Label
+	sbuild.flds, sbuild.scan = &mlq.fields, sbuild.Scan
+	return sbuild
 }
 
 // Aggregate returns a MJLogSelect configured with the given aggregations.
@@ -375,6 +381,16 @@ func (mlq *MJLogQuery) Aggregate(fns ...AggregateFunc) *MJLogSelect {
 }
 
 func (mlq *MJLogQuery) prepareQuery(ctx context.Context) error {
+	for _, inter := range mlq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, mlq); err != nil {
+				return err
+			}
+		}
+	}
 	for _, f := range mlq.fields {
 		if !mjlog.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
@@ -507,17 +523,6 @@ func (mlq *MJLogQuery) sqlCount(ctx context.Context) (int, error) {
 	return sqlgraph.CountNodes(ctx, mlq.driver, _spec)
 }
 
-func (mlq *MJLogQuery) sqlExist(ctx context.Context) (bool, error) {
-	switch _, err := mlq.FirstID(ctx); {
-	case IsNotFound(err):
-		return false, nil
-	case err != nil:
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	default:
-		return true, nil
-	}
-}
-
 func (mlq *MJLogQuery) querySpec() *sqlgraph.QuerySpec {
 	_spec := &sqlgraph.QuerySpec{
 		Node: &sqlgraph.NodeSpec{
@@ -600,13 +605,8 @@ func (mlq *MJLogQuery) sqlQuery(ctx context.Context) *sql.Selector {
 
 // MJLogGroupBy is the group-by builder for MJLog entities.
 type MJLogGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *MJLogQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -615,58 +615,46 @@ func (mlgb *MJLogGroupBy) Aggregate(fns ...AggregateFunc) *MJLogGroupBy {
 	return mlgb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
+// Scan applies the selector query and scans the result into the given value.
 func (mlgb *MJLogGroupBy) Scan(ctx context.Context, v any) error {
-	query, err := mlgb.path(ctx)
-	if err != nil {
+	ctx = newQueryContext(ctx, TypeMJLog, "GroupBy")
+	if err := mlgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	mlgb.sql = query
-	return mlgb.sqlScan(ctx, v)
+	return scanWithInterceptors[*MJLogQuery, *MJLogGroupBy](ctx, mlgb.build, mlgb, mlgb.build.inters, v)
 }
 
-func (mlgb *MJLogGroupBy) sqlScan(ctx context.Context, v any) error {
-	for _, f := range mlgb.fields {
-		if !mjlog.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (mlgb *MJLogGroupBy) sqlScan(ctx context.Context, root *MJLogQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(mlgb.fns))
+	for _, fn := range mlgb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := mlgb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*mlgb.flds)+len(mlgb.fns))
+		for _, f := range *mlgb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*mlgb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := mlgb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := mlgb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (mlgb *MJLogGroupBy) sqlQuery() *sql.Selector {
-	selector := mlgb.sql.Select()
-	aggregation := make([]string, 0, len(mlgb.fns))
-	for _, fn := range mlgb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(mlgb.fields)+len(mlgb.fns))
-		for _, f := range mlgb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(mlgb.fields...)...)
-}
-
 // MJLogSelect is the builder for selecting fields of MJLog entities.
 type MJLogSelect struct {
 	*MJLogQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
@@ -677,26 +665,27 @@ func (mls *MJLogSelect) Aggregate(fns ...AggregateFunc) *MJLogSelect {
 
 // Scan applies the selector query and scans the result into the given value.
 func (mls *MJLogSelect) Scan(ctx context.Context, v any) error {
+	ctx = newQueryContext(ctx, TypeMJLog, "Select")
 	if err := mls.prepareQuery(ctx); err != nil {
 		return err
 	}
-	mls.sql = mls.MJLogQuery.sqlQuery(ctx)
-	return mls.sqlScan(ctx, v)
+	return scanWithInterceptors[*MJLogQuery, *MJLogSelect](ctx, mls.MJLogQuery, mls, mls.inters, v)
 }
 
-func (mls *MJLogSelect) sqlScan(ctx context.Context, v any) error {
+func (mls *MJLogSelect) sqlScan(ctx context.Context, root *MJLogQuery, v any) error {
+	selector := root.sqlQuery(ctx)
 	aggregation := make([]string, 0, len(mls.fns))
 	for _, fn := range mls.fns {
-		aggregation = append(aggregation, fn(mls.sql))
+		aggregation = append(aggregation, fn(selector))
 	}
 	switch n := len(*mls.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
-		mls.sql.Select(aggregation...)
+		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
-		mls.sql.AppendSelect(aggregation...)
+		selector.AppendSelect(aggregation...)
 	}
 	rows := &sql.Rows{}
-	query, args := mls.sql.Query()
+	query, args := selector.Query()
 	if err := mls.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

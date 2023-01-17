@@ -25,6 +25,7 @@ type PonQuery struct {
 	unique     *bool
 	order      []OrderFunc
 	fields     []string
+	inters     []Interceptor
 	predicates []predicate.Pon
 	withCall   *CallQuery
 	// intermediate query (i.e. traversal path).
@@ -38,13 +39,13 @@ func (pq *PonQuery) Where(ps ...predicate.Pon) *PonQuery {
 	return pq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (pq *PonQuery) Limit(limit int) *PonQuery {
 	pq.limit = &limit
 	return pq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (pq *PonQuery) Offset(offset int) *PonQuery {
 	pq.offset = &offset
 	return pq
@@ -57,7 +58,7 @@ func (pq *PonQuery) Unique(unique bool) *PonQuery {
 	return pq
 }
 
-// Order adds an order step to the query.
+// Order specifies how the records should be ordered.
 func (pq *PonQuery) Order(o ...OrderFunc) *PonQuery {
 	pq.order = append(pq.order, o...)
 	return pq
@@ -65,7 +66,7 @@ func (pq *PonQuery) Order(o ...OrderFunc) *PonQuery {
 
 // QueryCall chains the current query on the "call" edge.
 func (pq *PonQuery) QueryCall() *CallQuery {
-	query := &CallQuery{config: pq.config}
+	query := (&CallClient{config: pq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := pq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -88,7 +89,7 @@ func (pq *PonQuery) QueryCall() *CallQuery {
 // First returns the first Pon entity from the query.
 // Returns a *NotFoundError when no Pon was found.
 func (pq *PonQuery) First(ctx context.Context) (*Pon, error) {
-	nodes, err := pq.Limit(1).All(ctx)
+	nodes, err := pq.Limit(1).All(newQueryContext(ctx, TypePon, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +112,7 @@ func (pq *PonQuery) FirstX(ctx context.Context) *Pon {
 // Returns a *NotFoundError when no Pon ID was found.
 func (pq *PonQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = pq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = pq.Limit(1).IDs(newQueryContext(ctx, TypePon, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -134,7 +135,7 @@ func (pq *PonQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one Pon entity is found.
 // Returns a *NotFoundError when no Pon entities are found.
 func (pq *PonQuery) Only(ctx context.Context) (*Pon, error) {
-	nodes, err := pq.Limit(2).All(ctx)
+	nodes, err := pq.Limit(2).All(newQueryContext(ctx, TypePon, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +163,7 @@ func (pq *PonQuery) OnlyX(ctx context.Context) *Pon {
 // Returns a *NotFoundError when no entities are found.
 func (pq *PonQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = pq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = pq.Limit(2).IDs(newQueryContext(ctx, TypePon, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -187,10 +188,12 @@ func (pq *PonQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of Pons.
 func (pq *PonQuery) All(ctx context.Context) ([]*Pon, error) {
+	ctx = newQueryContext(ctx, TypePon, "All")
 	if err := pq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return pq.sqlAll(ctx)
+	qr := querierAll[[]*Pon, *PonQuery]()
+	return withInterceptors[[]*Pon](ctx, pq, qr, pq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -205,6 +208,7 @@ func (pq *PonQuery) AllX(ctx context.Context) []*Pon {
 // IDs executes the query and returns a list of Pon IDs.
 func (pq *PonQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	var ids []uuid.UUID
+	ctx = newQueryContext(ctx, TypePon, "IDs")
 	if err := pq.Select(pon.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
@@ -222,10 +226,11 @@ func (pq *PonQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (pq *PonQuery) Count(ctx context.Context) (int, error) {
+	ctx = newQueryContext(ctx, TypePon, "Count")
 	if err := pq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return pq.sqlCount(ctx)
+	return withInterceptors[int](ctx, pq, querierCount[*PonQuery](), pq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -239,10 +244,15 @@ func (pq *PonQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (pq *PonQuery) Exist(ctx context.Context) (bool, error) {
-	if err := pq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = newQueryContext(ctx, TypePon, "Exist")
+	switch _, err := pq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return pq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -265,6 +275,7 @@ func (pq *PonQuery) Clone() *PonQuery {
 		limit:      pq.limit,
 		offset:     pq.offset,
 		order:      append([]OrderFunc{}, pq.order...),
+		inters:     append([]Interceptor{}, pq.inters...),
 		predicates: append([]predicate.Pon{}, pq.predicates...),
 		withCall:   pq.withCall.Clone(),
 		// clone intermediate query.
@@ -277,7 +288,7 @@ func (pq *PonQuery) Clone() *PonQuery {
 // WithCall tells the query-builder to eager-load the nodes that are connected to
 // the "call" edge. The optional arguments are used to configure the query builder of the edge.
 func (pq *PonQuery) WithCall(opts ...func(*CallQuery)) *PonQuery {
-	query := &CallQuery{config: pq.config}
+	query := (&CallClient{config: pq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -288,16 +299,11 @@ func (pq *PonQuery) WithCall(opts ...func(*CallQuery)) *PonQuery {
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
 func (pq *PonQuery) GroupBy(field string, fields ...string) *PonGroupBy {
-	grbuild := &PonGroupBy{config: pq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := pq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return pq.sqlQuery(ctx), nil
-	}
+	pq.fields = append([]string{field}, fields...)
+	grbuild := &PonGroupBy{build: pq}
+	grbuild.flds = &pq.fields
 	grbuild.label = pon.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -305,10 +311,10 @@ func (pq *PonQuery) GroupBy(field string, fields ...string) *PonGroupBy {
 // instead of selecting all fields in the entity.
 func (pq *PonQuery) Select(fields ...string) *PonSelect {
 	pq.fields = append(pq.fields, fields...)
-	selbuild := &PonSelect{PonQuery: pq}
-	selbuild.label = pon.Label
-	selbuild.flds, selbuild.scan = &pq.fields, selbuild.Scan
-	return selbuild
+	sbuild := &PonSelect{PonQuery: pq}
+	sbuild.label = pon.Label
+	sbuild.flds, sbuild.scan = &pq.fields, sbuild.Scan
+	return sbuild
 }
 
 // Aggregate returns a PonSelect configured with the given aggregations.
@@ -317,6 +323,16 @@ func (pq *PonQuery) Aggregate(fns ...AggregateFunc) *PonSelect {
 }
 
 func (pq *PonQuery) prepareQuery(ctx context.Context) error {
+	for _, inter := range pq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, pq); err != nil {
+				return err
+			}
+		}
+	}
 	for _, f := range pq.fields {
 		if !pon.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
@@ -405,17 +421,6 @@ func (pq *PonQuery) sqlCount(ctx context.Context) (int, error) {
 	return sqlgraph.CountNodes(ctx, pq.driver, _spec)
 }
 
-func (pq *PonQuery) sqlExist(ctx context.Context) (bool, error) {
-	switch _, err := pq.FirstID(ctx); {
-	case IsNotFound(err):
-		return false, nil
-	case err != nil:
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	default:
-		return true, nil
-	}
-}
-
 func (pq *PonQuery) querySpec() *sqlgraph.QuerySpec {
 	_spec := &sqlgraph.QuerySpec{
 		Node: &sqlgraph.NodeSpec{
@@ -498,13 +503,8 @@ func (pq *PonQuery) sqlQuery(ctx context.Context) *sql.Selector {
 
 // PonGroupBy is the group-by builder for Pon entities.
 type PonGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *PonQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -513,58 +513,46 @@ func (pgb *PonGroupBy) Aggregate(fns ...AggregateFunc) *PonGroupBy {
 	return pgb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
+// Scan applies the selector query and scans the result into the given value.
 func (pgb *PonGroupBy) Scan(ctx context.Context, v any) error {
-	query, err := pgb.path(ctx)
-	if err != nil {
+	ctx = newQueryContext(ctx, TypePon, "GroupBy")
+	if err := pgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	pgb.sql = query
-	return pgb.sqlScan(ctx, v)
+	return scanWithInterceptors[*PonQuery, *PonGroupBy](ctx, pgb.build, pgb, pgb.build.inters, v)
 }
 
-func (pgb *PonGroupBy) sqlScan(ctx context.Context, v any) error {
-	for _, f := range pgb.fields {
-		if !pon.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (pgb *PonGroupBy) sqlScan(ctx context.Context, root *PonQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(pgb.fns))
+	for _, fn := range pgb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := pgb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*pgb.flds)+len(pgb.fns))
+		for _, f := range *pgb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*pgb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := pgb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := pgb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (pgb *PonGroupBy) sqlQuery() *sql.Selector {
-	selector := pgb.sql.Select()
-	aggregation := make([]string, 0, len(pgb.fns))
-	for _, fn := range pgb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(pgb.fields)+len(pgb.fns))
-		for _, f := range pgb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(pgb.fields...)...)
-}
-
 // PonSelect is the builder for selecting fields of Pon entities.
 type PonSelect struct {
 	*PonQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
@@ -575,26 +563,27 @@ func (ps *PonSelect) Aggregate(fns ...AggregateFunc) *PonSelect {
 
 // Scan applies the selector query and scans the result into the given value.
 func (ps *PonSelect) Scan(ctx context.Context, v any) error {
+	ctx = newQueryContext(ctx, TypePon, "Select")
 	if err := ps.prepareQuery(ctx); err != nil {
 		return err
 	}
-	ps.sql = ps.PonQuery.sqlQuery(ctx)
-	return ps.sqlScan(ctx, v)
+	return scanWithInterceptors[*PonQuery, *PonSelect](ctx, ps.PonQuery, ps, ps.inters, v)
 }
 
-func (ps *PonSelect) sqlScan(ctx context.Context, v any) error {
+func (ps *PonSelect) sqlScan(ctx context.Context, root *PonQuery, v any) error {
+	selector := root.sqlQuery(ctx)
 	aggregation := make([]string, 0, len(ps.fns))
 	for _, fn := range ps.fns {
-		aggregation = append(aggregation, fn(ps.sql))
+		aggregation = append(aggregation, fn(selector))
 	}
 	switch n := len(*ps.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
-		ps.sql.Select(aggregation...)
+		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
-		ps.sql.AppendSelect(aggregation...)
+		selector.AppendSelect(aggregation...)
 	}
 	rows := &sql.Rows{}
-	query, args := ps.sql.Query()
+	query, args := selector.Query()
 	if err := ps.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

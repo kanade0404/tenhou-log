@@ -56,50 +56,8 @@ func (wc *WinCreate) Mutation() *WinMutation {
 
 // Save creates the Win in the database.
 func (wc *WinCreate) Save(ctx context.Context) (*Win, error) {
-	var (
-		err  error
-		node *Win
-	)
 	wc.defaults()
-	if len(wc.hooks) == 0 {
-		if err = wc.check(); err != nil {
-			return nil, err
-		}
-		node, err = wc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*WinMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = wc.check(); err != nil {
-				return nil, err
-			}
-			wc.mutation = mutation
-			if node, err = wc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(wc.hooks) - 1; i >= 0; i-- {
-			if wc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = wc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, wc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*Win)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from WinMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks[*Win, WinMutation](ctx, wc.sqlSave, wc.mutation, wc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -141,6 +99,9 @@ func (wc *WinCreate) check() error {
 }
 
 func (wc *WinCreate) sqlSave(ctx context.Context) (*Win, error) {
+	if err := wc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := wc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, wc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -155,6 +116,8 @@ func (wc *WinCreate) sqlSave(ctx context.Context) (*Win, error) {
 			return nil, err
 		}
 	}
+	wc.mutation.id = &_node.ID
+	wc.mutation.done = true
 	return _node, nil
 }
 

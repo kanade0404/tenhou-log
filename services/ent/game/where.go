@@ -13,250 +13,162 @@ import (
 
 // ID filters vertices based on their ID field.
 func ID(id uuid.UUID) predicate.Game {
-	return predicate.Game(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.Game(sql.FieldEQ(FieldID, id))
 }
 
 // IDEQ applies the EQ predicate on the ID field.
 func IDEQ(id uuid.UUID) predicate.Game {
-	return predicate.Game(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.Game(sql.FieldEQ(FieldID, id))
 }
 
 // IDNEQ applies the NEQ predicate on the ID field.
 func IDNEQ(id uuid.UUID) predicate.Game {
-	return predicate.Game(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldID), id))
-	})
+	return predicate.Game(sql.FieldNEQ(FieldID, id))
 }
 
 // IDIn applies the In predicate on the ID field.
 func IDIn(ids ...uuid.UUID) predicate.Game {
-	return predicate.Game(func(s *sql.Selector) {
-		v := make([]any, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.In(s.C(FieldID), v...))
-	})
+	return predicate.Game(sql.FieldIn(FieldID, ids...))
 }
 
 // IDNotIn applies the NotIn predicate on the ID field.
 func IDNotIn(ids ...uuid.UUID) predicate.Game {
-	return predicate.Game(func(s *sql.Selector) {
-		v := make([]any, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.NotIn(s.C(FieldID), v...))
-	})
+	return predicate.Game(sql.FieldNotIn(FieldID, ids...))
 }
 
 // IDGT applies the GT predicate on the ID field.
 func IDGT(id uuid.UUID) predicate.Game {
-	return predicate.Game(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldID), id))
-	})
+	return predicate.Game(sql.FieldGT(FieldID, id))
 }
 
 // IDGTE applies the GTE predicate on the ID field.
 func IDGTE(id uuid.UUID) predicate.Game {
-	return predicate.Game(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldID), id))
-	})
+	return predicate.Game(sql.FieldGTE(FieldID, id))
 }
 
 // IDLT applies the LT predicate on the ID field.
 func IDLT(id uuid.UUID) predicate.Game {
-	return predicate.Game(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldID), id))
-	})
+	return predicate.Game(sql.FieldLT(FieldID, id))
 }
 
 // IDLTE applies the LTE predicate on the ID field.
 func IDLTE(id uuid.UUID) predicate.Game {
-	return predicate.Game(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldID), id))
-	})
+	return predicate.Game(sql.FieldLTE(FieldID, id))
 }
 
 // Name applies equality check predicate on the "name" field. It's identical to NameEQ.
 func Name(v string) predicate.Game {
-	return predicate.Game(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldName), v))
-	})
+	return predicate.Game(sql.FieldEQ(FieldName, v))
 }
 
 // StartedAt applies equality check predicate on the "started_at" field. It's identical to StartedAtEQ.
 func StartedAt(v time.Time) predicate.Game {
-	return predicate.Game(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldStartedAt), v))
-	})
+	return predicate.Game(sql.FieldEQ(FieldStartedAt, v))
 }
 
 // NameEQ applies the EQ predicate on the "name" field.
 func NameEQ(v string) predicate.Game {
-	return predicate.Game(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldName), v))
-	})
+	return predicate.Game(sql.FieldEQ(FieldName, v))
 }
 
 // NameNEQ applies the NEQ predicate on the "name" field.
 func NameNEQ(v string) predicate.Game {
-	return predicate.Game(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldName), v))
-	})
+	return predicate.Game(sql.FieldNEQ(FieldName, v))
 }
 
 // NameIn applies the In predicate on the "name" field.
 func NameIn(vs ...string) predicate.Game {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Game(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldName), v...))
-	})
+	return predicate.Game(sql.FieldIn(FieldName, vs...))
 }
 
 // NameNotIn applies the NotIn predicate on the "name" field.
 func NameNotIn(vs ...string) predicate.Game {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Game(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldName), v...))
-	})
+	return predicate.Game(sql.FieldNotIn(FieldName, vs...))
 }
 
 // NameGT applies the GT predicate on the "name" field.
 func NameGT(v string) predicate.Game {
-	return predicate.Game(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldName), v))
-	})
+	return predicate.Game(sql.FieldGT(FieldName, v))
 }
 
 // NameGTE applies the GTE predicate on the "name" field.
 func NameGTE(v string) predicate.Game {
-	return predicate.Game(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldName), v))
-	})
+	return predicate.Game(sql.FieldGTE(FieldName, v))
 }
 
 // NameLT applies the LT predicate on the "name" field.
 func NameLT(v string) predicate.Game {
-	return predicate.Game(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldName), v))
-	})
+	return predicate.Game(sql.FieldLT(FieldName, v))
 }
 
 // NameLTE applies the LTE predicate on the "name" field.
 func NameLTE(v string) predicate.Game {
-	return predicate.Game(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldName), v))
-	})
+	return predicate.Game(sql.FieldLTE(FieldName, v))
 }
 
 // NameContains applies the Contains predicate on the "name" field.
 func NameContains(v string) predicate.Game {
-	return predicate.Game(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldName), v))
-	})
+	return predicate.Game(sql.FieldContains(FieldName, v))
 }
 
 // NameHasPrefix applies the HasPrefix predicate on the "name" field.
 func NameHasPrefix(v string) predicate.Game {
-	return predicate.Game(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldName), v))
-	})
+	return predicate.Game(sql.FieldHasPrefix(FieldName, v))
 }
 
 // NameHasSuffix applies the HasSuffix predicate on the "name" field.
 func NameHasSuffix(v string) predicate.Game {
-	return predicate.Game(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldName), v))
-	})
+	return predicate.Game(sql.FieldHasSuffix(FieldName, v))
 }
 
 // NameEqualFold applies the EqualFold predicate on the "name" field.
 func NameEqualFold(v string) predicate.Game {
-	return predicate.Game(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldName), v))
-	})
+	return predicate.Game(sql.FieldEqualFold(FieldName, v))
 }
 
 // NameContainsFold applies the ContainsFold predicate on the "name" field.
 func NameContainsFold(v string) predicate.Game {
-	return predicate.Game(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldName), v))
-	})
+	return predicate.Game(sql.FieldContainsFold(FieldName, v))
 }
 
 // StartedAtEQ applies the EQ predicate on the "started_at" field.
 func StartedAtEQ(v time.Time) predicate.Game {
-	return predicate.Game(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldStartedAt), v))
-	})
+	return predicate.Game(sql.FieldEQ(FieldStartedAt, v))
 }
 
 // StartedAtNEQ applies the NEQ predicate on the "started_at" field.
 func StartedAtNEQ(v time.Time) predicate.Game {
-	return predicate.Game(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldStartedAt), v))
-	})
+	return predicate.Game(sql.FieldNEQ(FieldStartedAt, v))
 }
 
 // StartedAtIn applies the In predicate on the "started_at" field.
 func StartedAtIn(vs ...time.Time) predicate.Game {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Game(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldStartedAt), v...))
-	})
+	return predicate.Game(sql.FieldIn(FieldStartedAt, vs...))
 }
 
 // StartedAtNotIn applies the NotIn predicate on the "started_at" field.
 func StartedAtNotIn(vs ...time.Time) predicate.Game {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Game(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldStartedAt), v...))
-	})
+	return predicate.Game(sql.FieldNotIn(FieldStartedAt, vs...))
 }
 
 // StartedAtGT applies the GT predicate on the "started_at" field.
 func StartedAtGT(v time.Time) predicate.Game {
-	return predicate.Game(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldStartedAt), v))
-	})
+	return predicate.Game(sql.FieldGT(FieldStartedAt, v))
 }
 
 // StartedAtGTE applies the GTE predicate on the "started_at" field.
 func StartedAtGTE(v time.Time) predicate.Game {
-	return predicate.Game(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldStartedAt), v))
-	})
+	return predicate.Game(sql.FieldGTE(FieldStartedAt, v))
 }
 
 // StartedAtLT applies the LT predicate on the "started_at" field.
 func StartedAtLT(v time.Time) predicate.Game {
-	return predicate.Game(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldStartedAt), v))
-	})
+	return predicate.Game(sql.FieldLT(FieldStartedAt, v))
 }
 
 // StartedAtLTE applies the LTE predicate on the "started_at" field.
 func StartedAtLTE(v time.Time) predicate.Game {
-	return predicate.Game(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldStartedAt), v))
-	})
+	return predicate.Game(sql.FieldLTE(FieldStartedAt, v))
 }
 
 // HasMjlogs applies the HasEdge predicate on the "mjlogs" edge.
@@ -264,7 +176,6 @@ func HasMjlogs() predicate.Game {
 	return predicate.Game(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(MjlogsTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, false, MjlogsTable, MjlogsColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -292,7 +203,6 @@ func HasGamePlayers() predicate.Game {
 	return predicate.Game(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(GamePlayersTable, FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, false, GamePlayersTable, GamePlayersPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -320,7 +230,6 @@ func HasRooms() predicate.Game {
 	return predicate.Game(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(RoomsTable, FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, RoomsTable, RoomsColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -348,7 +257,6 @@ func HasRounds() predicate.Game {
 	return predicate.Game(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(RoundsTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, RoundsTable, RoundsColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)

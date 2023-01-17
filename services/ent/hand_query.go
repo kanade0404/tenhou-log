@@ -26,6 +26,7 @@ type HandQuery struct {
 	unique     *bool
 	order      []OrderFunc
 	fields     []string
+	inters     []Interceptor
 	predicates []predicate.Hand
 	withRounds *RoundQuery
 	withTurns  *TurnQuery
@@ -41,13 +42,13 @@ func (hq *HandQuery) Where(ps ...predicate.Hand) *HandQuery {
 	return hq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (hq *HandQuery) Limit(limit int) *HandQuery {
 	hq.limit = &limit
 	return hq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (hq *HandQuery) Offset(offset int) *HandQuery {
 	hq.offset = &offset
 	return hq
@@ -60,7 +61,7 @@ func (hq *HandQuery) Unique(unique bool) *HandQuery {
 	return hq
 }
 
-// Order adds an order step to the query.
+// Order specifies how the records should be ordered.
 func (hq *HandQuery) Order(o ...OrderFunc) *HandQuery {
 	hq.order = append(hq.order, o...)
 	return hq
@@ -68,7 +69,7 @@ func (hq *HandQuery) Order(o ...OrderFunc) *HandQuery {
 
 // QueryRounds chains the current query on the "rounds" edge.
 func (hq *HandQuery) QueryRounds() *RoundQuery {
-	query := &RoundQuery{config: hq.config}
+	query := (&RoundClient{config: hq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := hq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -90,7 +91,7 @@ func (hq *HandQuery) QueryRounds() *RoundQuery {
 
 // QueryTurns chains the current query on the "turns" edge.
 func (hq *HandQuery) QueryTurns() *TurnQuery {
-	query := &TurnQuery{config: hq.config}
+	query := (&TurnClient{config: hq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := hq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -113,7 +114,7 @@ func (hq *HandQuery) QueryTurns() *TurnQuery {
 // First returns the first Hand entity from the query.
 // Returns a *NotFoundError when no Hand was found.
 func (hq *HandQuery) First(ctx context.Context) (*Hand, error) {
-	nodes, err := hq.Limit(1).All(ctx)
+	nodes, err := hq.Limit(1).All(newQueryContext(ctx, TypeHand, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +137,7 @@ func (hq *HandQuery) FirstX(ctx context.Context) *Hand {
 // Returns a *NotFoundError when no Hand ID was found.
 func (hq *HandQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = hq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = hq.Limit(1).IDs(newQueryContext(ctx, TypeHand, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -159,7 +160,7 @@ func (hq *HandQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one Hand entity is found.
 // Returns a *NotFoundError when no Hand entities are found.
 func (hq *HandQuery) Only(ctx context.Context) (*Hand, error) {
-	nodes, err := hq.Limit(2).All(ctx)
+	nodes, err := hq.Limit(2).All(newQueryContext(ctx, TypeHand, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +188,7 @@ func (hq *HandQuery) OnlyX(ctx context.Context) *Hand {
 // Returns a *NotFoundError when no entities are found.
 func (hq *HandQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = hq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = hq.Limit(2).IDs(newQueryContext(ctx, TypeHand, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -212,10 +213,12 @@ func (hq *HandQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of Hands.
 func (hq *HandQuery) All(ctx context.Context) ([]*Hand, error) {
+	ctx = newQueryContext(ctx, TypeHand, "All")
 	if err := hq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return hq.sqlAll(ctx)
+	qr := querierAll[[]*Hand, *HandQuery]()
+	return withInterceptors[[]*Hand](ctx, hq, qr, hq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -230,6 +233,7 @@ func (hq *HandQuery) AllX(ctx context.Context) []*Hand {
 // IDs executes the query and returns a list of Hand IDs.
 func (hq *HandQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	var ids []uuid.UUID
+	ctx = newQueryContext(ctx, TypeHand, "IDs")
 	if err := hq.Select(hand.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
@@ -247,10 +251,11 @@ func (hq *HandQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (hq *HandQuery) Count(ctx context.Context) (int, error) {
+	ctx = newQueryContext(ctx, TypeHand, "Count")
 	if err := hq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return hq.sqlCount(ctx)
+	return withInterceptors[int](ctx, hq, querierCount[*HandQuery](), hq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -264,10 +269,15 @@ func (hq *HandQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (hq *HandQuery) Exist(ctx context.Context) (bool, error) {
-	if err := hq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = newQueryContext(ctx, TypeHand, "Exist")
+	switch _, err := hq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return hq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -290,6 +300,7 @@ func (hq *HandQuery) Clone() *HandQuery {
 		limit:      hq.limit,
 		offset:     hq.offset,
 		order:      append([]OrderFunc{}, hq.order...),
+		inters:     append([]Interceptor{}, hq.inters...),
 		predicates: append([]predicate.Hand{}, hq.predicates...),
 		withRounds: hq.withRounds.Clone(),
 		withTurns:  hq.withTurns.Clone(),
@@ -303,7 +314,7 @@ func (hq *HandQuery) Clone() *HandQuery {
 // WithRounds tells the query-builder to eager-load the nodes that are connected to
 // the "rounds" edge. The optional arguments are used to configure the query builder of the edge.
 func (hq *HandQuery) WithRounds(opts ...func(*RoundQuery)) *HandQuery {
-	query := &RoundQuery{config: hq.config}
+	query := (&RoundClient{config: hq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -314,7 +325,7 @@ func (hq *HandQuery) WithRounds(opts ...func(*RoundQuery)) *HandQuery {
 // WithTurns tells the query-builder to eager-load the nodes that are connected to
 // the "turns" edge. The optional arguments are used to configure the query builder of the edge.
 func (hq *HandQuery) WithTurns(opts ...func(*TurnQuery)) *HandQuery {
-	query := &TurnQuery{config: hq.config}
+	query := (&TurnClient{config: hq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -337,16 +348,11 @@ func (hq *HandQuery) WithTurns(opts ...func(*TurnQuery)) *HandQuery {
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (hq *HandQuery) GroupBy(field string, fields ...string) *HandGroupBy {
-	grbuild := &HandGroupBy{config: hq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := hq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return hq.sqlQuery(ctx), nil
-	}
+	hq.fields = append([]string{field}, fields...)
+	grbuild := &HandGroupBy{build: hq}
+	grbuild.flds = &hq.fields
 	grbuild.label = hand.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -364,10 +370,10 @@ func (hq *HandQuery) GroupBy(field string, fields ...string) *HandGroupBy {
 //		Scan(ctx, &v)
 func (hq *HandQuery) Select(fields ...string) *HandSelect {
 	hq.fields = append(hq.fields, fields...)
-	selbuild := &HandSelect{HandQuery: hq}
-	selbuild.label = hand.Label
-	selbuild.flds, selbuild.scan = &hq.fields, selbuild.Scan
-	return selbuild
+	sbuild := &HandSelect{HandQuery: hq}
+	sbuild.label = hand.Label
+	sbuild.flds, sbuild.scan = &hq.fields, sbuild.Scan
+	return sbuild
 }
 
 // Aggregate returns a HandSelect configured with the given aggregations.
@@ -376,6 +382,16 @@ func (hq *HandQuery) Aggregate(fns ...AggregateFunc) *HandSelect {
 }
 
 func (hq *HandQuery) prepareQuery(ctx context.Context) error {
+	for _, inter := range hq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, hq); err != nil {
+				return err
+			}
+		}
+	}
 	for _, f := range hq.fields {
 		if !hand.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
@@ -538,17 +554,6 @@ func (hq *HandQuery) sqlCount(ctx context.Context) (int, error) {
 	return sqlgraph.CountNodes(ctx, hq.driver, _spec)
 }
 
-func (hq *HandQuery) sqlExist(ctx context.Context) (bool, error) {
-	switch _, err := hq.FirstID(ctx); {
-	case IsNotFound(err):
-		return false, nil
-	case err != nil:
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	default:
-		return true, nil
-	}
-}
-
 func (hq *HandQuery) querySpec() *sqlgraph.QuerySpec {
 	_spec := &sqlgraph.QuerySpec{
 		Node: &sqlgraph.NodeSpec{
@@ -631,13 +636,8 @@ func (hq *HandQuery) sqlQuery(ctx context.Context) *sql.Selector {
 
 // HandGroupBy is the group-by builder for Hand entities.
 type HandGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *HandQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -646,58 +646,46 @@ func (hgb *HandGroupBy) Aggregate(fns ...AggregateFunc) *HandGroupBy {
 	return hgb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
+// Scan applies the selector query and scans the result into the given value.
 func (hgb *HandGroupBy) Scan(ctx context.Context, v any) error {
-	query, err := hgb.path(ctx)
-	if err != nil {
+	ctx = newQueryContext(ctx, TypeHand, "GroupBy")
+	if err := hgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	hgb.sql = query
-	return hgb.sqlScan(ctx, v)
+	return scanWithInterceptors[*HandQuery, *HandGroupBy](ctx, hgb.build, hgb, hgb.build.inters, v)
 }
 
-func (hgb *HandGroupBy) sqlScan(ctx context.Context, v any) error {
-	for _, f := range hgb.fields {
-		if !hand.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (hgb *HandGroupBy) sqlScan(ctx context.Context, root *HandQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(hgb.fns))
+	for _, fn := range hgb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := hgb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*hgb.flds)+len(hgb.fns))
+		for _, f := range *hgb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*hgb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := hgb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := hgb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (hgb *HandGroupBy) sqlQuery() *sql.Selector {
-	selector := hgb.sql.Select()
-	aggregation := make([]string, 0, len(hgb.fns))
-	for _, fn := range hgb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(hgb.fields)+len(hgb.fns))
-		for _, f := range hgb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(hgb.fields...)...)
-}
-
 // HandSelect is the builder for selecting fields of Hand entities.
 type HandSelect struct {
 	*HandQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
@@ -708,26 +696,27 @@ func (hs *HandSelect) Aggregate(fns ...AggregateFunc) *HandSelect {
 
 // Scan applies the selector query and scans the result into the given value.
 func (hs *HandSelect) Scan(ctx context.Context, v any) error {
+	ctx = newQueryContext(ctx, TypeHand, "Select")
 	if err := hs.prepareQuery(ctx); err != nil {
 		return err
 	}
-	hs.sql = hs.HandQuery.sqlQuery(ctx)
-	return hs.sqlScan(ctx, v)
+	return scanWithInterceptors[*HandQuery, *HandSelect](ctx, hs.HandQuery, hs, hs.inters, v)
 }
 
-func (hs *HandSelect) sqlScan(ctx context.Context, v any) error {
+func (hs *HandSelect) sqlScan(ctx context.Context, root *HandQuery, v any) error {
+	selector := root.sqlQuery(ctx)
 	aggregation := make([]string, 0, len(hs.fns))
 	for _, fn := range hs.fns {
-		aggregation = append(aggregation, fn(hs.sql))
+		aggregation = append(aggregation, fn(selector))
 	}
 	switch n := len(*hs.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
-		hs.sql.Select(aggregation...)
+		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
-		hs.sql.AppendSelect(aggregation...)
+		selector.AppendSelect(aggregation...)
 	}
 	rows := &sql.Rows{}
-	query, args := hs.sql.Query()
+	query, args := selector.Query()
 	if err := hs.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

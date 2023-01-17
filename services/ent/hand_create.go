@@ -98,50 +98,8 @@ func (hc *HandCreate) Mutation() *HandMutation {
 
 // Save creates the Hand in the database.
 func (hc *HandCreate) Save(ctx context.Context) (*Hand, error) {
-	var (
-		err  error
-		node *Hand
-	)
 	hc.defaults()
-	if len(hc.hooks) == 0 {
-		if err = hc.check(); err != nil {
-			return nil, err
-		}
-		node, err = hc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*HandMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = hc.check(); err != nil {
-				return nil, err
-			}
-			hc.mutation = mutation
-			if node, err = hc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(hc.hooks) - 1; i >= 0; i-- {
-			if hc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = hc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, hc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*Hand)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from HandMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks[*Hand, HandMutation](ctx, hc.sqlSave, hc.mutation, hc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -199,6 +157,9 @@ func (hc *HandCreate) check() error {
 }
 
 func (hc *HandCreate) sqlSave(ctx context.Context) (*Hand, error) {
+	if err := hc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := hc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, hc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -213,6 +174,8 @@ func (hc *HandCreate) sqlSave(ctx context.Context) (*Hand, error) {
 			return nil, err
 		}
 	}
+	hc.mutation.id = &_node.ID
+	hc.mutation.done = true
 	return _node, nil
 }
 

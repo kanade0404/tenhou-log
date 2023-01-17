@@ -109,50 +109,8 @@ func (mlc *MJLogCreate) Mutation() *MJLogMutation {
 
 // Save creates the MJLog in the database.
 func (mlc *MJLogCreate) Save(ctx context.Context) (*MJLog, error) {
-	var (
-		err  error
-		node *MJLog
-	)
 	mlc.defaults()
-	if len(mlc.hooks) == 0 {
-		if err = mlc.check(); err != nil {
-			return nil, err
-		}
-		node, err = mlc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*MJLogMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = mlc.check(); err != nil {
-				return nil, err
-			}
-			mlc.mutation = mutation
-			if node, err = mlc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(mlc.hooks) - 1; i >= 0; i-- {
-			if mlc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = mlc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, mlc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*MJLog)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from MJLogMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks[*MJLog, MJLogMutation](ctx, mlc.sqlSave, mlc.mutation, mlc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -210,6 +168,9 @@ func (mlc *MJLogCreate) check() error {
 }
 
 func (mlc *MJLogCreate) sqlSave(ctx context.Context) (*MJLog, error) {
+	if err := mlc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := mlc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, mlc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -224,6 +185,8 @@ func (mlc *MJLogCreate) sqlSave(ctx context.Context) (*MJLog, error) {
 			return nil, err
 		}
 	}
+	mlc.mutation.id = &_node.ID
+	mlc.mutation.done = true
 	return _node, nil
 }
 

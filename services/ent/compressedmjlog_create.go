@@ -91,50 +91,8 @@ func (cmlc *CompressedMJLogCreate) Mutation() *CompressedMJLogMutation {
 
 // Save creates the CompressedMJLog in the database.
 func (cmlc *CompressedMJLogCreate) Save(ctx context.Context) (*CompressedMJLog, error) {
-	var (
-		err  error
-		node *CompressedMJLog
-	)
 	cmlc.defaults()
-	if len(cmlc.hooks) == 0 {
-		if err = cmlc.check(); err != nil {
-			return nil, err
-		}
-		node, err = cmlc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*CompressedMJLogMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = cmlc.check(); err != nil {
-				return nil, err
-			}
-			cmlc.mutation = mutation
-			if node, err = cmlc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(cmlc.hooks) - 1; i >= 0; i-- {
-			if cmlc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = cmlc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, cmlc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*CompressedMJLog)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from CompressedMJLogMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks[*CompressedMJLog, CompressedMJLogMutation](ctx, cmlc.sqlSave, cmlc.mutation, cmlc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -186,6 +144,9 @@ func (cmlc *CompressedMJLogCreate) check() error {
 }
 
 func (cmlc *CompressedMJLogCreate) sqlSave(ctx context.Context) (*CompressedMJLog, error) {
+	if err := cmlc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := cmlc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, cmlc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -200,6 +161,8 @@ func (cmlc *CompressedMJLogCreate) sqlSave(ctx context.Context) (*CompressedMJLo
 			return nil, err
 		}
 	}
+	cmlc.mutation.id = &_node.ID
+	cmlc.mutation.done = true
 	return _node, nil
 }
 

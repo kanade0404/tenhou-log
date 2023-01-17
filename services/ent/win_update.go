@@ -53,40 +53,7 @@ func (wu *WinUpdate) ClearEvent() *WinUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (wu *WinUpdate) Save(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(wu.hooks) == 0 {
-		if err = wu.check(); err != nil {
-			return 0, err
-		}
-		affected, err = wu.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*WinMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = wu.check(); err != nil {
-				return 0, err
-			}
-			wu.mutation = mutation
-			affected, err = wu.sqlSave(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(wu.hooks) - 1; i >= 0; i-- {
-			if wu.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = wu.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, wu.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks[int, WinMutation](ctx, wu.sqlSave, wu.mutation, wu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -120,6 +87,9 @@ func (wu *WinUpdate) check() error {
 }
 
 func (wu *WinUpdate) sqlSave(ctx context.Context) (n int, err error) {
+	if err := wu.check(); err != nil {
+		return n, err
+	}
 	_spec := &sqlgraph.UpdateSpec{
 		Node: &sqlgraph.NodeSpec{
 			Table:   win.Table,
@@ -180,6 +150,7 @@ func (wu *WinUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		return 0, err
 	}
+	wu.mutation.done = true
 	return n, nil
 }
 
@@ -222,46 +193,7 @@ func (wuo *WinUpdateOne) Select(field string, fields ...string) *WinUpdateOne {
 
 // Save executes the query and returns the updated Win entity.
 func (wuo *WinUpdateOne) Save(ctx context.Context) (*Win, error) {
-	var (
-		err  error
-		node *Win
-	)
-	if len(wuo.hooks) == 0 {
-		if err = wuo.check(); err != nil {
-			return nil, err
-		}
-		node, err = wuo.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*WinMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = wuo.check(); err != nil {
-				return nil, err
-			}
-			wuo.mutation = mutation
-			node, err = wuo.sqlSave(ctx)
-			mutation.done = true
-			return node, err
-		})
-		for i := len(wuo.hooks) - 1; i >= 0; i-- {
-			if wuo.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = wuo.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, wuo.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*Win)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from WinMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks[*Win, WinMutation](ctx, wuo.sqlSave, wuo.mutation, wuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -295,6 +227,9 @@ func (wuo *WinUpdateOne) check() error {
 }
 
 func (wuo *WinUpdateOne) sqlSave(ctx context.Context) (_node *Win, err error) {
+	if err := wuo.check(); err != nil {
+		return _node, err
+	}
 	_spec := &sqlgraph.UpdateSpec{
 		Node: &sqlgraph.NodeSpec{
 			Table:   win.Table,
@@ -375,5 +310,6 @@ func (wuo *WinUpdateOne) sqlSave(ctx context.Context) (_node *Win, err error) {
 		}
 		return nil, err
 	}
+	wuo.mutation.done = true
 	return _node, nil
 }

@@ -25,6 +25,7 @@ type CompressedMJLogQuery struct {
 	unique         *bool
 	order          []OrderFunc
 	fields         []string
+	inters         []Interceptor
 	predicates     []predicate.CompressedMJLog
 	withMjlogFiles *MJLogFileQuery
 	// intermediate query (i.e. traversal path).
@@ -38,13 +39,13 @@ func (cmlq *CompressedMJLogQuery) Where(ps ...predicate.CompressedMJLog) *Compre
 	return cmlq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (cmlq *CompressedMJLogQuery) Limit(limit int) *CompressedMJLogQuery {
 	cmlq.limit = &limit
 	return cmlq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (cmlq *CompressedMJLogQuery) Offset(offset int) *CompressedMJLogQuery {
 	cmlq.offset = &offset
 	return cmlq
@@ -57,7 +58,7 @@ func (cmlq *CompressedMJLogQuery) Unique(unique bool) *CompressedMJLogQuery {
 	return cmlq
 }
 
-// Order adds an order step to the query.
+// Order specifies how the records should be ordered.
 func (cmlq *CompressedMJLogQuery) Order(o ...OrderFunc) *CompressedMJLogQuery {
 	cmlq.order = append(cmlq.order, o...)
 	return cmlq
@@ -65,7 +66,7 @@ func (cmlq *CompressedMJLogQuery) Order(o ...OrderFunc) *CompressedMJLogQuery {
 
 // QueryMjlogFiles chains the current query on the "mjlog_files" edge.
 func (cmlq *CompressedMJLogQuery) QueryMjlogFiles() *MJLogFileQuery {
-	query := &MJLogFileQuery{config: cmlq.config}
+	query := (&MJLogFileClient{config: cmlq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := cmlq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -88,7 +89,7 @@ func (cmlq *CompressedMJLogQuery) QueryMjlogFiles() *MJLogFileQuery {
 // First returns the first CompressedMJLog entity from the query.
 // Returns a *NotFoundError when no CompressedMJLog was found.
 func (cmlq *CompressedMJLogQuery) First(ctx context.Context) (*CompressedMJLog, error) {
-	nodes, err := cmlq.Limit(1).All(ctx)
+	nodes, err := cmlq.Limit(1).All(newQueryContext(ctx, TypeCompressedMJLog, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +112,7 @@ func (cmlq *CompressedMJLogQuery) FirstX(ctx context.Context) *CompressedMJLog {
 // Returns a *NotFoundError when no CompressedMJLog ID was found.
 func (cmlq *CompressedMJLogQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = cmlq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = cmlq.Limit(1).IDs(newQueryContext(ctx, TypeCompressedMJLog, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -134,7 +135,7 @@ func (cmlq *CompressedMJLogQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one CompressedMJLog entity is found.
 // Returns a *NotFoundError when no CompressedMJLog entities are found.
 func (cmlq *CompressedMJLogQuery) Only(ctx context.Context) (*CompressedMJLog, error) {
-	nodes, err := cmlq.Limit(2).All(ctx)
+	nodes, err := cmlq.Limit(2).All(newQueryContext(ctx, TypeCompressedMJLog, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +163,7 @@ func (cmlq *CompressedMJLogQuery) OnlyX(ctx context.Context) *CompressedMJLog {
 // Returns a *NotFoundError when no entities are found.
 func (cmlq *CompressedMJLogQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = cmlq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = cmlq.Limit(2).IDs(newQueryContext(ctx, TypeCompressedMJLog, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -187,10 +188,12 @@ func (cmlq *CompressedMJLogQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of CompressedMJLogs.
 func (cmlq *CompressedMJLogQuery) All(ctx context.Context) ([]*CompressedMJLog, error) {
+	ctx = newQueryContext(ctx, TypeCompressedMJLog, "All")
 	if err := cmlq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return cmlq.sqlAll(ctx)
+	qr := querierAll[[]*CompressedMJLog, *CompressedMJLogQuery]()
+	return withInterceptors[[]*CompressedMJLog](ctx, cmlq, qr, cmlq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -205,6 +208,7 @@ func (cmlq *CompressedMJLogQuery) AllX(ctx context.Context) []*CompressedMJLog {
 // IDs executes the query and returns a list of CompressedMJLog IDs.
 func (cmlq *CompressedMJLogQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	var ids []uuid.UUID
+	ctx = newQueryContext(ctx, TypeCompressedMJLog, "IDs")
 	if err := cmlq.Select(compressedmjlog.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
@@ -222,10 +226,11 @@ func (cmlq *CompressedMJLogQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (cmlq *CompressedMJLogQuery) Count(ctx context.Context) (int, error) {
+	ctx = newQueryContext(ctx, TypeCompressedMJLog, "Count")
 	if err := cmlq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return cmlq.sqlCount(ctx)
+	return withInterceptors[int](ctx, cmlq, querierCount[*CompressedMJLogQuery](), cmlq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -239,10 +244,15 @@ func (cmlq *CompressedMJLogQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (cmlq *CompressedMJLogQuery) Exist(ctx context.Context) (bool, error) {
-	if err := cmlq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = newQueryContext(ctx, TypeCompressedMJLog, "Exist")
+	switch _, err := cmlq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return cmlq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -265,6 +275,7 @@ func (cmlq *CompressedMJLogQuery) Clone() *CompressedMJLogQuery {
 		limit:          cmlq.limit,
 		offset:         cmlq.offset,
 		order:          append([]OrderFunc{}, cmlq.order...),
+		inters:         append([]Interceptor{}, cmlq.inters...),
 		predicates:     append([]predicate.CompressedMJLog{}, cmlq.predicates...),
 		withMjlogFiles: cmlq.withMjlogFiles.Clone(),
 		// clone intermediate query.
@@ -277,7 +288,7 @@ func (cmlq *CompressedMJLogQuery) Clone() *CompressedMJLogQuery {
 // WithMjlogFiles tells the query-builder to eager-load the nodes that are connected to
 // the "mjlog_files" edge. The optional arguments are used to configure the query builder of the edge.
 func (cmlq *CompressedMJLogQuery) WithMjlogFiles(opts ...func(*MJLogFileQuery)) *CompressedMJLogQuery {
-	query := &MJLogFileQuery{config: cmlq.config}
+	query := (&MJLogFileClient{config: cmlq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -300,16 +311,11 @@ func (cmlq *CompressedMJLogQuery) WithMjlogFiles(opts ...func(*MJLogFileQuery)) 
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (cmlq *CompressedMJLogQuery) GroupBy(field string, fields ...string) *CompressedMJLogGroupBy {
-	grbuild := &CompressedMJLogGroupBy{config: cmlq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := cmlq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return cmlq.sqlQuery(ctx), nil
-	}
+	cmlq.fields = append([]string{field}, fields...)
+	grbuild := &CompressedMJLogGroupBy{build: cmlq}
+	grbuild.flds = &cmlq.fields
 	grbuild.label = compressedmjlog.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -327,10 +333,10 @@ func (cmlq *CompressedMJLogQuery) GroupBy(field string, fields ...string) *Compr
 //		Scan(ctx, &v)
 func (cmlq *CompressedMJLogQuery) Select(fields ...string) *CompressedMJLogSelect {
 	cmlq.fields = append(cmlq.fields, fields...)
-	selbuild := &CompressedMJLogSelect{CompressedMJLogQuery: cmlq}
-	selbuild.label = compressedmjlog.Label
-	selbuild.flds, selbuild.scan = &cmlq.fields, selbuild.Scan
-	return selbuild
+	sbuild := &CompressedMJLogSelect{CompressedMJLogQuery: cmlq}
+	sbuild.label = compressedmjlog.Label
+	sbuild.flds, sbuild.scan = &cmlq.fields, sbuild.Scan
+	return sbuild
 }
 
 // Aggregate returns a CompressedMJLogSelect configured with the given aggregations.
@@ -339,6 +345,16 @@ func (cmlq *CompressedMJLogQuery) Aggregate(fns ...AggregateFunc) *CompressedMJL
 }
 
 func (cmlq *CompressedMJLogQuery) prepareQuery(ctx context.Context) error {
+	for _, inter := range cmlq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, cmlq); err != nil {
+				return err
+			}
+		}
+	}
 	for _, f := range cmlq.fields {
 		if !compressedmjlog.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
@@ -427,17 +443,6 @@ func (cmlq *CompressedMJLogQuery) sqlCount(ctx context.Context) (int, error) {
 	return sqlgraph.CountNodes(ctx, cmlq.driver, _spec)
 }
 
-func (cmlq *CompressedMJLogQuery) sqlExist(ctx context.Context) (bool, error) {
-	switch _, err := cmlq.FirstID(ctx); {
-	case IsNotFound(err):
-		return false, nil
-	case err != nil:
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	default:
-		return true, nil
-	}
-}
-
 func (cmlq *CompressedMJLogQuery) querySpec() *sqlgraph.QuerySpec {
 	_spec := &sqlgraph.QuerySpec{
 		Node: &sqlgraph.NodeSpec{
@@ -520,13 +525,8 @@ func (cmlq *CompressedMJLogQuery) sqlQuery(ctx context.Context) *sql.Selector {
 
 // CompressedMJLogGroupBy is the group-by builder for CompressedMJLog entities.
 type CompressedMJLogGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *CompressedMJLogQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -535,58 +535,46 @@ func (cmlgb *CompressedMJLogGroupBy) Aggregate(fns ...AggregateFunc) *Compressed
 	return cmlgb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
+// Scan applies the selector query and scans the result into the given value.
 func (cmlgb *CompressedMJLogGroupBy) Scan(ctx context.Context, v any) error {
-	query, err := cmlgb.path(ctx)
-	if err != nil {
+	ctx = newQueryContext(ctx, TypeCompressedMJLog, "GroupBy")
+	if err := cmlgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	cmlgb.sql = query
-	return cmlgb.sqlScan(ctx, v)
+	return scanWithInterceptors[*CompressedMJLogQuery, *CompressedMJLogGroupBy](ctx, cmlgb.build, cmlgb, cmlgb.build.inters, v)
 }
 
-func (cmlgb *CompressedMJLogGroupBy) sqlScan(ctx context.Context, v any) error {
-	for _, f := range cmlgb.fields {
-		if !compressedmjlog.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (cmlgb *CompressedMJLogGroupBy) sqlScan(ctx context.Context, root *CompressedMJLogQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(cmlgb.fns))
+	for _, fn := range cmlgb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := cmlgb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*cmlgb.flds)+len(cmlgb.fns))
+		for _, f := range *cmlgb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*cmlgb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := cmlgb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := cmlgb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (cmlgb *CompressedMJLogGroupBy) sqlQuery() *sql.Selector {
-	selector := cmlgb.sql.Select()
-	aggregation := make([]string, 0, len(cmlgb.fns))
-	for _, fn := range cmlgb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(cmlgb.fields)+len(cmlgb.fns))
-		for _, f := range cmlgb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(cmlgb.fields...)...)
-}
-
 // CompressedMJLogSelect is the builder for selecting fields of CompressedMJLog entities.
 type CompressedMJLogSelect struct {
 	*CompressedMJLogQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
@@ -597,26 +585,27 @@ func (cmls *CompressedMJLogSelect) Aggregate(fns ...AggregateFunc) *CompressedMJ
 
 // Scan applies the selector query and scans the result into the given value.
 func (cmls *CompressedMJLogSelect) Scan(ctx context.Context, v any) error {
+	ctx = newQueryContext(ctx, TypeCompressedMJLog, "Select")
 	if err := cmls.prepareQuery(ctx); err != nil {
 		return err
 	}
-	cmls.sql = cmls.CompressedMJLogQuery.sqlQuery(ctx)
-	return cmls.sqlScan(ctx, v)
+	return scanWithInterceptors[*CompressedMJLogQuery, *CompressedMJLogSelect](ctx, cmls.CompressedMJLogQuery, cmls, cmls.inters, v)
 }
 
-func (cmls *CompressedMJLogSelect) sqlScan(ctx context.Context, v any) error {
+func (cmls *CompressedMJLogSelect) sqlScan(ctx context.Context, root *CompressedMJLogQuery, v any) error {
+	selector := root.sqlQuery(ctx)
 	aggregation := make([]string, 0, len(cmls.fns))
 	for _, fn := range cmls.fns {
-		aggregation = append(aggregation, fn(cmls.sql))
+		aggregation = append(aggregation, fn(selector))
 	}
 	switch n := len(*cmls.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
-		cmls.sql.Select(aggregation...)
+		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
-		cmls.sql.AppendSelect(aggregation...)
+		selector.AppendSelect(aggregation...)
 	}
 	rows := &sql.Rows{}
-	query, args := cmls.sql.Query()
+	query, args := selector.Query()
 	if err := cmls.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

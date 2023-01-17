@@ -11,73 +11,47 @@ import (
 
 // ID filters vertices based on their ID field.
 func ID(id uuid.UUID) predicate.Call {
-	return predicate.Call(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.Call(sql.FieldEQ(FieldID, id))
 }
 
 // IDEQ applies the EQ predicate on the ID field.
 func IDEQ(id uuid.UUID) predicate.Call {
-	return predicate.Call(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.Call(sql.FieldEQ(FieldID, id))
 }
 
 // IDNEQ applies the NEQ predicate on the ID field.
 func IDNEQ(id uuid.UUID) predicate.Call {
-	return predicate.Call(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldID), id))
-	})
+	return predicate.Call(sql.FieldNEQ(FieldID, id))
 }
 
 // IDIn applies the In predicate on the ID field.
 func IDIn(ids ...uuid.UUID) predicate.Call {
-	return predicate.Call(func(s *sql.Selector) {
-		v := make([]any, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.In(s.C(FieldID), v...))
-	})
+	return predicate.Call(sql.FieldIn(FieldID, ids...))
 }
 
 // IDNotIn applies the NotIn predicate on the ID field.
 func IDNotIn(ids ...uuid.UUID) predicate.Call {
-	return predicate.Call(func(s *sql.Selector) {
-		v := make([]any, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.NotIn(s.C(FieldID), v...))
-	})
+	return predicate.Call(sql.FieldNotIn(FieldID, ids...))
 }
 
 // IDGT applies the GT predicate on the ID field.
 func IDGT(id uuid.UUID) predicate.Call {
-	return predicate.Call(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldID), id))
-	})
+	return predicate.Call(sql.FieldGT(FieldID, id))
 }
 
 // IDGTE applies the GTE predicate on the ID field.
 func IDGTE(id uuid.UUID) predicate.Call {
-	return predicate.Call(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldID), id))
-	})
+	return predicate.Call(sql.FieldGTE(FieldID, id))
 }
 
 // IDLT applies the LT predicate on the ID field.
 func IDLT(id uuid.UUID) predicate.Call {
-	return predicate.Call(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldID), id))
-	})
+	return predicate.Call(sql.FieldLT(FieldID, id))
 }
 
 // IDLTE applies the LTE predicate on the ID field.
 func IDLTE(id uuid.UUID) predicate.Call {
-	return predicate.Call(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldID), id))
-	})
+	return predicate.Call(sql.FieldLTE(FieldID, id))
 }
 
 // HasEvent applies the HasEdge predicate on the "event" edge.
@@ -85,7 +59,6 @@ func HasEvent() predicate.Call {
 	return predicate.Call(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(EventTable, FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, EventTable, EventColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -113,7 +86,6 @@ func HasDiscard() predicate.Call {
 	return predicate.Call(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(DiscardTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, true, DiscardTable, DiscardColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -141,7 +113,6 @@ func HasChii() predicate.Call {
 	return predicate.Call(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ChiiTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, true, ChiiTable, ChiiColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -169,7 +140,6 @@ func HasChakan() predicate.Call {
 	return predicate.Call(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ChakanTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, true, ChakanTable, ChakanColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -197,7 +167,6 @@ func HasConcealedkan() predicate.Call {
 	return predicate.Call(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(ConcealedkanTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, true, ConcealedkanTable, ConcealedkanColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -225,7 +194,6 @@ func HasMeldedkan() predicate.Call {
 	return predicate.Call(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(MeldedkanTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, true, MeldedkanTable, MeldedkanColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -253,7 +221,6 @@ func HasPon() predicate.Call {
 	return predicate.Call(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(PonTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, true, PonTable, PonColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)

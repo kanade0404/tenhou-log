@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"fmt"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -28,34 +27,7 @@ func (mkd *MeldedKanDelete) Where(ps ...predicate.MeldedKan) *MeldedKanDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (mkd *MeldedKanDelete) Exec(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(mkd.hooks) == 0 {
-		affected, err = mkd.sqlExec(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*MeldedKanMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			mkd.mutation = mutation
-			affected, err = mkd.sqlExec(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(mkd.hooks) - 1; i >= 0; i-- {
-			if mkd.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = mkd.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, mkd.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks[int, MeldedKanMutation](ctx, mkd.sqlExec, mkd.mutation, mkd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -88,6 +60,7 @@ func (mkd *MeldedKanDelete) sqlExec(ctx context.Context) (int, error) {
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
+	mkd.mutation.done = true
 	return affected, err
 }
 

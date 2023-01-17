@@ -79,40 +79,7 @@ func (mlu *MJLogUpdate) ClearGames() *MJLogUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (mlu *MJLogUpdate) Save(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(mlu.hooks) == 0 {
-		if err = mlu.check(); err != nil {
-			return 0, err
-		}
-		affected, err = mlu.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*MJLogMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = mlu.check(); err != nil {
-				return 0, err
-			}
-			mlu.mutation = mutation
-			affected, err = mlu.sqlSave(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(mlu.hooks) - 1; i >= 0; i-- {
-			if mlu.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = mlu.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, mlu.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks[int, MJLogMutation](ctx, mlu.sqlSave, mlu.mutation, mlu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -146,6 +113,9 @@ func (mlu *MJLogUpdate) check() error {
 }
 
 func (mlu *MJLogUpdate) sqlSave(ctx context.Context) (n int, err error) {
+	if err := mlu.check(); err != nil {
+		return n, err
+	}
 	_spec := &sqlgraph.UpdateSpec{
 		Node: &sqlgraph.NodeSpec{
 			Table:   mjlog.Table,
@@ -241,6 +211,7 @@ func (mlu *MJLogUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		return 0, err
 	}
+	mlu.mutation.done = true
 	return n, nil
 }
 
@@ -308,46 +279,7 @@ func (mluo *MJLogUpdateOne) Select(field string, fields ...string) *MJLogUpdateO
 
 // Save executes the query and returns the updated MJLog entity.
 func (mluo *MJLogUpdateOne) Save(ctx context.Context) (*MJLog, error) {
-	var (
-		err  error
-		node *MJLog
-	)
-	if len(mluo.hooks) == 0 {
-		if err = mluo.check(); err != nil {
-			return nil, err
-		}
-		node, err = mluo.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*MJLogMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = mluo.check(); err != nil {
-				return nil, err
-			}
-			mluo.mutation = mutation
-			node, err = mluo.sqlSave(ctx)
-			mutation.done = true
-			return node, err
-		})
-		for i := len(mluo.hooks) - 1; i >= 0; i-- {
-			if mluo.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = mluo.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, mluo.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*MJLog)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from MJLogMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks[*MJLog, MJLogMutation](ctx, mluo.sqlSave, mluo.mutation, mluo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -381,6 +313,9 @@ func (mluo *MJLogUpdateOne) check() error {
 }
 
 func (mluo *MJLogUpdateOne) sqlSave(ctx context.Context) (_node *MJLog, err error) {
+	if err := mluo.check(); err != nil {
+		return _node, err
+	}
 	_spec := &sqlgraph.UpdateSpec{
 		Node: &sqlgraph.NodeSpec{
 			Table:   mjlog.Table,
@@ -496,5 +431,6 @@ func (mluo *MJLogUpdateOne) sqlSave(ctx context.Context) (_node *MJLog, err erro
 		}
 		return nil, err
 	}
+	mluo.mutation.done = true
 	return _node, nil
 }

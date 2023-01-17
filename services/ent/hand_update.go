@@ -98,34 +98,7 @@ func (hu *HandUpdate) RemoveTurns(t ...*Turn) *HandUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (hu *HandUpdate) Save(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(hu.hooks) == 0 {
-		affected, err = hu.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*HandMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			hu.mutation = mutation
-			affected, err = hu.sqlSave(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(hu.hooks) - 1; i >= 0; i-- {
-			if hu.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = hu.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, hu.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks[int, HandMutation](ctx, hu.sqlSave, hu.mutation, hu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -265,6 +238,7 @@ func (hu *HandUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		return 0, err
 	}
+	hu.mutation.done = true
 	return n, nil
 }
 
@@ -351,40 +325,7 @@ func (huo *HandUpdateOne) Select(field string, fields ...string) *HandUpdateOne 
 
 // Save executes the query and returns the updated Hand entity.
 func (huo *HandUpdateOne) Save(ctx context.Context) (*Hand, error) {
-	var (
-		err  error
-		node *Hand
-	)
-	if len(huo.hooks) == 0 {
-		node, err = huo.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*HandMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			huo.mutation = mutation
-			node, err = huo.sqlSave(ctx)
-			mutation.done = true
-			return node, err
-		})
-		for i := len(huo.hooks) - 1; i >= 0; i-- {
-			if huo.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = huo.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, huo.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*Hand)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from HandMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks[*Hand, HandMutation](ctx, huo.sqlSave, huo.mutation, huo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -544,5 +485,6 @@ func (huo *HandUpdateOne) sqlSave(ctx context.Context) (_node *Hand, err error) 
 		}
 		return nil, err
 	}
+	huo.mutation.done = true
 	return _node, nil
 }

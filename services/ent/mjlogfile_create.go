@@ -82,50 +82,8 @@ func (mlfc *MJLogFileCreate) Mutation() *MJLogFileMutation {
 
 // Save creates the MJLogFile in the database.
 func (mlfc *MJLogFileCreate) Save(ctx context.Context) (*MJLogFile, error) {
-	var (
-		err  error
-		node *MJLogFile
-	)
 	mlfc.defaults()
-	if len(mlfc.hooks) == 0 {
-		if err = mlfc.check(); err != nil {
-			return nil, err
-		}
-		node, err = mlfc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*MJLogFileMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = mlfc.check(); err != nil {
-				return nil, err
-			}
-			mlfc.mutation = mutation
-			if node, err = mlfc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(mlfc.hooks) - 1; i >= 0; i-- {
-			if mlfc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = mlfc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, mlfc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*MJLogFile)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from MJLogFileMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks[*MJLogFile, MJLogFileMutation](ctx, mlfc.sqlSave, mlfc.mutation, mlfc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -170,6 +128,9 @@ func (mlfc *MJLogFileCreate) check() error {
 }
 
 func (mlfc *MJLogFileCreate) sqlSave(ctx context.Context) (*MJLogFile, error) {
+	if err := mlfc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := mlfc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, mlfc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -184,6 +145,8 @@ func (mlfc *MJLogFileCreate) sqlSave(ctx context.Context) (*MJLogFile, error) {
 			return nil, err
 		}
 	}
+	mlfc.mutation.id = &_node.ID
+	mlfc.mutation.done = true
 	return _node, nil
 }
 

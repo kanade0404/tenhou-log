@@ -130,40 +130,7 @@ func (gpu *GamePlayerUpdate) ClearDans() *GamePlayerUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (gpu *GamePlayerUpdate) Save(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(gpu.hooks) == 0 {
-		if err = gpu.check(); err != nil {
-			return 0, err
-		}
-		affected, err = gpu.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*GamePlayerMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = gpu.check(); err != nil {
-				return 0, err
-			}
-			gpu.mutation = mutation
-			affected, err = gpu.sqlSave(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(gpu.hooks) - 1; i >= 0; i-- {
-			if gpu.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = gpu.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, gpu.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks[int, GamePlayerMutation](ctx, gpu.sqlSave, gpu.mutation, gpu.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -199,6 +166,9 @@ func (gpu *GamePlayerUpdate) check() error {
 }
 
 func (gpu *GamePlayerUpdate) sqlSave(ctx context.Context) (n int, err error) {
+	if err := gpu.check(); err != nil {
+		return n, err
+	}
 	_spec := &sqlgraph.UpdateSpec{
 		Node: &sqlgraph.NodeSpec{
 			Table:   gameplayer.Table,
@@ -351,6 +321,7 @@ func (gpu *GamePlayerUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		return 0, err
 	}
+	gpu.mutation.done = true
 	return n, nil
 }
 
@@ -468,46 +439,7 @@ func (gpuo *GamePlayerUpdateOne) Select(field string, fields ...string) *GamePla
 
 // Save executes the query and returns the updated GamePlayer entity.
 func (gpuo *GamePlayerUpdateOne) Save(ctx context.Context) (*GamePlayer, error) {
-	var (
-		err  error
-		node *GamePlayer
-	)
-	if len(gpuo.hooks) == 0 {
-		if err = gpuo.check(); err != nil {
-			return nil, err
-		}
-		node, err = gpuo.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*GamePlayerMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = gpuo.check(); err != nil {
-				return nil, err
-			}
-			gpuo.mutation = mutation
-			node, err = gpuo.sqlSave(ctx)
-			mutation.done = true
-			return node, err
-		})
-		for i := len(gpuo.hooks) - 1; i >= 0; i-- {
-			if gpuo.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = gpuo.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, gpuo.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*GamePlayer)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from GamePlayerMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks[*GamePlayer, GamePlayerMutation](ctx, gpuo.sqlSave, gpuo.mutation, gpuo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -543,6 +475,9 @@ func (gpuo *GamePlayerUpdateOne) check() error {
 }
 
 func (gpuo *GamePlayerUpdateOne) sqlSave(ctx context.Context) (_node *GamePlayer, err error) {
+	if err := gpuo.check(); err != nil {
+		return _node, err
+	}
 	_spec := &sqlgraph.UpdateSpec{
 		Node: &sqlgraph.NodeSpec{
 			Table:   gameplayer.Table,
@@ -715,5 +650,6 @@ func (gpuo *GamePlayerUpdateOne) sqlSave(ctx context.Context) (_node *GamePlayer
 		}
 		return nil, err
 	}
+	gpuo.mutation.done = true
 	return _node, nil
 }

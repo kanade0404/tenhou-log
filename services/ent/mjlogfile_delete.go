@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"fmt"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -28,34 +27,7 @@ func (mlfd *MJLogFileDelete) Where(ps ...predicate.MJLogFile) *MJLogFileDelete {
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (mlfd *MJLogFileDelete) Exec(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(mlfd.hooks) == 0 {
-		affected, err = mlfd.sqlExec(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*MJLogFileMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			mlfd.mutation = mutation
-			affected, err = mlfd.sqlExec(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(mlfd.hooks) - 1; i >= 0; i-- {
-			if mlfd.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = mlfd.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, mlfd.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks[int, MJLogFileMutation](ctx, mlfd.sqlExec, mlfd.mutation, mlfd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -88,6 +60,7 @@ func (mlfd *MJLogFileDelete) sqlExec(ctx context.Context) (int, error) {
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
+	mlfd.mutation.done = true
 	return affected, err
 }
 

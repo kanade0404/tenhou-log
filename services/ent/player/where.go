@@ -11,285 +11,187 @@ import (
 
 // ID filters vertices based on their ID field.
 func ID(id uuid.UUID) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.Player(sql.FieldEQ(FieldID, id))
 }
 
 // IDEQ applies the EQ predicate on the ID field.
 func IDEQ(id uuid.UUID) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.Player(sql.FieldEQ(FieldID, id))
 }
 
 // IDNEQ applies the NEQ predicate on the ID field.
 func IDNEQ(id uuid.UUID) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldID), id))
-	})
+	return predicate.Player(sql.FieldNEQ(FieldID, id))
 }
 
 // IDIn applies the In predicate on the ID field.
 func IDIn(ids ...uuid.UUID) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		v := make([]any, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.In(s.C(FieldID), v...))
-	})
+	return predicate.Player(sql.FieldIn(FieldID, ids...))
 }
 
 // IDNotIn applies the NotIn predicate on the ID field.
 func IDNotIn(ids ...uuid.UUID) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		v := make([]any, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.NotIn(s.C(FieldID), v...))
-	})
+	return predicate.Player(sql.FieldNotIn(FieldID, ids...))
 }
 
 // IDGT applies the GT predicate on the ID field.
 func IDGT(id uuid.UUID) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldID), id))
-	})
+	return predicate.Player(sql.FieldGT(FieldID, id))
 }
 
 // IDGTE applies the GTE predicate on the ID field.
 func IDGTE(id uuid.UUID) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldID), id))
-	})
+	return predicate.Player(sql.FieldGTE(FieldID, id))
 }
 
 // IDLT applies the LT predicate on the ID field.
 func IDLT(id uuid.UUID) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldID), id))
-	})
+	return predicate.Player(sql.FieldLT(FieldID, id))
 }
 
 // IDLTE applies the LTE predicate on the ID field.
 func IDLTE(id uuid.UUID) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldID), id))
-	})
+	return predicate.Player(sql.FieldLTE(FieldID, id))
 }
 
 // Name applies equality check predicate on the "name" field. It's identical to NameEQ.
 func Name(v string) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldName), v))
-	})
+	return predicate.Player(sql.FieldEQ(FieldName, v))
 }
 
 // Sex applies equality check predicate on the "sex" field. It's identical to SexEQ.
 func Sex(v string) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldSex), v))
-	})
+	return predicate.Player(sql.FieldEQ(FieldSex, v))
 }
 
 // NameEQ applies the EQ predicate on the "name" field.
 func NameEQ(v string) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldName), v))
-	})
+	return predicate.Player(sql.FieldEQ(FieldName, v))
 }
 
 // NameNEQ applies the NEQ predicate on the "name" field.
 func NameNEQ(v string) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldName), v))
-	})
+	return predicate.Player(sql.FieldNEQ(FieldName, v))
 }
 
 // NameIn applies the In predicate on the "name" field.
 func NameIn(vs ...string) predicate.Player {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldName), v...))
-	})
+	return predicate.Player(sql.FieldIn(FieldName, vs...))
 }
 
 // NameNotIn applies the NotIn predicate on the "name" field.
 func NameNotIn(vs ...string) predicate.Player {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldName), v...))
-	})
+	return predicate.Player(sql.FieldNotIn(FieldName, vs...))
 }
 
 // NameGT applies the GT predicate on the "name" field.
 func NameGT(v string) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldName), v))
-	})
+	return predicate.Player(sql.FieldGT(FieldName, v))
 }
 
 // NameGTE applies the GTE predicate on the "name" field.
 func NameGTE(v string) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldName), v))
-	})
+	return predicate.Player(sql.FieldGTE(FieldName, v))
 }
 
 // NameLT applies the LT predicate on the "name" field.
 func NameLT(v string) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldName), v))
-	})
+	return predicate.Player(sql.FieldLT(FieldName, v))
 }
 
 // NameLTE applies the LTE predicate on the "name" field.
 func NameLTE(v string) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldName), v))
-	})
+	return predicate.Player(sql.FieldLTE(FieldName, v))
 }
 
 // NameContains applies the Contains predicate on the "name" field.
 func NameContains(v string) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldName), v))
-	})
+	return predicate.Player(sql.FieldContains(FieldName, v))
 }
 
 // NameHasPrefix applies the HasPrefix predicate on the "name" field.
 func NameHasPrefix(v string) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldName), v))
-	})
+	return predicate.Player(sql.FieldHasPrefix(FieldName, v))
 }
 
 // NameHasSuffix applies the HasSuffix predicate on the "name" field.
 func NameHasSuffix(v string) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldName), v))
-	})
+	return predicate.Player(sql.FieldHasSuffix(FieldName, v))
 }
 
 // NameEqualFold applies the EqualFold predicate on the "name" field.
 func NameEqualFold(v string) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldName), v))
-	})
+	return predicate.Player(sql.FieldEqualFold(FieldName, v))
 }
 
 // NameContainsFold applies the ContainsFold predicate on the "name" field.
 func NameContainsFold(v string) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldName), v))
-	})
+	return predicate.Player(sql.FieldContainsFold(FieldName, v))
 }
 
 // SexEQ applies the EQ predicate on the "sex" field.
 func SexEQ(v string) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldSex), v))
-	})
+	return predicate.Player(sql.FieldEQ(FieldSex, v))
 }
 
 // SexNEQ applies the NEQ predicate on the "sex" field.
 func SexNEQ(v string) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldSex), v))
-	})
+	return predicate.Player(sql.FieldNEQ(FieldSex, v))
 }
 
 // SexIn applies the In predicate on the "sex" field.
 func SexIn(vs ...string) predicate.Player {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldSex), v...))
-	})
+	return predicate.Player(sql.FieldIn(FieldSex, vs...))
 }
 
 // SexNotIn applies the NotIn predicate on the "sex" field.
 func SexNotIn(vs ...string) predicate.Player {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldSex), v...))
-	})
+	return predicate.Player(sql.FieldNotIn(FieldSex, vs...))
 }
 
 // SexGT applies the GT predicate on the "sex" field.
 func SexGT(v string) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldSex), v))
-	})
+	return predicate.Player(sql.FieldGT(FieldSex, v))
 }
 
 // SexGTE applies the GTE predicate on the "sex" field.
 func SexGTE(v string) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldSex), v))
-	})
+	return predicate.Player(sql.FieldGTE(FieldSex, v))
 }
 
 // SexLT applies the LT predicate on the "sex" field.
 func SexLT(v string) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldSex), v))
-	})
+	return predicate.Player(sql.FieldLT(FieldSex, v))
 }
 
 // SexLTE applies the LTE predicate on the "sex" field.
 func SexLTE(v string) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldSex), v))
-	})
+	return predicate.Player(sql.FieldLTE(FieldSex, v))
 }
 
 // SexContains applies the Contains predicate on the "sex" field.
 func SexContains(v string) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.Contains(s.C(FieldSex), v))
-	})
+	return predicate.Player(sql.FieldContains(FieldSex, v))
 }
 
 // SexHasPrefix applies the HasPrefix predicate on the "sex" field.
 func SexHasPrefix(v string) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.HasPrefix(s.C(FieldSex), v))
-	})
+	return predicate.Player(sql.FieldHasPrefix(FieldSex, v))
 }
 
 // SexHasSuffix applies the HasSuffix predicate on the "sex" field.
 func SexHasSuffix(v string) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.HasSuffix(s.C(FieldSex), v))
-	})
+	return predicate.Player(sql.FieldHasSuffix(FieldSex, v))
 }
 
 // SexEqualFold applies the EqualFold predicate on the "sex" field.
 func SexEqualFold(v string) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.EqualFold(s.C(FieldSex), v))
-	})
+	return predicate.Player(sql.FieldEqualFold(FieldSex, v))
 }
 
 // SexContainsFold applies the ContainsFold predicate on the "sex" field.
 func SexContainsFold(v string) predicate.Player {
-	return predicate.Player(func(s *sql.Selector) {
-		s.Where(sql.ContainsFold(s.C(FieldSex), v))
-	})
+	return predicate.Player(sql.FieldContainsFold(FieldSex, v))
 }
 
 // HasGamePlayers applies the HasEdge predicate on the "game_players" edge.
@@ -297,7 +199,6 @@ func HasGamePlayers() predicate.Player {
 	return predicate.Player(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(GamePlayersTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, GamePlayersTable, GamePlayersColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)

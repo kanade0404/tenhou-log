@@ -66,50 +66,8 @@ func (gppc *GamePlayerPointCreate) Mutation() *GamePlayerPointMutation {
 
 // Save creates the GamePlayerPoint in the database.
 func (gppc *GamePlayerPointCreate) Save(ctx context.Context) (*GamePlayerPoint, error) {
-	var (
-		err  error
-		node *GamePlayerPoint
-	)
 	gppc.defaults()
-	if len(gppc.hooks) == 0 {
-		if err = gppc.check(); err != nil {
-			return nil, err
-		}
-		node, err = gppc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*GamePlayerPointMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = gppc.check(); err != nil {
-				return nil, err
-			}
-			gppc.mutation = mutation
-			if node, err = gppc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(gppc.hooks) - 1; i >= 0; i-- {
-			if gppc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = gppc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, gppc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*GamePlayerPoint)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from GamePlayerPointMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks[*GamePlayerPoint, GamePlayerPointMutation](ctx, gppc.sqlSave, gppc.mutation, gppc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -156,6 +114,9 @@ func (gppc *GamePlayerPointCreate) check() error {
 }
 
 func (gppc *GamePlayerPointCreate) sqlSave(ctx context.Context) (*GamePlayerPoint, error) {
+	if err := gppc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := gppc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, gppc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -170,6 +131,8 @@ func (gppc *GamePlayerPointCreate) sqlSave(ctx context.Context) (*GamePlayerPoin
 			return nil, err
 		}
 	}
+	gppc.mutation.id = &_node.ID
+	gppc.mutation.done = true
 	return _node, nil
 }
 

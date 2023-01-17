@@ -20,35 +20,65 @@ type config struct {
 	log func(...any)
 	// hooks to execute on mutations.
 	hooks *hooks
+	// interceptors to execute on queries.
+	inters *inters
 }
 
-// hooks per client, for fast access.
-type hooks struct {
-	Call              []ent.Hook
-	Chakan            []ent.Hook
-	Chii              []ent.Hook
-	CompressedMJLog   []ent.Hook
-	ConcealedKan      []ent.Hook
-	Dan               []ent.Hook
-	Discard           []ent.Hook
-	Drawn             []ent.Hook
-	Event             []ent.Hook
-	Game              []ent.Hook
-	GamePlayer        []ent.Hook
-	GamePlayerHandHai []ent.Hook
-	GamePlayerPoint   []ent.Hook
-	Hand              []ent.Hook
-	MJLog             []ent.Hook
-	MJLogFile         []ent.Hook
-	MeldedKan         []ent.Hook
-	Player            []ent.Hook
-	Pon               []ent.Hook
-	Reach             []ent.Hook
-	Room              []ent.Hook
-	Round             []ent.Hook
-	Turn              []ent.Hook
-	Win               []ent.Hook
-}
+// hooks and interceptors per client, for fast access.
+type (
+	hooks struct {
+		Call              []ent.Hook
+		Chakan            []ent.Hook
+		Chii              []ent.Hook
+		CompressedMJLog   []ent.Hook
+		ConcealedKan      []ent.Hook
+		Dan               []ent.Hook
+		Discard           []ent.Hook
+		Drawn             []ent.Hook
+		Event             []ent.Hook
+		Game              []ent.Hook
+		GamePlayer        []ent.Hook
+		GamePlayerHandHai []ent.Hook
+		GamePlayerPoint   []ent.Hook
+		Hand              []ent.Hook
+		MJLog             []ent.Hook
+		MJLogFile         []ent.Hook
+		MeldedKan         []ent.Hook
+		Player            []ent.Hook
+		Pon               []ent.Hook
+		Reach             []ent.Hook
+		Room              []ent.Hook
+		Round             []ent.Hook
+		Turn              []ent.Hook
+		Win               []ent.Hook
+	}
+	inters struct {
+		Call              []ent.Interceptor
+		Chakan            []ent.Interceptor
+		Chii              []ent.Interceptor
+		CompressedMJLog   []ent.Interceptor
+		ConcealedKan      []ent.Interceptor
+		Dan               []ent.Interceptor
+		Discard           []ent.Interceptor
+		Drawn             []ent.Interceptor
+		Event             []ent.Interceptor
+		Game              []ent.Interceptor
+		GamePlayer        []ent.Interceptor
+		GamePlayerHandHai []ent.Interceptor
+		GamePlayerPoint   []ent.Interceptor
+		Hand              []ent.Interceptor
+		MJLog             []ent.Interceptor
+		MJLogFile         []ent.Interceptor
+		MeldedKan         []ent.Interceptor
+		Player            []ent.Interceptor
+		Pon               []ent.Interceptor
+		Reach             []ent.Interceptor
+		Room              []ent.Interceptor
+		Round             []ent.Interceptor
+		Turn              []ent.Interceptor
+		Win               []ent.Interceptor
+	}
+)
 
 // Options applies the options on the config object.
 func (c *config) options(opts ...Option) {

@@ -27,6 +27,7 @@ type GamePlayerQuery struct {
 	unique      *bool
 	order       []OrderFunc
 	fields      []string
+	inters      []Interceptor
 	predicates  []predicate.GamePlayer
 	withGames   *GameQuery
 	withPlayers *PlayerQuery
@@ -43,13 +44,13 @@ func (gpq *GamePlayerQuery) Where(ps ...predicate.GamePlayer) *GamePlayerQuery {
 	return gpq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (gpq *GamePlayerQuery) Limit(limit int) *GamePlayerQuery {
 	gpq.limit = &limit
 	return gpq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (gpq *GamePlayerQuery) Offset(offset int) *GamePlayerQuery {
 	gpq.offset = &offset
 	return gpq
@@ -62,7 +63,7 @@ func (gpq *GamePlayerQuery) Unique(unique bool) *GamePlayerQuery {
 	return gpq
 }
 
-// Order adds an order step to the query.
+// Order specifies how the records should be ordered.
 func (gpq *GamePlayerQuery) Order(o ...OrderFunc) *GamePlayerQuery {
 	gpq.order = append(gpq.order, o...)
 	return gpq
@@ -70,7 +71,7 @@ func (gpq *GamePlayerQuery) Order(o ...OrderFunc) *GamePlayerQuery {
 
 // QueryGames chains the current query on the "games" edge.
 func (gpq *GamePlayerQuery) QueryGames() *GameQuery {
-	query := &GameQuery{config: gpq.config}
+	query := (&GameClient{config: gpq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := gpq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -92,7 +93,7 @@ func (gpq *GamePlayerQuery) QueryGames() *GameQuery {
 
 // QueryPlayers chains the current query on the "players" edge.
 func (gpq *GamePlayerQuery) QueryPlayers() *PlayerQuery {
-	query := &PlayerQuery{config: gpq.config}
+	query := (&PlayerClient{config: gpq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := gpq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -114,7 +115,7 @@ func (gpq *GamePlayerQuery) QueryPlayers() *PlayerQuery {
 
 // QueryDans chains the current query on the "dans" edge.
 func (gpq *GamePlayerQuery) QueryDans() *DanQuery {
-	query := &DanQuery{config: gpq.config}
+	query := (&DanClient{config: gpq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := gpq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -137,7 +138,7 @@ func (gpq *GamePlayerQuery) QueryDans() *DanQuery {
 // First returns the first GamePlayer entity from the query.
 // Returns a *NotFoundError when no GamePlayer was found.
 func (gpq *GamePlayerQuery) First(ctx context.Context) (*GamePlayer, error) {
-	nodes, err := gpq.Limit(1).All(ctx)
+	nodes, err := gpq.Limit(1).All(newQueryContext(ctx, TypeGamePlayer, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +161,7 @@ func (gpq *GamePlayerQuery) FirstX(ctx context.Context) *GamePlayer {
 // Returns a *NotFoundError when no GamePlayer ID was found.
 func (gpq *GamePlayerQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = gpq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = gpq.Limit(1).IDs(newQueryContext(ctx, TypeGamePlayer, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -183,7 +184,7 @@ func (gpq *GamePlayerQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one GamePlayer entity is found.
 // Returns a *NotFoundError when no GamePlayer entities are found.
 func (gpq *GamePlayerQuery) Only(ctx context.Context) (*GamePlayer, error) {
-	nodes, err := gpq.Limit(2).All(ctx)
+	nodes, err := gpq.Limit(2).All(newQueryContext(ctx, TypeGamePlayer, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +212,7 @@ func (gpq *GamePlayerQuery) OnlyX(ctx context.Context) *GamePlayer {
 // Returns a *NotFoundError when no entities are found.
 func (gpq *GamePlayerQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = gpq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = gpq.Limit(2).IDs(newQueryContext(ctx, TypeGamePlayer, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -236,10 +237,12 @@ func (gpq *GamePlayerQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of GamePlayers.
 func (gpq *GamePlayerQuery) All(ctx context.Context) ([]*GamePlayer, error) {
+	ctx = newQueryContext(ctx, TypeGamePlayer, "All")
 	if err := gpq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return gpq.sqlAll(ctx)
+	qr := querierAll[[]*GamePlayer, *GamePlayerQuery]()
+	return withInterceptors[[]*GamePlayer](ctx, gpq, qr, gpq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -254,6 +257,7 @@ func (gpq *GamePlayerQuery) AllX(ctx context.Context) []*GamePlayer {
 // IDs executes the query and returns a list of GamePlayer IDs.
 func (gpq *GamePlayerQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	var ids []uuid.UUID
+	ctx = newQueryContext(ctx, TypeGamePlayer, "IDs")
 	if err := gpq.Select(gameplayer.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
@@ -271,10 +275,11 @@ func (gpq *GamePlayerQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (gpq *GamePlayerQuery) Count(ctx context.Context) (int, error) {
+	ctx = newQueryContext(ctx, TypeGamePlayer, "Count")
 	if err := gpq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return gpq.sqlCount(ctx)
+	return withInterceptors[int](ctx, gpq, querierCount[*GamePlayerQuery](), gpq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -288,10 +293,15 @@ func (gpq *GamePlayerQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (gpq *GamePlayerQuery) Exist(ctx context.Context) (bool, error) {
-	if err := gpq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = newQueryContext(ctx, TypeGamePlayer, "Exist")
+	switch _, err := gpq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return gpq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -314,6 +324,7 @@ func (gpq *GamePlayerQuery) Clone() *GamePlayerQuery {
 		limit:       gpq.limit,
 		offset:      gpq.offset,
 		order:       append([]OrderFunc{}, gpq.order...),
+		inters:      append([]Interceptor{}, gpq.inters...),
 		predicates:  append([]predicate.GamePlayer{}, gpq.predicates...),
 		withGames:   gpq.withGames.Clone(),
 		withPlayers: gpq.withPlayers.Clone(),
@@ -328,7 +339,7 @@ func (gpq *GamePlayerQuery) Clone() *GamePlayerQuery {
 // WithGames tells the query-builder to eager-load the nodes that are connected to
 // the "games" edge. The optional arguments are used to configure the query builder of the edge.
 func (gpq *GamePlayerQuery) WithGames(opts ...func(*GameQuery)) *GamePlayerQuery {
-	query := &GameQuery{config: gpq.config}
+	query := (&GameClient{config: gpq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -339,7 +350,7 @@ func (gpq *GamePlayerQuery) WithGames(opts ...func(*GameQuery)) *GamePlayerQuery
 // WithPlayers tells the query-builder to eager-load the nodes that are connected to
 // the "players" edge. The optional arguments are used to configure the query builder of the edge.
 func (gpq *GamePlayerQuery) WithPlayers(opts ...func(*PlayerQuery)) *GamePlayerQuery {
-	query := &PlayerQuery{config: gpq.config}
+	query := (&PlayerClient{config: gpq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -350,7 +361,7 @@ func (gpq *GamePlayerQuery) WithPlayers(opts ...func(*PlayerQuery)) *GamePlayerQ
 // WithDans tells the query-builder to eager-load the nodes that are connected to
 // the "dans" edge. The optional arguments are used to configure the query builder of the edge.
 func (gpq *GamePlayerQuery) WithDans(opts ...func(*DanQuery)) *GamePlayerQuery {
-	query := &DanQuery{config: gpq.config}
+	query := (&DanClient{config: gpq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -373,16 +384,11 @@ func (gpq *GamePlayerQuery) WithDans(opts ...func(*DanQuery)) *GamePlayerQuery {
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (gpq *GamePlayerQuery) GroupBy(field string, fields ...string) *GamePlayerGroupBy {
-	grbuild := &GamePlayerGroupBy{config: gpq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := gpq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return gpq.sqlQuery(ctx), nil
-	}
+	gpq.fields = append([]string{field}, fields...)
+	grbuild := &GamePlayerGroupBy{build: gpq}
+	grbuild.flds = &gpq.fields
 	grbuild.label = gameplayer.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -400,10 +406,10 @@ func (gpq *GamePlayerQuery) GroupBy(field string, fields ...string) *GamePlayerG
 //		Scan(ctx, &v)
 func (gpq *GamePlayerQuery) Select(fields ...string) *GamePlayerSelect {
 	gpq.fields = append(gpq.fields, fields...)
-	selbuild := &GamePlayerSelect{GamePlayerQuery: gpq}
-	selbuild.label = gameplayer.Label
-	selbuild.flds, selbuild.scan = &gpq.fields, selbuild.Scan
-	return selbuild
+	sbuild := &GamePlayerSelect{GamePlayerQuery: gpq}
+	sbuild.label = gameplayer.Label
+	sbuild.flds, sbuild.scan = &gpq.fields, sbuild.Scan
+	return sbuild
 }
 
 // Aggregate returns a GamePlayerSelect configured with the given aggregations.
@@ -412,6 +418,16 @@ func (gpq *GamePlayerQuery) Aggregate(fns ...AggregateFunc) *GamePlayerSelect {
 }
 
 func (gpq *GamePlayerQuery) prepareQuery(ctx context.Context) error {
+	for _, inter := range gpq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, gpq); err != nil {
+				return err
+			}
+		}
+	}
 	for _, f := range gpq.fields {
 		if !gameplayer.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
@@ -610,17 +626,6 @@ func (gpq *GamePlayerQuery) sqlCount(ctx context.Context) (int, error) {
 	return sqlgraph.CountNodes(ctx, gpq.driver, _spec)
 }
 
-func (gpq *GamePlayerQuery) sqlExist(ctx context.Context) (bool, error) {
-	switch _, err := gpq.FirstID(ctx); {
-	case IsNotFound(err):
-		return false, nil
-	case err != nil:
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	default:
-		return true, nil
-	}
-}
-
 func (gpq *GamePlayerQuery) querySpec() *sqlgraph.QuerySpec {
 	_spec := &sqlgraph.QuerySpec{
 		Node: &sqlgraph.NodeSpec{
@@ -703,13 +708,8 @@ func (gpq *GamePlayerQuery) sqlQuery(ctx context.Context) *sql.Selector {
 
 // GamePlayerGroupBy is the group-by builder for GamePlayer entities.
 type GamePlayerGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *GamePlayerQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -718,58 +718,46 @@ func (gpgb *GamePlayerGroupBy) Aggregate(fns ...AggregateFunc) *GamePlayerGroupB
 	return gpgb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
+// Scan applies the selector query and scans the result into the given value.
 func (gpgb *GamePlayerGroupBy) Scan(ctx context.Context, v any) error {
-	query, err := gpgb.path(ctx)
-	if err != nil {
+	ctx = newQueryContext(ctx, TypeGamePlayer, "GroupBy")
+	if err := gpgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	gpgb.sql = query
-	return gpgb.sqlScan(ctx, v)
+	return scanWithInterceptors[*GamePlayerQuery, *GamePlayerGroupBy](ctx, gpgb.build, gpgb, gpgb.build.inters, v)
 }
 
-func (gpgb *GamePlayerGroupBy) sqlScan(ctx context.Context, v any) error {
-	for _, f := range gpgb.fields {
-		if !gameplayer.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (gpgb *GamePlayerGroupBy) sqlScan(ctx context.Context, root *GamePlayerQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(gpgb.fns))
+	for _, fn := range gpgb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := gpgb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*gpgb.flds)+len(gpgb.fns))
+		for _, f := range *gpgb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*gpgb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := gpgb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := gpgb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (gpgb *GamePlayerGroupBy) sqlQuery() *sql.Selector {
-	selector := gpgb.sql.Select()
-	aggregation := make([]string, 0, len(gpgb.fns))
-	for _, fn := range gpgb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(gpgb.fields)+len(gpgb.fns))
-		for _, f := range gpgb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(gpgb.fields...)...)
-}
-
 // GamePlayerSelect is the builder for selecting fields of GamePlayer entities.
 type GamePlayerSelect struct {
 	*GamePlayerQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
@@ -780,26 +768,27 @@ func (gps *GamePlayerSelect) Aggregate(fns ...AggregateFunc) *GamePlayerSelect {
 
 // Scan applies the selector query and scans the result into the given value.
 func (gps *GamePlayerSelect) Scan(ctx context.Context, v any) error {
+	ctx = newQueryContext(ctx, TypeGamePlayer, "Select")
 	if err := gps.prepareQuery(ctx); err != nil {
 		return err
 	}
-	gps.sql = gps.GamePlayerQuery.sqlQuery(ctx)
-	return gps.sqlScan(ctx, v)
+	return scanWithInterceptors[*GamePlayerQuery, *GamePlayerSelect](ctx, gps.GamePlayerQuery, gps, gps.inters, v)
 }
 
-func (gps *GamePlayerSelect) sqlScan(ctx context.Context, v any) error {
+func (gps *GamePlayerSelect) sqlScan(ctx context.Context, root *GamePlayerQuery, v any) error {
+	selector := root.sqlQuery(ctx)
 	aggregation := make([]string, 0, len(gps.fns))
 	for _, fn := range gps.fns {
-		aggregation = append(aggregation, fn(gps.sql))
+		aggregation = append(aggregation, fn(selector))
 	}
 	switch n := len(*gps.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
-		gps.sql.Select(aggregation...)
+		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
-		gps.sql.AppendSelect(aggregation...)
+		selector.AppendSelect(aggregation...)
 	}
 	rows := &sql.Rows{}
-	query, args := gps.sql.Query()
+	query, args := selector.Query()
 	if err := gps.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

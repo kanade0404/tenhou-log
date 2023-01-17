@@ -11,144 +11,92 @@ import (
 
 // ID filters vertices based on their ID field.
 func ID(id uuid.UUID) predicate.Turn {
-	return predicate.Turn(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.Turn(sql.FieldEQ(FieldID, id))
 }
 
 // IDEQ applies the EQ predicate on the ID field.
 func IDEQ(id uuid.UUID) predicate.Turn {
-	return predicate.Turn(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldID), id))
-	})
+	return predicate.Turn(sql.FieldEQ(FieldID, id))
 }
 
 // IDNEQ applies the NEQ predicate on the ID field.
 func IDNEQ(id uuid.UUID) predicate.Turn {
-	return predicate.Turn(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldID), id))
-	})
+	return predicate.Turn(sql.FieldNEQ(FieldID, id))
 }
 
 // IDIn applies the In predicate on the ID field.
 func IDIn(ids ...uuid.UUID) predicate.Turn {
-	return predicate.Turn(func(s *sql.Selector) {
-		v := make([]any, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.In(s.C(FieldID), v...))
-	})
+	return predicate.Turn(sql.FieldIn(FieldID, ids...))
 }
 
 // IDNotIn applies the NotIn predicate on the ID field.
 func IDNotIn(ids ...uuid.UUID) predicate.Turn {
-	return predicate.Turn(func(s *sql.Selector) {
-		v := make([]any, len(ids))
-		for i := range v {
-			v[i] = ids[i]
-		}
-		s.Where(sql.NotIn(s.C(FieldID), v...))
-	})
+	return predicate.Turn(sql.FieldNotIn(FieldID, ids...))
 }
 
 // IDGT applies the GT predicate on the ID field.
 func IDGT(id uuid.UUID) predicate.Turn {
-	return predicate.Turn(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldID), id))
-	})
+	return predicate.Turn(sql.FieldGT(FieldID, id))
 }
 
 // IDGTE applies the GTE predicate on the ID field.
 func IDGTE(id uuid.UUID) predicate.Turn {
-	return predicate.Turn(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldID), id))
-	})
+	return predicate.Turn(sql.FieldGTE(FieldID, id))
 }
 
 // IDLT applies the LT predicate on the ID field.
 func IDLT(id uuid.UUID) predicate.Turn {
-	return predicate.Turn(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldID), id))
-	})
+	return predicate.Turn(sql.FieldLT(FieldID, id))
 }
 
 // IDLTE applies the LTE predicate on the ID field.
 func IDLTE(id uuid.UUID) predicate.Turn {
-	return predicate.Turn(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldID), id))
-	})
+	return predicate.Turn(sql.FieldLTE(FieldID, id))
 }
 
 // Num applies equality check predicate on the "num" field. It's identical to NumEQ.
 func Num(v uint) predicate.Turn {
-	return predicate.Turn(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldNum), v))
-	})
+	return predicate.Turn(sql.FieldEQ(FieldNum, v))
 }
 
 // NumEQ applies the EQ predicate on the "num" field.
 func NumEQ(v uint) predicate.Turn {
-	return predicate.Turn(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldNum), v))
-	})
+	return predicate.Turn(sql.FieldEQ(FieldNum, v))
 }
 
 // NumNEQ applies the NEQ predicate on the "num" field.
 func NumNEQ(v uint) predicate.Turn {
-	return predicate.Turn(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldNum), v))
-	})
+	return predicate.Turn(sql.FieldNEQ(FieldNum, v))
 }
 
 // NumIn applies the In predicate on the "num" field.
 func NumIn(vs ...uint) predicate.Turn {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Turn(func(s *sql.Selector) {
-		s.Where(sql.In(s.C(FieldNum), v...))
-	})
+	return predicate.Turn(sql.FieldIn(FieldNum, vs...))
 }
 
 // NumNotIn applies the NotIn predicate on the "num" field.
 func NumNotIn(vs ...uint) predicate.Turn {
-	v := make([]any, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Turn(func(s *sql.Selector) {
-		s.Where(sql.NotIn(s.C(FieldNum), v...))
-	})
+	return predicate.Turn(sql.FieldNotIn(FieldNum, vs...))
 }
 
 // NumGT applies the GT predicate on the "num" field.
 func NumGT(v uint) predicate.Turn {
-	return predicate.Turn(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldNum), v))
-	})
+	return predicate.Turn(sql.FieldGT(FieldNum, v))
 }
 
 // NumGTE applies the GTE predicate on the "num" field.
 func NumGTE(v uint) predicate.Turn {
-	return predicate.Turn(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldNum), v))
-	})
+	return predicate.Turn(sql.FieldGTE(FieldNum, v))
 }
 
 // NumLT applies the LT predicate on the "num" field.
 func NumLT(v uint) predicate.Turn {
-	return predicate.Turn(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldNum), v))
-	})
+	return predicate.Turn(sql.FieldLT(FieldNum, v))
 }
 
 // NumLTE applies the LTE predicate on the "num" field.
 func NumLTE(v uint) predicate.Turn {
-	return predicate.Turn(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldNum), v))
-	})
+	return predicate.Turn(sql.FieldLTE(FieldNum, v))
 }
 
 // HasHands applies the HasEdge predicate on the "hands" edge.
@@ -156,7 +104,6 @@ func HasHands() predicate.Turn {
 	return predicate.Turn(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(HandsTable, FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, true, HandsTable, HandsPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -184,7 +131,6 @@ func HasGamePlayerPoints() predicate.Turn {
 	return predicate.Turn(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(GamePlayerPointsTable, FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, false, GamePlayerPointsTable, GamePlayerPointsPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -212,7 +158,6 @@ func HasEvent() predicate.Turn {
 	return predicate.Turn(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(EventTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, false, EventTable, EventColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
@@ -240,7 +185,6 @@ func HasGameplayerhandhai() predicate.Turn {
 	return predicate.Turn(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.To(GameplayerhandhaiTable, FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, false, GameplayerhandhaiTable, GameplayerhandhaiColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)

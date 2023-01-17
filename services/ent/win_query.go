@@ -24,6 +24,7 @@ type WinQuery struct {
 	unique     *bool
 	order      []OrderFunc
 	fields     []string
+	inters     []Interceptor
 	predicates []predicate.Win
 	withEvent  *EventQuery
 	withFKs    bool
@@ -38,13 +39,13 @@ func (wq *WinQuery) Where(ps ...predicate.Win) *WinQuery {
 	return wq
 }
 
-// Limit adds a limit step to the query.
+// Limit the number of records to be returned by this query.
 func (wq *WinQuery) Limit(limit int) *WinQuery {
 	wq.limit = &limit
 	return wq
 }
 
-// Offset adds an offset step to the query.
+// Offset to start from.
 func (wq *WinQuery) Offset(offset int) *WinQuery {
 	wq.offset = &offset
 	return wq
@@ -57,7 +58,7 @@ func (wq *WinQuery) Unique(unique bool) *WinQuery {
 	return wq
 }
 
-// Order adds an order step to the query.
+// Order specifies how the records should be ordered.
 func (wq *WinQuery) Order(o ...OrderFunc) *WinQuery {
 	wq.order = append(wq.order, o...)
 	return wq
@@ -65,7 +66,7 @@ func (wq *WinQuery) Order(o ...OrderFunc) *WinQuery {
 
 // QueryEvent chains the current query on the "event" edge.
 func (wq *WinQuery) QueryEvent() *EventQuery {
-	query := &EventQuery{config: wq.config}
+	query := (&EventClient{config: wq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := wq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -88,7 +89,7 @@ func (wq *WinQuery) QueryEvent() *EventQuery {
 // First returns the first Win entity from the query.
 // Returns a *NotFoundError when no Win was found.
 func (wq *WinQuery) First(ctx context.Context) (*Win, error) {
-	nodes, err := wq.Limit(1).All(ctx)
+	nodes, err := wq.Limit(1).All(newQueryContext(ctx, TypeWin, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +112,7 @@ func (wq *WinQuery) FirstX(ctx context.Context) *Win {
 // Returns a *NotFoundError when no Win ID was found.
 func (wq *WinQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = wq.Limit(1).IDs(ctx); err != nil {
+	if ids, err = wq.Limit(1).IDs(newQueryContext(ctx, TypeWin, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -134,7 +135,7 @@ func (wq *WinQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one Win entity is found.
 // Returns a *NotFoundError when no Win entities are found.
 func (wq *WinQuery) Only(ctx context.Context) (*Win, error) {
-	nodes, err := wq.Limit(2).All(ctx)
+	nodes, err := wq.Limit(2).All(newQueryContext(ctx, TypeWin, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +163,7 @@ func (wq *WinQuery) OnlyX(ctx context.Context) *Win {
 // Returns a *NotFoundError when no entities are found.
 func (wq *WinQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = wq.Limit(2).IDs(ctx); err != nil {
+	if ids, err = wq.Limit(2).IDs(newQueryContext(ctx, TypeWin, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -187,10 +188,12 @@ func (wq *WinQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of Wins.
 func (wq *WinQuery) All(ctx context.Context) ([]*Win, error) {
+	ctx = newQueryContext(ctx, TypeWin, "All")
 	if err := wq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
-	return wq.sqlAll(ctx)
+	qr := querierAll[[]*Win, *WinQuery]()
+	return withInterceptors[[]*Win](ctx, wq, qr, wq.inters)
 }
 
 // AllX is like All, but panics if an error occurs.
@@ -205,6 +208,7 @@ func (wq *WinQuery) AllX(ctx context.Context) []*Win {
 // IDs executes the query and returns a list of Win IDs.
 func (wq *WinQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	var ids []uuid.UUID
+	ctx = newQueryContext(ctx, TypeWin, "IDs")
 	if err := wq.Select(win.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
@@ -222,10 +226,11 @@ func (wq *WinQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (wq *WinQuery) Count(ctx context.Context) (int, error) {
+	ctx = newQueryContext(ctx, TypeWin, "Count")
 	if err := wq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
-	return wq.sqlCount(ctx)
+	return withInterceptors[int](ctx, wq, querierCount[*WinQuery](), wq.inters)
 }
 
 // CountX is like Count, but panics if an error occurs.
@@ -239,10 +244,15 @@ func (wq *WinQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (wq *WinQuery) Exist(ctx context.Context) (bool, error) {
-	if err := wq.prepareQuery(ctx); err != nil {
-		return false, err
+	ctx = newQueryContext(ctx, TypeWin, "Exist")
+	switch _, err := wq.FirstID(ctx); {
+	case IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("ent: check existence: %w", err)
+	default:
+		return true, nil
 	}
-	return wq.sqlExist(ctx)
 }
 
 // ExistX is like Exist, but panics if an error occurs.
@@ -265,6 +275,7 @@ func (wq *WinQuery) Clone() *WinQuery {
 		limit:      wq.limit,
 		offset:     wq.offset,
 		order:      append([]OrderFunc{}, wq.order...),
+		inters:     append([]Interceptor{}, wq.inters...),
 		predicates: append([]predicate.Win{}, wq.predicates...),
 		withEvent:  wq.withEvent.Clone(),
 		// clone intermediate query.
@@ -277,7 +288,7 @@ func (wq *WinQuery) Clone() *WinQuery {
 // WithEvent tells the query-builder to eager-load the nodes that are connected to
 // the "event" edge. The optional arguments are used to configure the query builder of the edge.
 func (wq *WinQuery) WithEvent(opts ...func(*EventQuery)) *WinQuery {
-	query := &EventQuery{config: wq.config}
+	query := (&EventClient{config: wq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
@@ -288,16 +299,11 @@ func (wq *WinQuery) WithEvent(opts ...func(*EventQuery)) *WinQuery {
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
 func (wq *WinQuery) GroupBy(field string, fields ...string) *WinGroupBy {
-	grbuild := &WinGroupBy{config: wq.config}
-	grbuild.fields = append([]string{field}, fields...)
-	grbuild.path = func(ctx context.Context) (prev *sql.Selector, err error) {
-		if err := wq.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		return wq.sqlQuery(ctx), nil
-	}
+	wq.fields = append([]string{field}, fields...)
+	grbuild := &WinGroupBy{build: wq}
+	grbuild.flds = &wq.fields
 	grbuild.label = win.Label
-	grbuild.flds, grbuild.scan = &grbuild.fields, grbuild.Scan
+	grbuild.scan = grbuild.Scan
 	return grbuild
 }
 
@@ -305,10 +311,10 @@ func (wq *WinQuery) GroupBy(field string, fields ...string) *WinGroupBy {
 // instead of selecting all fields in the entity.
 func (wq *WinQuery) Select(fields ...string) *WinSelect {
 	wq.fields = append(wq.fields, fields...)
-	selbuild := &WinSelect{WinQuery: wq}
-	selbuild.label = win.Label
-	selbuild.flds, selbuild.scan = &wq.fields, selbuild.Scan
-	return selbuild
+	sbuild := &WinSelect{WinQuery: wq}
+	sbuild.label = win.Label
+	sbuild.flds, sbuild.scan = &wq.fields, sbuild.Scan
+	return sbuild
 }
 
 // Aggregate returns a WinSelect configured with the given aggregations.
@@ -317,6 +323,16 @@ func (wq *WinQuery) Aggregate(fns ...AggregateFunc) *WinSelect {
 }
 
 func (wq *WinQuery) prepareQuery(ctx context.Context) error {
+	for _, inter := range wq.inters {
+		if inter == nil {
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
+		}
+		if trv, ok := inter.(Traverser); ok {
+			if err := trv.Traverse(ctx, wq); err != nil {
+				return err
+			}
+		}
+	}
 	for _, f := range wq.fields {
 		if !win.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
@@ -413,17 +429,6 @@ func (wq *WinQuery) sqlCount(ctx context.Context) (int, error) {
 	return sqlgraph.CountNodes(ctx, wq.driver, _spec)
 }
 
-func (wq *WinQuery) sqlExist(ctx context.Context) (bool, error) {
-	switch _, err := wq.FirstID(ctx); {
-	case IsNotFound(err):
-		return false, nil
-	case err != nil:
-		return false, fmt.Errorf("ent: check existence: %w", err)
-	default:
-		return true, nil
-	}
-}
-
 func (wq *WinQuery) querySpec() *sqlgraph.QuerySpec {
 	_spec := &sqlgraph.QuerySpec{
 		Node: &sqlgraph.NodeSpec{
@@ -506,13 +511,8 @@ func (wq *WinQuery) sqlQuery(ctx context.Context) *sql.Selector {
 
 // WinGroupBy is the group-by builder for Win entities.
 type WinGroupBy struct {
-	config
 	selector
-	fields []string
-	fns    []AggregateFunc
-	// intermediate query (i.e. traversal path).
-	sql  *sql.Selector
-	path func(context.Context) (*sql.Selector, error)
+	build *WinQuery
 }
 
 // Aggregate adds the given aggregation functions to the group-by query.
@@ -521,58 +521,46 @@ func (wgb *WinGroupBy) Aggregate(fns ...AggregateFunc) *WinGroupBy {
 	return wgb
 }
 
-// Scan applies the group-by query and scans the result into the given value.
+// Scan applies the selector query and scans the result into the given value.
 func (wgb *WinGroupBy) Scan(ctx context.Context, v any) error {
-	query, err := wgb.path(ctx)
-	if err != nil {
+	ctx = newQueryContext(ctx, TypeWin, "GroupBy")
+	if err := wgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
-	wgb.sql = query
-	return wgb.sqlScan(ctx, v)
+	return scanWithInterceptors[*WinQuery, *WinGroupBy](ctx, wgb.build, wgb, wgb.build.inters, v)
 }
 
-func (wgb *WinGroupBy) sqlScan(ctx context.Context, v any) error {
-	for _, f := range wgb.fields {
-		if !win.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("invalid field %q for group-by", f)}
-		}
+func (wgb *WinGroupBy) sqlScan(ctx context.Context, root *WinQuery, v any) error {
+	selector := root.sqlQuery(ctx).Select()
+	aggregation := make([]string, 0, len(wgb.fns))
+	for _, fn := range wgb.fns {
+		aggregation = append(aggregation, fn(selector))
 	}
-	selector := wgb.sqlQuery()
+	if len(selector.SelectedColumns()) == 0 {
+		columns := make([]string, 0, len(*wgb.flds)+len(wgb.fns))
+		for _, f := range *wgb.flds {
+			columns = append(columns, selector.C(f))
+		}
+		columns = append(columns, aggregation...)
+		selector.Select(columns...)
+	}
+	selector.GroupBy(selector.Columns(*wgb.flds...)...)
 	if err := selector.Err(); err != nil {
 		return err
 	}
 	rows := &sql.Rows{}
 	query, args := selector.Query()
-	if err := wgb.driver.Query(ctx, query, args, rows); err != nil {
+	if err := wgb.build.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}
 	defer rows.Close()
 	return sql.ScanSlice(rows, v)
 }
 
-func (wgb *WinGroupBy) sqlQuery() *sql.Selector {
-	selector := wgb.sql.Select()
-	aggregation := make([]string, 0, len(wgb.fns))
-	for _, fn := range wgb.fns {
-		aggregation = append(aggregation, fn(selector))
-	}
-	if len(selector.SelectedColumns()) == 0 {
-		columns := make([]string, 0, len(wgb.fields)+len(wgb.fns))
-		for _, f := range wgb.fields {
-			columns = append(columns, selector.C(f))
-		}
-		columns = append(columns, aggregation...)
-		selector.Select(columns...)
-	}
-	return selector.GroupBy(selector.Columns(wgb.fields...)...)
-}
-
 // WinSelect is the builder for selecting fields of Win entities.
 type WinSelect struct {
 	*WinQuery
 	selector
-	// intermediate query (i.e. traversal path).
-	sql *sql.Selector
 }
 
 // Aggregate adds the given aggregation functions to the selector query.
@@ -583,26 +571,27 @@ func (ws *WinSelect) Aggregate(fns ...AggregateFunc) *WinSelect {
 
 // Scan applies the selector query and scans the result into the given value.
 func (ws *WinSelect) Scan(ctx context.Context, v any) error {
+	ctx = newQueryContext(ctx, TypeWin, "Select")
 	if err := ws.prepareQuery(ctx); err != nil {
 		return err
 	}
-	ws.sql = ws.WinQuery.sqlQuery(ctx)
-	return ws.sqlScan(ctx, v)
+	return scanWithInterceptors[*WinQuery, *WinSelect](ctx, ws.WinQuery, ws, ws.inters, v)
 }
 
-func (ws *WinSelect) sqlScan(ctx context.Context, v any) error {
+func (ws *WinSelect) sqlScan(ctx context.Context, root *WinQuery, v any) error {
+	selector := root.sqlQuery(ctx)
 	aggregation := make([]string, 0, len(ws.fns))
 	for _, fn := range ws.fns {
-		aggregation = append(aggregation, fn(ws.sql))
+		aggregation = append(aggregation, fn(selector))
 	}
 	switch n := len(*ws.selector.flds); {
 	case n == 0 && len(aggregation) > 0:
-		ws.sql.Select(aggregation...)
+		selector.Select(aggregation...)
 	case n != 0 && len(aggregation) > 0:
-		ws.sql.AppendSelect(aggregation...)
+		selector.AppendSelect(aggregation...)
 	}
 	rows := &sql.Rows{}
-	query, args := ws.sql.Query()
+	query, args := selector.Query()
 	if err := ws.driver.Query(ctx, query, args, rows); err != nil {
 		return err
 	}

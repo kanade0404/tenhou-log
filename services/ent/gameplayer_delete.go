@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"fmt"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -28,34 +27,7 @@ func (gpd *GamePlayerDelete) Where(ps ...predicate.GamePlayer) *GamePlayerDelete
 
 // Exec executes the deletion query and returns how many vertices were deleted.
 func (gpd *GamePlayerDelete) Exec(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(gpd.hooks) == 0 {
-		affected, err = gpd.sqlExec(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*GamePlayerMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			gpd.mutation = mutation
-			affected, err = gpd.sqlExec(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(gpd.hooks) - 1; i >= 0; i-- {
-			if gpd.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = gpd.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, gpd.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks[int, GamePlayerMutation](ctx, gpd.sqlExec, gpd.mutation, gpd.hooks)
 }
 
 // ExecX is like Exec, but panics if an error occurs.
@@ -88,6 +60,7 @@ func (gpd *GamePlayerDelete) sqlExec(ctx context.Context) (int, error) {
 	if err != nil && sqlgraph.IsConstraintError(err) {
 		err = &ConstraintError{msg: err.Error(), wrap: err}
 	}
+	gpd.mutation.done = true
 	return affected, err
 }
 

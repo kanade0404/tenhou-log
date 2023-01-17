@@ -64,50 +64,8 @@ func (ckc *ConcealedKanCreate) Mutation() *ConcealedKanMutation {
 
 // Save creates the ConcealedKan in the database.
 func (ckc *ConcealedKanCreate) Save(ctx context.Context) (*ConcealedKan, error) {
-	var (
-		err  error
-		node *ConcealedKan
-	)
 	ckc.defaults()
-	if len(ckc.hooks) == 0 {
-		if err = ckc.check(); err != nil {
-			return nil, err
-		}
-		node, err = ckc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*ConcealedKanMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = ckc.check(); err != nil {
-				return nil, err
-			}
-			ckc.mutation = mutation
-			if node, err = ckc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(ckc.hooks) - 1; i >= 0; i-- {
-			if ckc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = ckc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, ckc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*ConcealedKan)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from ConcealedKanMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks[*ConcealedKan, ConcealedKanMutation](ctx, ckc.sqlSave, ckc.mutation, ckc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -146,6 +104,9 @@ func (ckc *ConcealedKanCreate) check() error {
 }
 
 func (ckc *ConcealedKanCreate) sqlSave(ctx context.Context) (*ConcealedKan, error) {
+	if err := ckc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := ckc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, ckc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -160,6 +121,8 @@ func (ckc *ConcealedKanCreate) sqlSave(ctx context.Context) (*ConcealedKan, erro
 			return nil, err
 		}
 	}
+	ckc.mutation.id = &_node.ID
+	ckc.mutation.done = true
 	return _node, nil
 }
 
