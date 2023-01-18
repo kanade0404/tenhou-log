@@ -7,3 +7,6 @@ tasks:
   migrate-dry:
     cmds:
       - sqldef -U postgres -p 65432 -W=secret postgres --dry-run < database/schema/schema.sql
+  loadenv:
+    cmds:
+      - direnv allow .

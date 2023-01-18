@@ -3,13 +3,12 @@ package entities
 import (
 	"encoding/json"
 	"log"
-	"scraper/models"
 	"strings"
 )
 
 type CompressedLogFile struct {
 	File string `json:"file"`
-	Size int    `json:"size"`
+	Size uint   `json:"size"`
 }
 
 func Unmarshal(logText string) (*CompressedLogFile, error) {
@@ -21,10 +20,4 @@ func Unmarshal(logText string) (*CompressedLogFile, error) {
 		return nil, err
 	}
 	return &l, nil
-}
-func (c *CompressedLogFile) Transformer() *models.CompressedLogFile {
-	return &models.CompressedLogFile{
-		Name: c.File,
-		Size: c.Size,
-	}
 }
