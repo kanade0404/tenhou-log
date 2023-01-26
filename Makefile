@@ -23,7 +23,7 @@ log-db:
 setup:
 	make build up setup-go setup-terraform
 setup-go:
-	cd services && go work init . backend-api external scraper
+	go mod download
 setup-terraform:
 	docker compose exec terraform gcloud auth application-default login
 	docker compose exec terraform gcloud auth login
