@@ -1,6 +1,6 @@
 name: Serdes CI
 on:
-  pull-request:
+  pull_request:
     paths:
       - pkg/serdes/**
       - .github/workflows/serdes-ci.yaml

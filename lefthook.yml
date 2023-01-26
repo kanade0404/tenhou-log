@@ -19,21 +19,25 @@
        root: "services/web/"
        glob: "*.{js,ts,tsx}"
        run: yarn eslint {staged_files}
+     prettier:
+       root: "services/web/"
+       glob: "*.{js,ts,tsx}"
+       run: yarn prettier --check {staged_files}
      gofmt:
        glob: "*.go"
        run: go fmt {staged_files}
        exclude: "services/ent/"
+     actionlint:
+       files: git diff --name-only HEAD | grep ".github/workflows/" || echo ''
+       glob: "*.y{a}ml"
+       run: docker run --rm -v $(pwd):/repo --workdir /repo rhysd/actionlint:latest -color
 
  pre-push:
    commands:
      govet:
        glob: "*.go"
-       run: {all_files}
+       run: go vet {all_files}
        exclude: "services/ent/"
-#     packages-audit:
-#       tags: frontend security
-#       run: yarn audit
-#     gems-audit:
-#       tags: services security
-#       run: bundle audit
-#
+     yarn-audit:
+       tags: frontend security
+       run: yarn audit
