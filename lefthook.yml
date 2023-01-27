@@ -38,7 +38,3 @@
        glob: "*.go"
        run: go vet ./...
        exclude: "services/ent/"
-     yarn-audit:
-       tags: frontend security
-       root: "services/web/"
-       run: yarn audit
