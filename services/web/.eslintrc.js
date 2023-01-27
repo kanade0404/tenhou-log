@@ -3,34 +3,36 @@ module.exports = {
     browser: true,
     es2021: true,
   },
-  extends: ["plugin:react/recommended", "google", "prettier", "standard-with-typescript"],
-  parser: "@typescript-eslint/parser",
+  extends: ['plugin:react/recommended', 'google', 'standard-with-typescript', 'prettier'],
+  parser: '@typescript-eslint/parser',
   parserOptions: {
-    project: ["tsconfig.json"],
+    project: ['tsconfig.json'],
     ecmaFeatures: {
       jsx: true,
     },
-    ecmaVersion: "latest",
-    sourceType: "module",
+    ecmaVersion: 'latest',
+    sourceType: 'module',
   },
-  plugins: ["react", "@typescript-eslint", "import"],
+  plugins: ['react', '@typescript-eslint', 'import', 'prettier'],
   settings: {
     react: {
-      version: "detect",
+      version: 'detect',
     },
   },
-  ignorePatterns: ["next-env.d.ts"],
+  ignorePatterns: ['next-env.d.ts', 'next.config.js', '.prettierrc.js', '.eslintrc.js'],
   rules: {
-    "react/react-in-jsx-scope": "off",
-    "require-jsdoc": "off",
-    "react/no-unescaped-entities": 0,
-    "import/order": [
-      "error",
+    'react/react-in-jsx-scope': 'off',
+    'require-jsdoc': 'off',
+    'react/no-unescaped-entities': 0,
+    'import/order': [
+      'error',
       {
-        groups: ["index", "sibling", "parent", "internal", "external", "builtin", "object", "type"],
-        pathGroupsExcludedImportTypes: ["react"],
-        alphabetize: { order: "asc", caseInsensitive: true },
+        groups: ['index', 'sibling', 'parent', 'internal', 'external', 'builtin', 'object', 'type'],
+        pathGroupsExcludedImportTypes: ['react'],
+        alphabetize: { order: 'asc', caseInsensitive: true },
       },
     ],
+    'space-before-function-paren': ['error', 'never'],
+    'prettier/prettier': 'error',
   },
 }

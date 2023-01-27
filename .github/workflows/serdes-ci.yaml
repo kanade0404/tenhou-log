@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - pkg/serdes/**
+      - go.*
       - .github/workflows/serdes-ci.yaml
 defaults:
   run:

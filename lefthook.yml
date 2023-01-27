@@ -25,7 +25,7 @@
        run: yarn prettier --check {staged_files}
      gofmt:
        glob: "*.go"
-       run: go fmt {staged_files}
+       run: go fmt ./...
        exclude: "services/ent/"
      actionlint:
        files: git diff --name-only HEAD | grep ".github/workflows/" || echo ''
@@ -38,6 +38,3 @@
        glob: "*.go"
        run: go vet ./...
        exclude: "services/ent/"
-     yarn-audit:
-       tags: frontend security
-       run: yarn audit

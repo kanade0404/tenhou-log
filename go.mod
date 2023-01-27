@@ -11,7 +11,6 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
-	github.com/hedwigz/entviz v0.0.0-20221011080911-9d47f6f1d818
 	github.com/kanade0404/tenhou-log/serdes v0.0.0-20230114134306-b09e466057d2
 	github.com/lib/pq v1.10.7
 	google.golang.org/genproto v0.0.0-20230113154510-dbe35b8444a5
@@ -40,7 +39,6 @@ require (
 	golang.org/x/oauth2 v0.0.0-20221014153046-6fdb5e3db783 // indirect
 	golang.org/x/sys v0.3.0 // indirect
 	golang.org/x/text v0.4.0 // indirect
-	golang.org/x/tools v0.3.1-0.20221202221704-aa9f4b2f3d57 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/api v0.103.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
