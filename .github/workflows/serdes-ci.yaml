@@ -1,12 +1,12 @@
 name: Serdes CI
 on:
-  push:
+  pull_request:
     paths:
-      - serdes/**
+      - pkg/serdes/**
       - .github/workflows/serdes-ci.yaml
 defaults:
   run:
-    working-directory: serdes
+    working-directory: pkg/serdes
 env:
   go-version: 1.18
 jobs:

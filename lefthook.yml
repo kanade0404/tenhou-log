@@ -16,15 +16,29 @@
    parallel: true
    commands:
      eslint:
+       root: "services/web/"
        glob: "*.{js,ts,tsx}"
        run: yarn eslint {staged_files}
+     prettier:
+       root: "services/web/"
+       glob: "*.{js,ts,tsx}"
+       run: yarn prettier --check {staged_files}
      gofmt:
-       files: git ls-files -m
-       root: "services/"
        glob: "*.go"
-       run: go fmt {files}
+       run: go fmt ./...
+       exclude: "services/ent/"
+     actionlint:
+       files: git diff --name-only HEAD | grep ".github/workflows/" || echo ''
+       glob: "*.y{a}ml"
+       run: docker run --rm -v $(pwd):/repo --workdir /repo rhysd/actionlint:latest -color
+
+ pre-push:
+   commands:
      govet:
-       files: git ls-files -m
-       root: "services/"
        glob: "*.go"
-       run: go vet {files}
+       run: go vet ./...
+       exclude: "services/ent/"
+     yarn-audit:
+       tags: frontend security
+       root: "services/web/"
+       run: yarn audit

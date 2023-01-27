@@ -5,9 +5,9 @@ on:
       - master
     paths:
       - services/scraper/**
-      - services/external/**
+      - pkg/**
       - .github/workflows/scraper-cd.yaml
-      - services/scraper_Dockerfile
+      - '!pkg/serdes/**'
   workflow_dispatch:
 
 env:

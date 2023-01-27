@@ -4,12 +4,12 @@ on:
     branches:
       - master
     paths:
-      - web/**
+      - services/web/**
   workflow_dispatch:
 defaults:
   run:
     shell: bash
-    working-directory: web
+    working-directory: services/web
 env:
   IMAGE: asia-northeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID_DEV }}/web/next
 jobs:

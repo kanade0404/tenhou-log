@@ -1,34 +1,16 @@
 name: Scraper CI
 on:
-  push:
+  pull_request:
     paths:
       - services/scraper/**
-      - services/external/**
+      - pkg/**
       - .github/workflows/scraper-ci.yaml
+      - '!pkg/serdes/**'
 env:
   go-version: 1.18
 jobs:
   services:
     runs-on: ubuntu-22.04
-    defaults:
-      run:
-        working-directory: services
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v3
-    - name: Setup Go
-      uses: actions/setup-go@v3
-      with:
-        go-version: ${{ env.go-version }}
-    - name: golangci-lint
-      uses: golangci/golangci-lint-action@v3
-      continue-on-error: true
-  scraper:
-    needs: services
-    runs-on: ubuntu-22.04
-    defaults:
-      run:
-        working-directory: services/scraper
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -36,6 +18,9 @@ jobs:
         uses: actions/setup-go@v3
         with:
           go-version: ${{ env.go-version }}
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        continue-on-error: true
       - name: Format
         run: go fmt ./...
       - name: Test
@@ -43,4 +28,4 @@ jobs:
       - name: go lint
         run: go vet ./...
       - name: Build
-        run: go build cmd/main.go
+        run: go build services/scraper/main.go
