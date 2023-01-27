@@ -13,7 +13,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/kanade0404/tenhou-log/serdes v0.0.0-20230114134306-b09e466057d2
 	github.com/lib/pq v1.10.7
-	google.golang.org/genproto v0.0.0-20230113154510-dbe35b8444a5
+	google.golang.org/genproto v0.0.0-20230127162408-596548ed4efa
 )
 
 require (
