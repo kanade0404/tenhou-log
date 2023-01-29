@@ -11,7 +11,7 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
-	github.com/kanade0404/tenhou-log/serdes v0.0.0-20230114134306-b09e466057d2
+	github.com/kanade0404/tenhou-log/serdes 498eb0ad8ed9
 	github.com/lib/pq v1.10.7
 	google.golang.org/genproto v0.0.0-20230127162408-596548ed4efa
 )
