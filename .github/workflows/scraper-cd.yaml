@@ -6,8 +6,9 @@ on:
     paths:
       - services/scraper/**
       - pkg/**
+      - go.*
       - .github/workflows/scraper-cd.yaml
-      - !pkg/serdes/**
+      - '!pkg/serdes/**'
   workflow_dispatch:
 
 env:
