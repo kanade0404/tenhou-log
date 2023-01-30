@@ -3,7 +3,7 @@ module github.com/kanade0404/tenhou-log
 go 1.18
 
 require (
-	ariga.io/atlas v0.9.1-0.20230119145809-92243f7c55cb
+	ariga.io/atlas v0.9.1-0.20230126152516-25fc911e6123
 	cloud.google.com/go/secretmanager v1.10.0
 	cloud.google.com/go/storage v1.29.0
 	entgo.io/ent v0.11.7
@@ -11,9 +11,9 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
-	github.com/kanade0404/tenhou-log/serdes v0.0.0-20230114134306-b09e466057d2
+	github.com/kanade0404/tenhou-log/serdes v0.0.0-20230117030944-2d43d0174a3f
 	github.com/lib/pq v1.10.7
-	google.golang.org/genproto v0.0.0-20230113154510-dbe35b8444a5
+	google.golang.org/genproto v0.0.0-20230127162408-596548ed4efa
 )
 
 require (
