@@ -276,6 +276,41 @@ func haiTestCases() []struct {
 	}
 
 }
+func commonTestCase(ba, ten, yaku, doraHai, uraDoraHai, who, fromWho, sc, owari string) args {
+	return args{
+		ba:         ba,
+		hands:      "14,18,22,23,27,31,41,43,46,49,53,85,86,87",
+		m:          "",
+		machi:      "12",
+		ten:        ten,
+		yaku:       yaku,
+		yakuman:    "",
+		doraHai:    doraHai,
+		doraHaiUra: uraDoraHai,
+		who:        who,
+		fromWho:    fromWho,
+		sc:         sc,
+		owari:      owari,
+		isRedRule:  true,
+	}
+}
+func commonExpected(handHais []hai.IHai, winHai hai.IHai, continuePoint, reachPoint, hu, winPoint int, yaku map[string]int, dora *Dora, playerPointSpreads []*pointSpread, player *player) *Win {
+	return &Win{
+		handHais:      handHais,
+		callHais:      [][]hai.IHai{},
+		player:        player,
+		continuePoint: continuePoint,
+		reachPoint:    reachPoint,
+		winHai:        winHai,
+		dora:          dora,
+		winPoint: &point{
+			hu:           hu,
+			p:            winPoint,
+			completeHand: yaku,
+		},
+		playerPointSpreads: playerPointSpreads,
+	}
+}
 
 func testWin_AllHais_Args(hai, m, machi string) args {
 	return args{
@@ -296,88 +331,7 @@ func testWin_AllHais_Args(hai, m, machi string) args {
 	}
 }
 
-func TestWin_AllHais(t *testing.T) {
-	tests := []struct {
-		name string
-		args
-		wantIDs []int
-		wantErr bool
-	}{
-		{
-			name:    "47m待ち副露なし",
-			args:    testWin_AllHais_Args("2,3,12,19,20,27,30,34,77,80,87", "41577", "12"),
-			wantIDs: []int{2, 3, 12, 19, 20, 27, 30, 34, 77, 80, 87, 109, 110, 108},
-		},
-	}
-	for _, tt := range tests {
-		win, err := NewWin(tt.args.ba, tt.args.hands, tt.args.m, tt.args.machi, tt.args.ten, tt.args.yaku, tt.args.yakuman, tt.args.doraHai, tt.args.doraHaiUra, tt.args.who, tt.args.fromWho, tt.args.sc, tt.args.owari, tt.args.isRedRule)
-		if (err != nil) != tt.wantErr {
-			t.Errorf("NewWin() error = %v, wantErr %v", err, tt.wantErr)
-			return
-		}
-		var want []hai.IHai
-		for i := range tt.wantIDs {
-			h, err := hai.NewHai(tt.wantIDs[i], tt.isRedRule)
-			if err != nil {
-				t.Errorf("%v", err)
-				return
-			}
-			want = append(want, h)
-		}
-		if diff := hais2Strings(win.AllHais(), want); diff != "" {
-			t.Errorf("(-got+want)\n%v", diff)
-			return
-		}
-	}
-}
-
-func TestWin_HandHais(t *testing.T) {
-	//TODO
-}
-
-func TestWin_CallHais(t *testing.T) {
-	//TODO
-}
-
-func TestWin_Doras(t *testing.T) {
-	//TODO
-}
-
-func TestWin_ContinuePoint(t *testing.T) {
-	//TODO
-}
-
-func TestWin_ReachPoint(t *testing.T) {
-	//TODO
-}
-
-func TestWin_WinHai(t *testing.T) {
-	//TODO
-}
-
-func TestWin_WinPlayer(t *testing.T) {
-	//TODO
-}
-
-func TestWin_LosePlayer(t *testing.T) {
-	//TODO
-}
-
-func TestWin_IsHitDora(t *testing.T) {
-	//TODO
-}
-
 func TestWin(t *testing.T) {
-	fourthUser, err := xml.NewPlayerIndex(3)
-	if err != nil {
-		t.Errorf("%v", err)
-		return
-	}
-	firstUser, err := xml.NewPlayerIndex(0)
-	if err != nil {
-		t.Errorf("%v", err)
-		return
-	}
 	twoCharacter, err := hai.NewHai(7, true)
 	if err != nil {
 		t.Errorf("%v", err)
@@ -429,6 +383,26 @@ func TestWin(t *testing.T) {
 			return
 		}
 		test2CallHais = append(test2CallHais, h)
+	}
+	firstUser, err := xml.NewPlayerIndex(0)
+	if err != nil {
+		t.Errorf("%v", err)
+		return
+	}
+	secondUser, err := xml.NewPlayerIndex(1)
+	if err != nil {
+		t.Errorf("%v", err)
+		return
+	}
+	thirdUser, err := xml.NewPlayerIndex(2)
+	if err != nil {
+		t.Errorf("%v", err)
+		return
+	}
+	fourthUser, err := xml.NewPlayerIndex(3)
+	if err != nil {
+		t.Errorf("%v", err)
+		return
 	}
 	tests := []struct {
 		name    string
@@ -566,6 +540,58 @@ func TestWin(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "20符1100点表ドラ1プレイヤー0ツモ",
+			args: commonTestCase(
+				"0,0", "20,1100,0", "14,1", "71", "", "0", "0",
+				"250,11,250,-7,250,-4,250,-4", "",
+			),
+			want: commonExpected(
+				test1Hais, winHai12, 0, 0, 20, 1100, map[string]int{"平和": 1, "門前清自摸和": 1},
+				&Dora{[]*commonDora{{omote: oneCircle71, ura: nil}}, true},
+				[]*pointSpread{{before: 25000, after: 26100}, {before: 25000, after: 24300}, {before: 25000, after: 24600}, {before: 25000, after: 24600}},
+				&player{winner: FirstUserIndex, loser: nil},
+			),
+		},
+		{
+			name: "リーチ棒1000点25符1600点表ドラ1裏ドラ1プレイヤー0ロンプレイヤー1",
+			args: commonTestCase(
+				"0,1", "20,1600,0", "21,1", "71", "17", "0", "1",
+				"250,11,250,-7,250,-4,250,-4", "",
+			),
+			want: commonExpected(
+				test1Hais, winHai12, 0, 1000, 25, 1600, map[string]int{"七対子": 1},
+				&Dora{[]*commonDora{{omote: oneCircle71, ura: fiveCharacter}}, true},
+				[]*pointSpread{{before: 25000, after: 26600}, {before: 25000, after: 23400}, {before: 25000, after: 25000}, {before: 25000, after: 25000}},
+				&player{winner: xml.PlayerIndex(0), loser: secondUser},
+			),
+		},
+		{
+			name: "積み棒300点30符2000点表ドラ2裏ドラ2プレイヤー0ロンプレイヤー2",
+			args: commonTestCase(
+				"1,0", "30,2000,0", "1,1,51,1", "71,17", "17,71", "0", "2",
+				"250,20,250,0,250,-20,250,0", "",
+			),
+			want: commonExpected(
+				test1Hais, winHai12, 300, 0, 30, 2000, map[string]int{"立直": 1, "ドラ": 1},
+				&Dora{[]*commonDora{{omote: oneCircle71, ura: fiveCharacter}, {omote: fiveCharacter, ura: oneCircle71}}, true},
+				[]*pointSpread{{before: 25000, after: 27000}, {before: 25000, after: 25000}, {before: 25000, after: 23000}, {before: 25000, after: 25000}},
+				&player{winner: xml.PlayerIndex(0), loser: thirdUser},
+			),
+		},
+		{
+			name: "積み棒300点リーチ棒1000点40符2600点表ドラ1プレイヤー0ロンプレイヤー3",
+			args: commonTestCase(
+				"1,1", "40,2600,0", "1,1,51,1", "71", "", "0", "3",
+				"250,26,250,0,250,0,250,-26", "",
+			),
+			want: commonExpected(
+				test1Hais, winHai12, 300, 1000, 40, 2600, map[string]int{"立直": 1, "ドラ": 1},
+				&Dora{[]*commonDora{{omote: oneCircle71}}, true},
+				[]*pointSpread{{before: 25000, after: 27600}, {before: 25000, after: 25000}, {before: 25000, after: 25000}, {before: 25000, after: 23400}},
+				&player{winner: xml.PlayerIndex(0), loser: fourthUser},
+			),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -635,4 +661,79 @@ func callHais2Strings(got [][]hai.IHai, want [][]hai.IHai) (diff string) {
 		resultWant = append(resultWant, w)
 	}
 	return cmp.Diff(resultGot, resultWant)
+}
+func TestCreateEnd(t *testing.T) {
+	tests := []struct {
+		owari   string
+		want    *End
+		wantErr bool
+	}{
+		{
+			owari: "218,-18.2,227,2.7,148,-35.2,407,50.7",
+			want: &End{
+				playerPoints: []*playerPoint{
+					{
+						gamePoint: 218,
+						winPoint:  -18.2,
+					},
+					{
+						gamePoint: 227,
+						winPoint:  2.7,
+					},
+					{
+						gamePoint: 148,
+						winPoint:  -35.2,
+					},
+					{
+						gamePoint: 407,
+						winPoint:  50.7,
+					},
+				},
+			},
+		},
+		{
+			owari:   "",
+			wantErr: true,
+		},
+		{
+			owari: "430,-18.2,350,2.7,280,-35.2",
+			want: &End{
+				playerPoints: []*playerPoint{
+					{
+						gamePoint: 430,
+						winPoint:  -18.2,
+					},
+					{
+						gamePoint: 350,
+						winPoint:  2.7,
+					},
+					{
+						gamePoint: 280,
+						winPoint:  -35.2,
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		var name string
+		if tt.want == nil {
+			name = fmt.Sprintf("createEnd(%s) == error", tt.owari)
+		} else {
+			name = fmt.Sprintf("createEnd(%s) == %v", tt.owari, tt.want.playerPoints)
+		}
+		t.Run(name, func(t *testing.T) {
+			got, err := createEnd(tt.owari)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("createEnd() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.wantErr {
+				return
+			}
+			if diff := cmp.Diff(got.PlayerPoints(), tt.want.PlayerPoints(), cmp.AllowUnexported(playerPoint{})); diff != "" {
+				t.Errorf("(-got+want)\n%v", diff)
+			}
+		})
+	}
 }
