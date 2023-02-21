@@ -3,7 +3,7 @@ module github.com/kanade0404/tenhou-log
 go 1.18
 
 require (
-	ariga.io/atlas v0.9.1-0.20230220183219-8c9f5fb615d8
+	ariga.io/atlas v0.9.1-0.20230221132516-32f4c64ff78e
 	cloud.google.com/go/secretmanager v1.10.0
 	cloud.google.com/go/storage v1.29.0
 	entgo.io/ent v0.11.8
