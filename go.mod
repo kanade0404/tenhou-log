@@ -13,14 +13,14 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/kanade0404/tenhou-log/serdes v0.0.0-20230117030944-2d43d0174a3f
 	github.com/lib/pq v1.10.7
-	google.golang.org/genproto v0.0.0-20230223222841-637eb2293923
+	google.golang.org/genproto v0.0.0-20230227214838-9b19f0bdc514
 )
 
 require (
-	cloud.google.com/go v0.107.0 // indirect
+	cloud.google.com/go v0.110.0 // indirect
 	cloud.google.com/go/compute v1.18.0 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
-	cloud.google.com/go/iam v0.11.0 // indirect
+	cloud.google.com/go/iam v0.12.0 // indirect
 	github.com/agext/levenshtein v1.2.1 // indirect
 	github.com/andybalholm/cascadia v1.3.1 // indirect
 	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
