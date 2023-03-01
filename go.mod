@@ -6,7 +6,7 @@ require (
 	ariga.io/atlas v0.9.1
 	cloud.google.com/go/secretmanager v1.10.0
 	cloud.google.com/go/storage v1.29.0
-	entgo.io/ent v0.11.8
+	entgo.io/ent v0.11.9
 	github.com/PuerkitoBio/goquery v1.8.1
 	github.com/google/go-cmp v0.5.9
 	github.com/google/uuid v1.3.0
@@ -34,7 +34,7 @@ require (
 	github.com/mitchellh/go-wordwrap v0.0.0-20150314170334-ad45545899c7 // indirect
 	github.com/zclconf/go-cty v1.8.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	golang.org/x/mod v0.7.0 // indirect
+	golang.org/x/mod v0.8.0 // indirect
 	golang.org/x/net v0.7.0 // indirect
 	golang.org/x/oauth2 v0.5.0 // indirect
 	golang.org/x/sys v0.5.0 // indirect
