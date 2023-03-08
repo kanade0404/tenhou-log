@@ -145,6 +145,7 @@ type pointSpread struct {
 	after  int
 }
 type Win struct {
+	allHais            []hai.IHai
 	handHais           []hai.IHai   // 面前の手牌
 	callHais           [][]hai.IHai // 副露の手牌
 	player             *player
@@ -156,6 +157,7 @@ type Win struct {
 	playerPointSpreads []*pointSpread
 	yakuman            map[int]string
 	end                *End
+	isHitDora          bool
 }
 
 /*
@@ -163,11 +165,7 @@ AllHais
 和了時の全ての手牌
 */
 func (w *Win) AllHais() []hai.IHai {
-	results := w.handHais
-	for i := range w.callHais {
-		results = append(results, w.callHais[i]...)
-	}
-	return results
+	return w.allHais
 }
 
 /*
@@ -239,15 +237,23 @@ IsHitDora
 ドラ牌を持っているかどうか
 */
 func (w *Win) IsHitDora() bool {
-	hais := w.AllHais()
-	for i := range hais {
-		for j := range w.dora.common {
-			if hais[i].Num() == w.dora.common[j].omote.Num() || (w.dora.common[j].ura != nil && hais[i].Num() == w.dora.common[j].ura.Num()) {
-				return true
-			}
-		}
-	}
-	return false
+	return w.isHitDora
+}
+
+/*
+Yakuman
+役満情報
+*/
+func (w *Win) Yakuman() map[int]string {
+	return w.yakuman
+}
+
+/*
+End
+終局情報
+*/
+func (w *Win) End() *End {
+	return w.end
 }
 
 /*
@@ -321,7 +327,28 @@ func NewWin(ba, hands, m, machi, ten, yaku, yakuman, doraHai, doraHaiUra, who, f
 	if err != nil {
 		return nil, wrapError("NewWin", err)
 	}
+	hs := handHais
+	for i := range callHais {
+		hs = append(hs, callHais[i]...)
+	}
+	// ドラがヒットしたか
+	var isHitDora bool
+	for hIdx := range hs {
+		for dIdx := range dora.common {
+			if hs[hIdx].IsRed() ||
+				(hs[hIdx].Num() == dora.common[dIdx].omote.Num() && hs[hIdx].Type() == dora.common[dIdx].omote.Type()) ||
+				(dora.common[dIdx].ura != nil && hs[hIdx].Num() == dora.common[dIdx].ura.Num() && hs[hIdx].Type() == dora.common[dIdx].ura.Type()) {
+				isHitDora = true
+			}
+		}
+	}
+	// 全ての牌
+	allHais := handHais
+	for i := range callHais {
+		allHais = append(allHais, callHais[i]...)
+	}
 	return &Win{
+		allHais:            allHais,
 		handHais:           handHais,
 		callHais:           callHais,
 		continuePoint:      continuePoint,
@@ -333,6 +360,7 @@ func NewWin(ba, hands, m, machi, ten, yaku, yakuman, doraHai, doraHaiUra, who, f
 		playerPointSpreads: playerPointSpread,
 		yakuman:            ykmn,
 		end:                end,
+		isHitDora:          isHitDora,
 	}, nil
 }
 
@@ -630,6 +658,7 @@ func createEnd(owari string) (*End, error) {
 /*
 createYakuman
 和了した役満情報
+役番号と役名のmap
 */
 func createYakuman(yakuman string) (map[int]string, error) {
 	if yakuman == "" {

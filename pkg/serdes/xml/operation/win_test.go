@@ -3,8 +3,10 @@ package operation
 import (
 	"fmt"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/kanade0404/tenhou-log/serdes/xml"
 	"github.com/kanade0404/tenhou-log/serdes/xml/hai"
+	"sort"
 	"testing"
 )
 
@@ -24,320 +26,23 @@ type args struct {
 	owari      string
 	isRedRule  bool
 }
-
-/*
-		待ちテストケース
-		- リャンメン
-		  - 14
-		  - 25
-		  - 36
-		  - 47
-		  - 58
-		  - 69
-		  - 147
-		  - 258
-		  - 369
-		- シャンポン
-		  - 東南
-		  - 西北
-		  - 白發
-		- 単騎
-		  - 中
-	    - ノベタン
-	      - 14
-	      - 25
-	      - 36
-	      - 47
-	      - 58
-	      - 69
-		- カンチャン
-		  - 間2
-		  - 間3
-		  - 間4
-		  - 間5
-		  - 間6
-		  - 間7
-		  - 間8
-		- ペンチャン
-		  - 辺3
-		  - 辺7
-		- 複雑系
-		  - 123(2333)
-		  - 789(8889)
-	      - 13(1222)
-		  - 23(2444)
-		  - 78(8666)
-		  - 14W(23444WW)
-*/
-func haiTestCases() []struct {
-	name       string
-	handHaiIDs []int
-	callHaiIDs []int
-	machi      int
-} {
-	return []struct {
-		name       string
-		handHaiIDs []int
-		callHaiIDs []int
-		machi      int
-	}{
-		{
-			"リャンメン(14m待ち1和了)",
-			[]int{108, 109, 110, 112, 113, 114, 116, 117, 118, 120, 121, 4, 8},
-			[]int{},
-			0,
-		},
-		{
-			"リャンメン(25m待ち2和了)",
-			[]int{108, 109, 110, 112, 113, 114, 116, 117, 118, 120, 121, 8, 12},
-			[]int{},
-			4,
-		},
-		{
-			"リャンメン(36m待ち3和了)",
-			[]int{108, 109, 110, 112, 113, 114, 116, 117, 118, 120, 121, 12, 16},
-			[]int{},
-			8,
-		},
-		{
-			"リャンメン(47m待ち4和了)",
-			[]int{108, 109, 110, 112, 113, 114, 116, 117, 118, 120, 121, 16, 20},
-			[]int{},
-			12,
-		},
-		{
-			"リャンメン(58m待ち5和了)",
-			[]int{108, 109, 110, 112, 113, 114, 116, 117, 118, 120, 121, 20, 24},
-			[]int{},
-			16,
-		},
-		{
-			"リャンメン(69m待ち6和了)",
-			[]int{108, 109, 110, 112, 113, 114, 116, 117, 118, 120, 121, 24, 28},
-			[]int{},
-			20,
-		},
-		{
-			"シャンポン(東南待ち東和了)",
-			[]int{109, 110, 113, 114, 116, 117, 118, 120, 121, 122, 0, 4, 8},
-			[]int{},
-			108,
-		},
-		{
-			"シャンポン(西北待ち西和了)",
-			[]int{108, 109, 110, 112, 113, 114, 117, 118, 121, 122, 0, 4, 8},
-			[]int{},
-			116,
-		},
-		{
-			"シャンポン(白發待ち白和了)",
-			[]int{108, 109, 110, 112, 113, 114, 116, 117, 118, 124, 125, 128, 129},
-			[]int{},
-			126,
-		},
-		{
-			"単騎(中待ち中和了)",
-			[]int{108, 109, 110, 112, 113, 114, 116, 117, 118, 120, 121, 122, 132},
-			[]int{},
-			133,
-		},
-		{
-			"ノベタン(14待ち1和了)",
-			[]int{108, 109, 110, 112, 113, 114, 116, 117, 118, 0, 4, 8, 12},
-			[]int{},
-			3,
-		},
-		{
-			"ノベタン(25待ち2和了)",
-			[]int{108, 109, 110, 112, 113, 114, 116, 117, 118, 4, 8, 12, 16},
-			[]int{},
-			5,
-		},
-		{
-			"ノベタン(36待ち3和了)",
-			[]int{108, 109, 110, 112, 113, 114, 116, 117, 118, 8, 12, 16, 20},
-			[]int{},
-			9,
-		},
-		{
-			"ノベタン(47待ち4和了)",
-			[]int{108, 109, 110, 112, 113, 114, 116, 117, 118, 12, 16, 20, 24},
-			[]int{},
-			13,
-		},
-		{
-			"ノベタン(58待ち5和了)",
-			[]int{108, 109, 110, 112, 113, 114, 116, 117, 118, 16, 20, 24, 28},
-			[]int{},
-			17,
-		},
-		{
-			"ノベタン(69待ち6和了)",
-			[]int{108, 109, 110, 112, 113, 114, 116, 117, 118, 20, 24, 28, 31},
-			[]int{},
-			21,
-		},
-		{
-			"カンチャン(2待ち2和了)",
-			[]int{108, 109, 110, 112, 113, 114, 116, 117, 118, 120, 121, 0, 8},
-			[]int{},
-			4,
-		},
-		{
-			"カンチャン(3待ち3和了)",
-			[]int{108, 109, 110, 112, 113, 114, 116, 117, 118, 120, 121, 4, 12},
-			[]int{},
-			8,
-		},
-		{
-			"カンチャン(4待ち4和了)",
-			[]int{108, 109, 110, 112, 113, 114, 116, 117, 118, 120, 121, 8, 16},
-			[]int{},
-			12,
-		},
-		{
-			"カンチャン(5待ち5和了)",
-			[]int{108, 109, 110, 112, 113, 114, 116, 117, 118, 120, 121, 12, 20},
-			[]int{},
-			16,
-		},
-		{
-			"カンチャン(6待ち6和了)",
-			[]int{108, 109, 110, 112, 113, 114, 116, 117, 118, 120, 121, 16, 24},
-			[]int{},
-			20,
-		},
-		{
-			"カンチャン(7待ち7和了)",
-			[]int{108, 109, 110, 112, 113, 114, 116, 117, 118, 120, 121, 20, 28},
-			[]int{},
-			24,
-		},
-		{
-			"カンチャン(8待ち8和了)",
-			[]int{108, 109, 110, 112, 113, 114, 116, 117, 118, 120, 121, 24, 32},
-			[]int{},
-			28,
-		},
-		{
-			"ペンチャン(3待ち3和了)",
-			[]int{108, 109, 110, 112, 113, 114, 116, 117, 118, 120, 121, 0, 4},
-			[]int{},
-			8,
-		},
-		{
-			"ペンチャン(7待ち7和了)",
-			[]int{108, 109, 110, 112, 113, 114, 116, 117, 118, 120, 121, 28, 32},
-			[]int{},
-			24,
-		},
-		{
-			"複雑系(123待ち1和了)",
-			// 2333
-			[]int{108, 109, 110, 112, 113, 114, 116, 117, 118, 4, 8, 9, 10},
-			[]int{},
-			0,
-		},
-		{
-			"複雑系(13待ち1和了)",
-			// 1222
-			[]int{108, 109, 110, 112, 113, 114, 116, 117, 118, 1, 4, 5, 6},
-			[]int{},
-			0,
-		},
-		{
-			"複雑系(79待ち9和了)",
-			// 8889
-			[]int{108, 109, 110, 112, 113, 114, 116, 117, 118, 28, 29, 30, 32},
-			[]int{},
-			33,
-		},
-		{
-			"複雑系(23待ち3和了)",
-			// 2444
-			[]int{108, 109, 110, 112, 113, 114, 116, 117, 118, 4, 12, 13, 14},
-			[]int{},
-			8,
-		},
-		{
-			"複雑系(78待ち7和了)",
-			// 6668
-			[]int{108, 109, 110, 112, 113, 114, 116, 117, 118, 20, 21, 22, 28},
-			[]int{},
-			24,
-		},
-		{
-			"複雑系(14西待ち1和了)",
-			// 23444西西
-			[]int{108, 109, 110, 112, 113, 114, 116, 117, 4, 8, 12, 13, 14},
-			[]int{},
-			0,
-		},
-	}
-
-}
-func commonTestCase(ba, ten, yaku, doraHai, uraDoraHai, who, fromWho, sc, owari string) args {
-	return args{
-		ba:         ba,
-		hands:      "14,18,22,23,27,31,41,43,46,49,53,85,86,87",
-		m:          "",
-		machi:      "12",
-		ten:        ten,
-		yaku:       yaku,
-		yakuman:    "",
-		doraHai:    doraHai,
-		doraHaiUra: uraDoraHai,
-		who:        who,
-		fromWho:    fromWho,
-		sc:         sc,
-		owari:      owari,
-		isRedRule:  true,
-	}
-}
-func commonExpected(handHais []hai.IHai, winHai hai.IHai, continuePoint, reachPoint, hu, winPoint int, yaku map[string]int, dora *Dora, playerPointSpreads []*pointSpread, player *player) *Win {
-	return &Win{
-		handHais:      handHais,
-		callHais:      [][]hai.IHai{},
-		player:        player,
-		continuePoint: continuePoint,
-		reachPoint:    reachPoint,
-		winHai:        winHai,
-		dora:          dora,
-		winPoint: &point{
-			hu:           hu,
-			p:            winPoint,
-			completeHand: yaku,
-		},
-		playerPointSpreads: playerPointSpreads,
-	}
-}
-
-func testWin_AllHais_Args(hai, m, machi string) args {
-	return args{
-		ba:         "0,0",
-		hands:      hai,
-		m:          m,
-		machi:      machi,
-		ten:        "30,1000,0",
-		yaku:       "14,1",
-		yakuman:    "",
-		doraHai:    "71",
-		doraHaiUra: "",
-		who:        "3",
-		fromWho:    "0",
-		sc:         "250,-80,250,0,250,0,240,90",
-		owari:      "",
-		isRedRule:  true,
-	}
+type want struct {
+	allHais       []hai.IHai
+	handHais      []hai.IHai
+	callHais      [][]hai.IHai
+	winPlayer     xml.PlayerIndex
+	losePlayer    *xml.PlayerIndex
+	continuePoint int
+	reachPoint    int
+	winHai        hai.IHai
+	dora          *Dora
+	isHitDora     bool
+	yakuman       map[int]string
+	winPoint      *point
 }
 
 func TestWin(t *testing.T) {
-	twoCharacter, err := hai.NewHai(7, true)
-	if err != nil {
-		t.Errorf("%v", err)
-		return
-	}
-	fiveCharacter, err := hai.NewHai(17, true)
+	fiveCharacter17, err := hai.NewHai(17, true)
 	if err != nil {
 		t.Errorf("%v", err)
 		return
@@ -347,48 +52,48 @@ func TestWin(t *testing.T) {
 		t.Errorf("%v", err)
 		return
 	}
-	winHai, err := hai.NewHai(18, true)
-	if err != nil {
-		t.Errorf("%v", err)
-		return
-	}
 	winHai12, err := hai.NewHai(12, true)
 	if err != nil {
 		t.Errorf("%v", err)
 	}
-	test1HaiIDs := []int{14, 18, 22, 23, 27, 31, 41, 43, 46, 49, 53, 85, 86, 87}
-	var test1Hais, test2Hais, test2CallHais []hai.IHai
-	for i := range test1HaiIDs {
-		h, err := hai.NewHai(test1HaiIDs[i], true)
+	var riichWinHandHais, calledWinHandHais, calledWinCallHais []hai.IHai
+	riichWinHandHaiIDs := []int{14, 18, 22, 23, 27, 31, 41, 43, 46, 49, 53, 85, 86, 87}
+	for i := range riichWinHandHaiIDs {
+		h, err := hai.NewHai(riichWinHandHaiIDs[i], true)
 		if err != nil {
 			t.Errorf("%v", err)
 			return
 		}
-		test1Hais = append(test1Hais, h)
+		riichWinHandHais = append(riichWinHandHais, h)
 	}
-	test2HaiIDs := []int{2, 3, 12, 19, 20, 27, 30, 34, 77, 80, 87}
-	for i := range test2HaiIDs {
-		h, err := hai.NewHai(test2HaiIDs[i], true)
+	calledWinHandHaiIDs := []int{2, 3, 12, 19, 20, 27, 30, 34, 77, 80, 87}
+	for i := range calledWinHandHaiIDs {
+		h, err := hai.NewHai(calledWinHandHaiIDs[i], true)
 		if err != nil {
 			t.Errorf("%v", err)
 			return
 		}
-		test2Hais = append(test2Hais, h)
+		calledWinHandHais = append(calledWinHandHais, h)
 	}
-	test2CallHaiIDs := []int{109, 110, 108}
-	for i := range test2CallHaiIDs {
-		h, err := hai.NewHai(test2CallHaiIDs[i], true)
+	calledWinCallHaiIDs := []int{109, 110, 108}
+	for i := range calledWinCallHaiIDs {
+		h, err := hai.NewHai(calledWinCallHaiIDs[i], true)
 		if err != nil {
 			t.Errorf("%v", err)
 			return
 		}
-		test2CallHais = append(test2CallHais, h)
+		calledWinCallHais = append(calledWinCallHais, h)
 	}
 	firstUser, err := xml.NewPlayerIndex(0)
 	if err != nil {
 		t.Errorf("%v", err)
 		return
 	}
+	var (
+		riichWinHandHaiArg  = "14,18,22,23,27,31,41,43,46,49,53,85,86,87"
+		calledWinHandHaiArg = "2,3,12,19,20,27,30,34,77,80,87"
+		calledWinCallHaiArg = "41577"
+	)
 	secondUser, err := xml.NewPlayerIndex(1)
 	if err != nil {
 		t.Errorf("%v", err)
@@ -404,193 +109,141 @@ func TestWin(t *testing.T) {
 		t.Errorf("%v", err)
 		return
 	}
+	winPoint20hu1100p := &point{
+		hu: 20,
+		p:  1100,
+		completeHand: completeHand{
+			"場風 南": 1,
+		},
+	}
+	winPoint30hu1000p := &point{
+		hu: 30,
+		p:  1000,
+		completeHand: completeHand{
+			"場風 南": 1,
+		},
+	}
+	winPoint40hu1300p := &point{
+		hu: 40,
+		p:  1300,
+		completeHand: completeHand{
+			"場風 南": 1,
+		},
+	}
 	tests := []struct {
 		name    string
 		args    args
-		want    *Win
+		want    want
 		wantErr bool
 	}{
 		{
-			name: "和了系:46678m22345p444s,和了牌:5m,ドラ:6m,裏ドラ:3m,点:8000,役:立直タンヤオドラ2,和了プレイヤー:3,放銃プレイヤー:0,立直棒:1000,供託棒:0",
+			name: "20符1100点表ドラ1プレイヤー0ツモ",
 			args: args{
-				ba:         "0,1",
-				hands:      "14,18,22,23,27,31,41,43,46,49,53,85,86,87",
-				m:          "",
-				machi:      "18",
-				ten:        "40,8000,1",
-				yaku:       "1,1,8,1,52,2,53,0",
-				yakuman:    "",
-				doraHai:    "17",
-				doraHaiUra: "7",
-				who:        "3",
-				fromWho:    "0",
-				sc:         "170,-10,250,0,250,0,330,10",
-				owari:      "",
-				isRedRule:  true,
+				ba:        "0,0",
+				hands:     calledWinHandHaiArg,
+				m:         calledWinCallHaiArg,
+				machi:     "12",
+				ten:       "20,1100,0",
+				yaku:      "14,1",
+				doraHai:   "71",
+				who:       "0",
+				fromWho:   "0",
+				sc:        "250,11,250,-7,250,-4,250,-4",
+				isRedRule: true,
 			},
-			want: &Win{
-				handHais: test1Hais,
-				callHais: [][]hai.IHai{},
-				player: &player{
-					winner: *fourthUser,
-					loser:  firstUser,
-				},
-				continuePoint: 0,
-				reachPoint:    1000,
-				winHai:        winHai,
-				dora: &Dora{
-					common: []*commonDora{
-						{
-							omote: fiveCharacter,
-							ura:   twoCharacter,
-						},
-					},
-					isRed: true,
-				},
-				winPoint: &point{
-					hu: 40,
-					p:  8000,
-					completeHand: map[string]int{
-						"立直":  1,
-						"断幺九": 1,
-						"ドラ":  2,
-					},
-				},
-				playerPointSpreads: []*pointSpread{
-					{
-						before: 25000,
-						after:  17000,
-					},
-					{
-						before: 25000,
-						after:  25000,
-					},
-					{
-						before: 25000,
-						after:  25000,
-					},
-					{
-						before: 25000,
-						after:  34000,
-					},
-				},
+			want: want{
+				allHais:   append(calledWinHandHais, calledWinCallHais...),
+				handHais:  calledWinHandHais,
+				callHais:  [][]hai.IHai{calledWinCallHais},
+				winPlayer: *firstUser,
+				winHai:    winHai12,
+				dora:      &Dora{common: []*commonDora{{omote: oneCircle71}}, isRed: true},
+				isHitDora: false,
+				winPoint:  winPoint20hu1100p,
 			},
 		},
 		{
-			name: "和了系:1156789m234sEEE,和了牌:4m,ドラ:1p,点:1000,役:場風東,和了プレイヤー:3,放銃プレイヤー:0,立直棒:0,供託棒:0",
+			name: "積み棒300点20符1100点表ドラ1裏ドラ1プレイヤー0ロンプレイヤー1",
 			args: args{
-				ba:         "0,0",
-				hands:      "2,3,12,19,20,27,30,34,77,80,87",
-				m:          "41577",
+				ba:         "1,0",
+				hands:      riichWinHandHaiArg,
 				machi:      "12",
 				ten:        "30,1000,0",
 				yaku:       "14,1",
-				yakuman:    "",
 				doraHai:    "71",
-				doraHaiUra: "",
-				who:        "3",
-				fromWho:    "0",
-				sc:         "250,-80,250,0,250,0,240,90",
-				owari:      "",
+				doraHaiUra: "17",
+				who:        "0",
+				fromWho:    "1",
+				sc:         "250,11,250,-7,250,-4,250,-4",
 				isRedRule:  true,
 			},
-			want: &Win{
-				handHais: test2Hais,
-				callHais: [][]hai.IHai{test2CallHais},
-				player: &player{
-					winner: *fourthUser,
-					loser:  firstUser,
-				},
-				continuePoint: 0,
-				reachPoint:    0,
+			want: want{
+				allHais:       riichWinHandHais,
+				handHais:      riichWinHandHais,
+				continuePoint: 300,
+				winPlayer:     *firstUser,
+				losePlayer:    secondUser,
 				winHai:        winHai12,
-				dora: &Dora{
-					common: []*commonDora{
-						{
-							omote: oneCircle71,
-							ura:   nil,
-						},
-					},
-					isRed: true,
-				},
-				winPoint: &point{
-					hu: 40,
-					p:  8000,
-					completeHand: map[string]int{
-						"場風 東": 1,
-					},
-				},
-				playerPointSpreads: []*pointSpread{
-					{
-						before: 17000,
-						after:  16000,
-					},
-					{
-						before: 25000,
-						after:  25000,
-					},
-					{
-						before: 25000,
-						after:  25000,
-					},
-					{
-						before: 33000,
-						after:  34000,
-					},
-				},
+				dora:          &Dora{common: []*commonDora{{omote: oneCircle71, ura: fiveCharacter17}}, isRed: true},
+				isHitDora:     true,
+				winPoint:      winPoint30hu1000p,
 			},
 		},
 		{
-			name: "20符1100点表ドラ1プレイヤー0ツモ",
-			args: commonTestCase(
-				"0,0", "20,1100,0", "14,1", "71", "", "0", "0",
-				"250,11,250,-7,250,-4,250,-4", "",
-			),
-			want: commonExpected(
-				test1Hais, winHai12, 0, 0, 20, 1100, map[string]int{"平和": 1, "門前清自摸和": 1},
-				&Dora{[]*commonDora{{omote: oneCircle71, ura: nil}}, true},
-				[]*pointSpread{{before: 25000, after: 26100}, {before: 25000, after: 24300}, {before: 25000, after: 24600}, {before: 25000, after: 24600}},
-				&player{winner: FirstUserIndex, loser: nil},
-			),
+			name: "リーチ棒1000点40符1300点表ドラ2裏ドラ2プレイヤー0ロンプレイヤー2",
+			args: args{
+				ba:         "0,1",
+				hands:      riichWinHandHaiArg,
+				machi:      "12",
+				ten:        "40,1300,0",
+				yaku:       "14,1",
+				doraHai:    "71,17",
+				doraHaiUra: "17,71",
+				who:        "0",
+				fromWho:    "2",
+				sc:         "250,11,250,-7,250,-4,250,-4",
+				isRedRule:  true,
+			},
+			want: want{
+				allHais:    riichWinHandHais,
+				handHais:   riichWinHandHais,
+				reachPoint: 1000,
+				winPlayer:  *firstUser,
+				losePlayer: thirdUser,
+				winHai:     winHai12,
+				dora:       &Dora{common: []*commonDora{{omote: oneCircle71, ura: fiveCharacter17}, {omote: fiveCharacter17, ura: oneCircle71}}, isRed: true},
+				isHitDora:  true,
+				winPoint:   winPoint40hu1300p,
+			},
 		},
 		{
-			name: "リーチ棒1000点25符1600点表ドラ1裏ドラ1プレイヤー0ロンプレイヤー1",
-			args: commonTestCase(
-				"0,1", "20,1600,0", "21,1", "71", "17", "0", "1",
-				"250,11,250,-7,250,-4,250,-4", "",
-			),
-			want: commonExpected(
-				test1Hais, winHai12, 0, 1000, 25, 1600, map[string]int{"七対子": 1},
-				&Dora{[]*commonDora{{omote: oneCircle71, ura: fiveCharacter}}, true},
-				[]*pointSpread{{before: 25000, after: 26600}, {before: 25000, after: 23400}, {before: 25000, after: 25000}, {before: 25000, after: 25000}},
-				&player{winner: xml.PlayerIndex(0), loser: secondUser},
-			),
-		},
-		{
-			name: "積み棒300点30符2000点表ドラ2裏ドラ2プレイヤー0ロンプレイヤー2",
-			args: commonTestCase(
-				"1,0", "30,2000,0", "1,1,51,1", "71,17", "17,71", "0", "2",
-				"250,20,250,0,250,-20,250,0", "",
-			),
-			want: commonExpected(
-				test1Hais, winHai12, 300, 0, 30, 2000, map[string]int{"立直": 1, "ドラ": 1},
-				&Dora{[]*commonDora{{omote: oneCircle71, ura: fiveCharacter}, {omote: fiveCharacter, ura: oneCircle71}}, true},
-				[]*pointSpread{{before: 25000, after: 27000}, {before: 25000, after: 25000}, {before: 25000, after: 23000}, {before: 25000, after: 25000}},
-				&player{winner: xml.PlayerIndex(0), loser: thirdUser},
-			),
-		},
-		{
-			name: "積み棒300点リーチ棒1000点40符2600点表ドラ1プレイヤー0ロンプレイヤー3",
-			args: commonTestCase(
-				"1,1", "40,2600,0", "1,1,51,1", "71", "", "0", "3",
-				"250,26,250,0,250,0,250,-26", "",
-			),
-			want: commonExpected(
-				test1Hais, winHai12, 300, 1000, 40, 2600, map[string]int{"立直": 1, "ドラ": 1},
-				&Dora{[]*commonDora{{omote: oneCircle71}}, true},
-				[]*pointSpread{{before: 25000, after: 27600}, {before: 25000, after: 25000}, {before: 25000, after: 25000}, {before: 25000, after: 23400}},
-				&player{winner: xml.PlayerIndex(0), loser: fourthUser},
-			),
+			name: "積み棒300点リーチ棒1000点20符1100点表ドラ1プレイヤー0ロンプレイヤー3",
+			args: args{
+				ba:        "1,1",
+				hands:     calledWinHandHaiArg,
+				m:         calledWinCallHaiArg,
+				machi:     "12",
+				ten:       "20,1100,0",
+				yaku:      "14,1",
+				doraHai:   "71",
+				who:       "0",
+				fromWho:   "3",
+				sc:        "250,11,250,-7,250,-4,250,-4",
+				isRedRule: true,
+			},
+			want: want{
+				allHais:       append(calledWinHandHais, calledWinCallHais...),
+				handHais:      calledWinHandHais,
+				callHais:      [][]hai.IHai{calledWinCallHais},
+				continuePoint: 300,
+				reachPoint:    1000,
+				winPlayer:     *firstUser,
+				losePlayer:    fourthUser,
+				winHai:        winHai12,
+				dora:          &Dora{common: []*commonDora{{omote: oneCircle71}}, isRed: true},
+				isHitDora:     false,
+				winPoint:      winPoint20hu1100p,
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -600,34 +253,37 @@ func TestWin(t *testing.T) {
 				t.Errorf("NewWin() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if diff := hais2Strings(got.AllHais(), tt.want.AllHais()); diff != "" {
+			if diff := hais2Strings(got.AllHais(), tt.want.allHais); diff != "" {
 				t.Errorf("(-got+want)\n%v", diff)
 			}
-			if diff := callHais2Strings(got.CallHais(), tt.want.CallHais()); diff != "" {
+			if diff := callHais2Strings(got.CallHais(), tt.want.callHais); diff != "" {
 				t.Errorf("(-got+want)\n%v", diff)
 			}
-			if diff := hais2Strings(got.HandHais(), tt.want.HandHais()); diff != "" {
+			if diff := hais2Strings(got.HandHais(), tt.want.handHais); diff != "" {
 				t.Errorf("(-got+want)\n%v", diff)
 			}
-			if diff := cmp.Diff(got.ContinuePoint(), tt.want.ContinuePoint()); diff != "" {
+			if diff := cmp.Diff(got.ContinuePoint(), tt.want.continuePoint); diff != "" {
 				t.Errorf("(-got+want)\n%v", diff)
 			}
-			if diff := cmp.Diff(got.ReachPoint(), tt.want.ReachPoint()); diff != "" {
+			if diff := cmp.Diff(got.ReachPoint(), tt.want.reachPoint); diff != "" {
 				t.Errorf("(-got+want)\n%v", diff)
 			}
-			if diff := cmp.Diff(got.Dora().String(), tt.want.Dora().String()); diff != "" {
+			if diff := cmp.Diff(got.Dora().String(), tt.want.dora.String()); diff != "" {
 				t.Errorf("(-got+want)\n%v", diff)
 			}
-			if diff := cmp.Diff(got.WinPlayer(), tt.want.WinPlayer()); diff != "" {
+			if diff := cmp.Diff(got.WinPlayer(), tt.want.winPlayer); diff != "" {
 				t.Errorf("(-got+want)\n%v", diff)
 			}
-			if diff := cmp.Diff(got.LosePlayer(), tt.want.LosePlayer()); diff != "" {
+			if diff := cmp.Diff(got.LosePlayer(), tt.want.losePlayer); diff != "" {
 				t.Errorf("(-got+want)\n%v", diff)
 			}
-			if diff := cmp.Diff(fmt.Sprintf("%+v", got.WinHai()), fmt.Sprintf("%+v", tt.want.WinHai())); diff != "" {
+			if diff := cmp.Diff(got.winHai, tt.want.winHai, cmp.AllowUnexported(hai.Hai{})); diff != "" {
 				t.Errorf("(-got+want)\n%v", diff)
 			}
-			if diff := cmp.Diff(got.IsHitDora(), tt.want.IsHitDora()); diff != "" {
+			if diff := cmp.Diff(got.IsHitDora(), tt.want.isHitDora); diff != "" {
+				t.Errorf("(-got+want)\n%v", diff)
+			}
+			if diff := cmp.Diff(got.winPoint, tt.want.winPoint, cmp.AllowUnexported(point{})); diff != "" {
 				t.Errorf("(-got+want)\n%v", diff)
 			}
 		})
@@ -642,23 +298,54 @@ func hais2Strings(got []hai.IHai, want []hai.IHai) (diff string) {
 	for i := range want {
 		w = append(w, want[i].String())
 	}
-	return cmp.Diff(g, w)
+	return cmp.Diff(g, w, cmpopts.SortSlices(func(i, j int) bool {
+		return i < j
+	}))
 }
 func callHais2Strings(got [][]hai.IHai, want [][]hai.IHai) (diff string) {
-	var resultGot, resultWant [][]string
-	for i := range got {
-		var g []string
-		for j := range got[i] {
-			g = append(g, got[i][j].String())
+	var (
+		mapGot                = make(map[uint][]string)
+		mapWant               = make(map[uint][]string)
+		gotIDs, wantIDs       []uint
+		resultGot, resultWant [][]string
+	)
+	for gotIdx := range got {
+		g := got[gotIdx]
+		sort.Slice(g, func(i, j int) bool {
+			return g[i].ID() < g[j].ID()
+		})
+		var gs []string
+		for j := range g {
+			gs = append(gs, g[j].String())
 		}
-		resultGot = append(resultGot, g)
+		if len(gs) > 0 {
+			mapGot[g[0].ID()] = gs
+			gotIDs = append(gotIDs, g[0].ID())
+		}
 	}
-	for i := range want {
-		var w []string
-		for j := range want[i] {
-			w = append(w, want[i][j].String())
+	for wantIdx := range want {
+		w := want[wantIdx]
+		sort.Slice(w, func(i, j int) bool {
+			return w[i].ID() < w[j].ID()
+		})
+		var ws []string
+		for j := range w {
+			ws = append(ws, w[j].String())
 		}
-		resultWant = append(resultWant, w)
+		if len(ws) > 0 {
+			mapWant[w[0].ID()] = ws
+			wantIDs = append(wantIDs, w[0].ID())
+		}
+	}
+	for i := range gotIDs {
+		if v, ok := mapGot[gotIDs[i]]; ok {
+			resultGot = append(resultGot, v)
+		}
+	}
+	for i := range wantIDs {
+		if v, ok := mapWant[wantIDs[i]]; ok {
+			resultWant = append(resultWant, v)
+		}
 	}
 	return cmp.Diff(resultGot, resultWant)
 }
