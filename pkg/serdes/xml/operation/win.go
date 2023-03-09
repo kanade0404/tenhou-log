@@ -1,15 +1,19 @@
 package operation
 
 import (
+	"errors"
 	"fmt"
+	error2 "github.com/kanade0404/tenhou-log/pkg/serdes/helper/error"
 	"github.com/kanade0404/tenhou-log/serdes/xml"
 	"github.com/kanade0404/tenhou-log/serdes/xml/hai"
 	"strconv"
 	"strings"
 )
 
-func wrapError(funcName string, err error) error {
-	return fmt.Errorf("error at operation.%s(): %w", funcName, err)
+var ArgumentEmptyError = fmt.Errorf("argument is empty")
+
+func wrapError(funName string, err error) error {
+	return error2.WrapError("operation", funName, err)
 }
 
 func yakuMap() map[int]string {
@@ -71,6 +75,25 @@ func yakuMap() map[int]string {
 	}
 }
 
+func yakumanMap() map[int]string {
+	return map[int]string{
+		36: "天和",
+		37: "地和",
+		38: "大三元",
+		39: "四暗刻",
+		40: "四暗刻単騎",
+		41: "字一色",
+		42: "緑一色",
+		43: "清老頭",
+		44: "九蓮宝燈",
+		45: "純正九蓮宝燈",
+		46: "国士無双",
+		47: "国士無双１３面",
+		48: "大四喜",
+		49: "小四喜",
+	}
+}
+
 type completeHand map[string]int
 type point struct {
 	hu int
@@ -122,6 +145,7 @@ type pointSpread struct {
 	after  int
 }
 type Win struct {
+	allHais            []hai.IHai
 	handHais           []hai.IHai   // 面前の手牌
 	callHais           [][]hai.IHai // 副露の手牌
 	player             *player
@@ -131,6 +155,9 @@ type Win struct {
 	dora               *Dora
 	winPoint           *point
 	playerPointSpreads []*pointSpread
+	yakuman            map[int]string
+	end                *End
+	isHitDora          bool
 }
 
 /*
@@ -138,11 +165,7 @@ AllHais
 和了時の全ての手牌
 */
 func (w *Win) AllHais() []hai.IHai {
-	results := w.handHais
-	for i := range w.callHais {
-		results = append(results, w.callHais[i]...)
-	}
-	return results
+	return w.allHais
 }
 
 /*
@@ -214,15 +237,23 @@ IsHitDora
 ドラ牌を持っているかどうか
 */
 func (w *Win) IsHitDora() bool {
-	hais := w.AllHais()
-	for i := range hais {
-		for j := range w.dora.common {
-			if hais[i].Num() == w.dora.common[j].omote.Num() || (w.dora.common[j].ura != nil && hais[i].Num() == w.dora.common[j].ura.Num()) {
-				return true
-			}
-		}
-	}
-	return false
+	return w.isHitDora
+}
+
+/*
+Yakuman
+役満情報
+*/
+func (w *Win) Yakuman() map[int]string {
+	return w.yakuman
+}
+
+/*
+End
+終局情報
+*/
+func (w *Win) End() *End {
+	return w.end
 }
 
 /*
@@ -242,11 +273,6 @@ sc 和了による点数移動を持ち点と収支をカンマ区切り
 owari 終局時の持ち点とポイント数をカンマ区切り
 */
 func NewWin(ba, hands, m, machi, ten, yaku, yakuman, doraHai, doraHaiUra, who, fromWho, sc, owari string, isRedRule bool) (*Win, error) {
-	// 積み棒と供託リーチ棒
-	continuePoint, reachPoint, err := createContinueAndReachPoint(ba)
-	if err != nil {
-		return nil, wrapError("NewWin", err)
-	}
 	// 手牌
 	handHais, err := createHandHais(hands, isRedRule)
 	if err != nil {
@@ -277,11 +303,52 @@ func NewWin(ba, hands, m, machi, ten, yaku, yakuman, doraHai, doraHaiUra, who, f
 	if err != nil {
 		return nil, wrapError("NewWin", err)
 	}
+	// 点数移動
 	playerPointSpread, err := createPlayerPointSpread(sc)
 	if err != nil {
 		return nil, wrapError("NewWin", err)
 	}
+	// 終局情報
+	end, err := createEnd(owari)
+	if err != nil {
+		if !errors.Is(err, ArgumentEmptyError) {
+			return nil, wrapError("NewWin", err)
+		}
+	}
+	// 役満
+	ykmn, err := createYakuman(yakuman)
+	if err != nil {
+		if !errors.Is(err, ArgumentEmptyError) {
+			return nil, wrapError("NewWin", err)
+		}
+	}
+	// 積み棒と供託リーチ棒
+	continuePoint, reachPoint, err := createContinueAndReachPoint(ba, len(playerPointSpread))
+	if err != nil {
+		return nil, wrapError("NewWin", err)
+	}
+	hs := handHais
+	for i := range callHais {
+		hs = append(hs, callHais[i]...)
+	}
+	// ドラがヒットしたか
+	var isHitDora bool
+	for hIdx := range hs {
+		for dIdx := range dora.common {
+			if hs[hIdx].IsRed() ||
+				(hs[hIdx].Num() == dora.common[dIdx].omote.Num() && hs[hIdx].Type() == dora.common[dIdx].omote.Type()) ||
+				(dora.common[dIdx].ura != nil && hs[hIdx].Num() == dora.common[dIdx].ura.Num() && hs[hIdx].Type() == dora.common[dIdx].ura.Type()) {
+				isHitDora = true
+			}
+		}
+	}
+	// 全ての牌
+	allHais := handHais
+	for i := range callHais {
+		allHais = append(allHais, callHais[i]...)
+	}
 	return &Win{
+		allHais:            allHais,
 		handHais:           handHais,
 		callHais:           callHais,
 		continuePoint:      continuePoint,
@@ -291,6 +358,9 @@ func NewWin(ba, hands, m, machi, ten, yaku, yakuman, doraHai, doraHaiUra, who, f
 		dora:               dora,
 		player:             player,
 		playerPointSpreads: playerPointSpread,
+		yakuman:            ykmn,
+		end:                end,
+		isHitDora:          isHitDora,
 	}, nil
 }
 
@@ -298,7 +368,7 @@ func NewWin(ba, hands, m, machi, ten, yaku, yakuman, doraHai, doraHaiUra, who, f
 createContinueAndReachPoint
 リーチ棒と供託つみ棒の情報を取得する。
 */
-func createContinueAndReachPoint(ba string) (continuePoint, reachPoint int, err error) {
+func createContinueAndReachPoint(ba string, userLen int) (continuePoint, reachPoint int, err error) {
 	points := strings.Split(ba, ",")
 	if len(points) < 2 {
 		err = fmt.Errorf("argument 'ba' must be two elements. actual: %s", ba)
@@ -313,7 +383,17 @@ func createContinueAndReachPoint(ba string) (continuePoint, reachPoint int, err 
 		return 0, 0, wrapError("createContinueAndReachPoint", err)
 	}
 	if cp != 0 {
-		continuePoint = cp * 1000
+		if userLen == 3 {
+			continuePoint = cp * 200
+		}
+		switch userLen {
+		case 3:
+			continuePoint = cp * 200
+		case 4:
+			continuePoint = cp * 300
+		default:
+			return 0, 0, wrapError("createContinueAndReachPoint", fmt.Errorf("user length must be 3 or 4. actual: %d", userLen))
+		}
 	}
 	if rp != 0 {
 		reachPoint = rp * 1000
@@ -365,6 +445,7 @@ func createCallHais(m string, isRedRule bool) ([][]hai.IHai, error) {
 /*
 createWinPoint
 和了点数情報を取得する
+満貫情報は見ていない
 */
 func createWinPoint(ten string, yaku string) (*point, error) {
 	tens := strings.Split(ten, ",")
@@ -513,4 +594,86 @@ func createCompleteHand(yaku string) (completeHand, error) {
 		completeHandMap[yakuMap()[yID]] = yNum
 	}
 	return completeHandMap, nil
+}
+
+type playerPoint struct {
+	gamePoint float64
+	winPoint  float64
+}
+
+func (p *playerPoint) GamePoint() float64 {
+	return p.gamePoint
+}
+func (p *playerPoint) WinPoint() float64 {
+	return p.winPoint
+}
+func (p *playerPoint) String() string {
+	return fmt.Sprintf("{gamePoint:%.1f,winPoint:%.1f}", p.gamePoint, p.winPoint)
+}
+
+func newPlayerPoint(gamePoint, winPoint float64) *playerPoint {
+	return &playerPoint{
+		gamePoint: gamePoint,
+		winPoint:  winPoint,
+	}
+}
+
+type End struct {
+	playerPoints []*playerPoint
+}
+
+func (e *End) PlayerPoints() []*playerPoint {
+	return e.playerPoints
+}
+
+/*
+createEnd
+終局時の持ち点とポイント数
+[起家, 南家, 西家(, 北家)]
+*/
+func createEnd(owari string) (*End, error) {
+	if owari == "" {
+		fmt.Println("EMPTY")
+		return nil, ArgumentEmptyError
+	}
+	points := strings.Split(owari, ",")
+	pLen := len(points)
+	var playerPoints []*playerPoint
+	for i := 0; i < pLen; i += 2 {
+		gamePoint, err := strconv.ParseFloat(points[i], 64)
+		if err != nil {
+			return nil, err
+		}
+		winPoint, err := strconv.ParseFloat(points[i+1], 64)
+		if err != nil {
+			return nil, err
+		}
+		playerPoints = append(playerPoints, newPlayerPoint(gamePoint, winPoint))
+	}
+	return &End{
+		playerPoints: playerPoints,
+	}, nil
+}
+
+/*
+createYakuman
+和了した役満情報
+役番号と役名のmap
+*/
+func createYakuman(yakuman string) (map[int]string, error) {
+	if yakuman == "" {
+		return nil, ArgumentEmptyError
+	}
+	yakus := strings.Split(yakuman, ",")
+	result := make(map[int]string)
+	for i := range yakus {
+		yakuIdx, err := strconv.Atoi(yakus[i])
+		if err != nil {
+			return nil, err
+		}
+		if y, ok := yakumanMap()[yakuIdx]; ok {
+			result[yakuIdx] = y
+		}
+	}
+	return result, nil
 }

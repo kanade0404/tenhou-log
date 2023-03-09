@@ -1,0 +1,29 @@
+version: '3'
+
+tasks:
+  setup:
+    cmds:
+      - docker compose exec terraform gcloud auth application-default login
+      - docker compose exec terraform gcloud auth login
+      - docker compose exec terraform gcloud config set project mj-log-dev
+      - task: init
+        vars: {ENV: "dev"}
+  init:
+    cmds:
+      - docker compose exec terraform terraform -chdir=/terraform/env/{{.ENV}} init
+  plan:
+    cmds:
+      - docker compose exec terraform terraform -chdir=/terraform/env/{{.ENV}} plan
+  apply:
+    cmds:
+      - docker compose exec terraform terraform -chdir=/terraform/env/{{.ENV}} apply
+  check:
+    cmds:
+      - task: fmt
+      - task: validate
+  fmt:
+    cmds:
+      - docker compose exec terraform terraform fmt -recursive
+  validate:
+    cmds:
+      - docker compose exec terraform terraform validate
