@@ -2,7 +2,7 @@ package hai
 
 import (
 	"fmt"
-	"github.com/kanade0404/tenhou-log/serdes/str"
+	"github.com/kanade0404/tenhou-log/pkg/serdes/str"
 )
 
 type IHai interface {

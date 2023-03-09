@@ -2,7 +2,7 @@ package operation
 
 import (
 	"fmt"
-	"github.com/kanade0404/tenhou-log/serdes/xml"
+	"github.com/kanade0404/tenhou-log/pkg/serdes/xml"
 	"strconv"
 )
 

@@ -2,7 +2,7 @@ package xml
 
 import (
 	"fmt"
-	"github.com/kanade0404/tenhou-log/serdes/str"
+	"github.com/kanade0404/tenhou-log/pkg/serdes/str"
 	"net/url"
 	"strconv"
 )

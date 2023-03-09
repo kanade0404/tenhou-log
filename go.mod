@@ -11,7 +11,6 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
-	github.com/kanade0404/tenhou-log/serdes 76ef264eb2c1
 	github.com/lib/pq v1.10.7
 	google.golang.org/genproto v0.0.0-20230306155012-7f2fa6fef1f4
 )
