@@ -2,5 +2,7 @@ go.work*
 **/tmp/**
 **/credentials/*.json
 database/data/**
+!database/data/.gitkeep
 database/logs/**
 database/test_data/**
+!database/test_data/.gitkeep
