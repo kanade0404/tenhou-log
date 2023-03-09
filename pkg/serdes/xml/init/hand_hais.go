@@ -1,8 +1,8 @@
 package init
 
 import (
-	"github.com/kanade0404/tenhou-log/serdes/xml"
-	"github.com/kanade0404/tenhou-log/serdes/xml/hai"
+	"github.com/kanade0404/tenhou-log/pkg/serdes/xml"
+	"github.com/kanade0404/tenhou-log/pkg/serdes/xml/hai"
 	"strconv"
 	"strings"
 )
