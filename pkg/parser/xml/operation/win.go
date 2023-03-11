@@ -3,9 +3,9 @@ package operation
 import (
 	"errors"
 	"fmt"
-	error2 "github.com/kanade0404/tenhou-log/pkg/serdes/helper/error"
-	"github.com/kanade0404/tenhou-log/pkg/serdes/xml"
-	"github.com/kanade0404/tenhou-log/pkg/serdes/xml/hai"
+	error2 "github.com/kanade0404/tenhou-log/pkg/parser/helper/error"
+	"github.com/kanade0404/tenhou-log/pkg/parser/xml"
+	"github.com/kanade0404/tenhou-log/pkg/parser/xml/hai"
 	"strconv"
 	"strings"
 )

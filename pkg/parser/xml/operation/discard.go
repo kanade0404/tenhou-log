@@ -1,8 +1,8 @@
 package operation
 
 import (
-	"github.com/kanade0404/tenhou-log/pkg/serdes/xml"
-	"github.com/kanade0404/tenhou-log/pkg/serdes/xml/hai"
+	"github.com/kanade0404/tenhou-log/pkg/parser/xml"
+	"github.com/kanade0404/tenhou-log/pkg/parser/xml/hai"
 )
 
 type Discard struct {
