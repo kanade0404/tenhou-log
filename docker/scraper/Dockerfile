@@ -1,6 +1,6 @@
 FROM golang:1.18 AS builder
 WORKDIR /app/
-COPY ../ .
+COPY ../../ .
 WORKDIR /app/services/scraper
 RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build main.go
 
