@@ -3,18 +3,11 @@ package operation
 import (
 	"errors"
 	"fmt"
-	error2 "github.com/kanade0404/tenhou-log/pkg/parser/helper/error"
 	"github.com/kanade0404/tenhou-log/pkg/parser/xml"
 	"github.com/kanade0404/tenhou-log/pkg/parser/xml/hai"
 	"strconv"
 	"strings"
 )
-
-var ArgumentEmptyError = fmt.Errorf("argument is empty")
-
-func wrapError(funName string, err error) error {
-	return error2.WrapError("operation", funName, err)
-}
 
 func yakuMap() map[int]string {
 	return map[int]string{
@@ -366,9 +359,12 @@ func NewWin(ba, hands, m, machi, ten, yaku, yakuman, doraHai, doraHaiUra, who, f
 
 /*
 createContinueAndReachPoint
-リーチ棒と供託つみ棒の情報を取得する。
+リーチ棒と供託積み棒の情報を取得する。
 */
 func createContinueAndReachPoint(ba string, userLen int) (continuePoint, reachPoint int, err error) {
+	if ba == "" {
+		return 0, 0, wrapError("createContinueAndReachPoint", errors.New("baを指定してください。"))
+	}
 	points := strings.Split(ba, ",")
 	if len(points) < 2 {
 		err = fmt.Errorf("argument 'ba' must be two elements. actual: %s", ba)
@@ -559,21 +555,27 @@ indexは0が起家で順になる。
 [起家, 南家, 西家(, 北家)]
 */
 func createPlayerPointSpread(sc string) ([]*pointSpread, error) {
+	if sc == "" {
+		return nil, errors.New("scを指定してください。")
+	}
 	var results []*pointSpread
 	scs := strings.Split(sc, ",")
 	l := len(scs)
+	if !(l == 6 || l == 8) {
+		return nil, fmt.Errorf("不正な書式のscです。sc: %s", sc)
+	}
 	for i := 0; i < l; i += 2 {
 		before, err := strconv.Atoi(scs[i])
 		if err != nil {
 			return nil, wrapError("createPlayerPointSpread", err)
 		}
-		after, err := strconv.Atoi(scs[i+1])
+		diff, err := strconv.Atoi(scs[i+1])
 		if err != nil {
 			return nil, wrapError("createPlayerPointSpread", err)
 		}
 		results = append(results, &pointSpread{
 			before: before,
-			after:  after,
+			after:  before + diff,
 		})
 	}
 	return results, nil
@@ -633,7 +635,6 @@ createEnd
 */
 func createEnd(owari string) (*End, error) {
 	if owari == "" {
-		fmt.Println("EMPTY")
 		return nil, ArgumentEmptyError
 	}
 	points := strings.Split(owari, ",")
@@ -648,7 +649,7 @@ func createEnd(owari string) (*End, error) {
 		if err != nil {
 			return nil, err
 		}
-		playerPoints = append(playerPoints, newPlayerPoint(gamePoint, winPoint))
+		playerPoints = append(playerPoints, newPlayerPoint(gamePoint*100, winPoint))
 	}
 	return &End{
 		playerPoints: playerPoints,

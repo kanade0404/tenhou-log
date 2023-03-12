@@ -250,7 +250,7 @@ func TestWin(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := NewWin(tt.args.ba, tt.args.hands, tt.args.m, tt.args.machi, tt.args.ten, tt.args.yaku, tt.args.yakuman, tt.args.doraHai, tt.args.doraHaiUra, tt.args.who, tt.args.fromWho, tt.args.sc, tt.args.owari, tt.args.isRedRule)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("NewWin() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("NewWin() custom_error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if diff := hais2Strings(got.AllHais(), tt.want.allHais); diff != "" {
@@ -360,19 +360,19 @@ func TestCreateEnd(t *testing.T) {
 			want: &End{
 				playerPoints: []*playerPoint{
 					{
-						gamePoint: 218,
+						gamePoint: 21800,
 						winPoint:  -18.2,
 					},
 					{
-						gamePoint: 227,
+						gamePoint: 22700,
 						winPoint:  2.7,
 					},
 					{
-						gamePoint: 148,
+						gamePoint: 14800,
 						winPoint:  -35.2,
 					},
 					{
-						gamePoint: 407,
+						gamePoint: 40700,
 						winPoint:  50.7,
 					},
 				},
@@ -387,15 +387,15 @@ func TestCreateEnd(t *testing.T) {
 			want: &End{
 				playerPoints: []*playerPoint{
 					{
-						gamePoint: 430,
+						gamePoint: 43000,
 						winPoint:  -18.2,
 					},
 					{
-						gamePoint: 350,
+						gamePoint: 35000,
 						winPoint:  2.7,
 					},
 					{
-						gamePoint: 280,
+						gamePoint: 28000,
 						winPoint:  -35.2,
 					},
 				},
@@ -405,14 +405,14 @@ func TestCreateEnd(t *testing.T) {
 	for _, tt := range tests {
 		var name string
 		if tt.want == nil {
-			name = fmt.Sprintf("createEnd(%s) == error", tt.owari)
+			name = fmt.Sprintf("createEnd(%s) == custom_error", tt.owari)
 		} else {
 			name = fmt.Sprintf("createEnd(%s) == %v", tt.owari, tt.want.playerPoints)
 		}
 		t.Run(name, func(t *testing.T) {
 			got, err := createEnd(tt.owari)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("createEnd() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("createEnd() custom_error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if tt.wantErr {

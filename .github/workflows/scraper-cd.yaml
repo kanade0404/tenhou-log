@@ -9,7 +9,7 @@ on:
       - go.*
       - .github/workflows/scraper-cd.yaml
       - docker/scraper/**
-      - '!pkg/serdes/**'
+      - '!pkg/parser/**'
   workflow_dispatch:
 
 env:
