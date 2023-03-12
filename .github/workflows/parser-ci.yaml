@@ -2,12 +2,12 @@ name: Serdes CI
 on:
   pull_request:
     paths:
-      - pkg/serdes/**
+      - pkg/parser/**
       - go.*
-      - .github/workflows/serdes-ci.yaml
+      - .github/workflows/parser-ci.yaml
 defaults:
   run:
-    working-directory: pkg/serdes
+    working-directory: pkg/parser
 env:
   go-version: 1.18
 jobs:
