@@ -9,5 +9,5 @@ resource "google_kms_crypto_key" "key" {
   lifecycle {
     prevent_destroy = true
   }
+  rotation_period = "2592000s" # 30日
 }
-
