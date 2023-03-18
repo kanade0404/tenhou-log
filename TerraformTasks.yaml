@@ -3,20 +3,20 @@ version: '3'
 tasks:
   setup:
     cmds:
-      - docker compose exec terraform gcloud auth application-default login
-      - docker compose exec terraform gcloud auth login
+      - docker compose exec terraform gcloud auth application-default login --no-launch-browser
+      - docker compose exec terraform gcloud auth login --no-launch-browser
       - docker compose exec terraform gcloud config set project mj-log-dev
       - task: init
         vars: {ENV: "dev"}
   init:
     cmds:
-      - docker compose exec terraform terraform -chdir=/terraform/env/{{.ENV}} init
+      - docker compose exec terraform terraform -chdir=/terraform/env/{{.ENV}} init {{.CLI_ARGS}}
   plan:
     cmds:
-      - docker compose exec terraform terraform -chdir=/terraform/env/{{.ENV}} plan
+      - docker compose exec terraform terraform -chdir=/terraform/env/{{.ENV}} plan {{.CLI_ARGS}}
   apply:
     cmds:
-      - docker compose exec terraform terraform -chdir=/terraform/env/{{.ENV}} apply
+      - docker compose exec terraform terraform -chdir=/terraform/env/{{.ENV}} apply {{.CLI_ARGS}}
   check:
     cmds:
       - task: fmt
@@ -27,3 +27,35 @@ tasks:
   validate:
     cmds:
       - docker compose exec terraform terraform validate
+  modgen:
+    cmds:
+      - docker compose exec terraform mkdir /terraform/modules/{{.MOD}}
+      - docker compose exec terraform touch /terraform/modules/{{.MOD}}/main.tf /terraform/modules/{{.MOD}}/outputs.tf /terraform/modules/{{.MOD}}/variables.tf
+  mv:
+    cmds:
+      - docker compose exec terraform terraform  -chdir=/terraform/env/{{.ENV}} state mv '{{.FROM}}' '{{.TO}}'
+  exec:
+    cmds:
+      - docker compose exec terraform bash
+  encrypt:dev:
+    cmds:
+      - docker compose exec terraform gcloud kms encrypt --location asia-northeast1 --keyring {{.KEYRING}} --key {{.KEY}} --plaintext-file /terraform/env/{{.ENV}}/credentials/scraper.json --ciphertext-file /terraform/env/{{.ENV}}/credentials/scraper.json.enc
+      - docker compose exec terraform gcloud kms encrypt --location asia-northeast1 --keyring {{.KEYRING}} --key {{.KEY}} --plaintext-file /terraform/env/{{.ENV}}/credentials/database.json --ciphertext-file /terraform/env/{{.ENV}}/credentials/database.json.enc
+      - docker compose exec terraform gcloud kms encrypt --location asia-northeast1 --keyring {{.KEYRING}} --key {{.KEY}} --plaintext-file /terraform/env/{{.ENV}}/credentials/api.json --ciphertext-file /terraform/env/{{.ENV}}/credentials/api.json.enc
+      - docker compose exec terraform gcloud kms encrypt --location asia-northeast1 --keyring {{.KEYRING}} --key {{.KEY}} --plaintext-file /terraform/env/{{.ENV}}/credentials/secret.json --ciphertext-file /terraform/env/{{.ENV}}/credentials/secret.json.enc
+      - docker compose exec terraform gcloud kms encrypt --location asia-northeast1 --keyring {{.KEYRING}} --key {{.KEY}} --plaintext-file /terraform/env/{{.ENV}}/terraform.tfvars --ciphertext-file /terraform/env/{{.ENV}}/terraform.tfvars.enc
+    vars:
+      ENV: dev
+      KEYRING: keyring-dev
+      KEY: terraform
+  decrypt:dev:
+    cmds:
+      - docker compose exec terraform gcloud kms decrypt --location asia-northeast1 --keyring {{.KEYRING}} --key {{.KEY}} --plaintext-file /terraform/env/{{.ENV}}/credentials/scraper.json --ciphertext-file /terraform/env/{{.ENV}}/credentials/scraper.json.enc
+      - docker compose exec terraform gcloud kms decrypt --location asia-northeast1 --keyring {{.KEYRING}} --key {{.KEY}} --plaintext-file /terraform/env/{{.ENV}}/credentials/database.json --ciphertext-file /terraform/env/{{.ENV}}/credentials/database.json.enc
+      - docker compose exec terraform gcloud kms decrypt --location asia-northeast1 --keyring {{.KEYRING}} --key {{.KEY}} --plaintext-file /terraform/env/{{.ENV}}/credentials/api.json --ciphertext-file /terraform/env/{{.ENV}}/credentials/api.json.enc
+      - docker compose exec terraform gcloud kms decrypt --location asia-northeast1 --keyring {{.KEYRING}} --key {{.KEY}} --plaintext-file /terraform/env/{{.ENV}}/credentials/secret.json --ciphertext-file /terraform/env/{{.ENV}}/credentials/secret.json.enc
+      - docker compose exec terraform gcloud kms decrypt --location asia-northeast1 --keyring {{.KEYRING}} --key {{.KEY}} --plaintext-file /terraform/env/{{.ENV}}/terraform.tfvars --ciphertext-file /terraform/env/{{.ENV}}/terraform.tfvars.enc
+    vars:
+      ENV: dev
+      KEYRING: keyring-dev
+      KEY: terraform

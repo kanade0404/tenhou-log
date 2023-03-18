@@ -1,18 +1,51 @@
 module "web_app_container" {
-  source            = "../../modules/run"
-  PROJECT_ID        = var.PROJECT_ID
-  location          = var.location
-  name              = "web"
-  image_name        = "${module.artifact_registry_web.image}/next"
-  sql_instance_name = ""
-  ingress           = "internal-and-cloud-load-balancing"
-  depends_on        = [module.enabled_services.services]
+  source     = "../../modules/run"
+  PROJECT_ID = var.PROJECT_ID
+  location   = local.location
+  name       = "web"
+  image_name = "${module.artifact_registry_web.image}/next"
+  ingress    = "internal-and-cloud-load-balancing"
+  port       = 3000
+  depends_on = [module.enabled_services.services]
+  iam_members = [
+    {
+      name = "allUsers"
+      role = "roles/run.invoker"
+    }
+  ]
+  service_account_name = module.service_account["web-invoker"].email
 }
-module "web_app_container_public_iam_member" {
-  source      = "../../modules/run/iam_members"
-  PROJECT_ID  = var.PROJECT_ID
-  location    = var.location
-  member_name = "allUsers"
-  role        = "roles/run.invoker"
-  run_name    = module.web_app_container.name
+module "api_app_container" {
+  source     = "../../modules/run"
+  PROJECT_ID = var.PROJECT_ID
+  location   = local.location
+  name       = "api"
+  image_name = "${module.artifact_registry_backend.image}/api"
+  ingress    = "internal-and-cloud-load-balancing"
+  port       = 8080
+  secrets = [
+    {
+      name = "HASURA_GRAPHQL_METADATA_DATABASE_URL"
+    },
+    {
+      name = "HASURA_GRAPHQL_ADMIN_SECRET"
+    },
+    {
+      name = "HASURA_GRAPHQL_ENABLE_CONSOLE"
+    },
+    {
+      name = "PG_DATABASE_URL"
+    },
+    {
+      name = "HASURA_GRAPHQL_DATABASE_URL"
+    }
+  ]
+  depends_on = [module.enabled_services.services]
+  iam_members = [
+    {
+      name = "allUsers"
+      role = "roles/run.invoker"
+    }
+  ]
+  service_account_name = module.service_account["api-invoker"].email
 }

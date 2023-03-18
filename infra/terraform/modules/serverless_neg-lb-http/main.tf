@@ -1,43 +1,31 @@
-resource "google_compute_region_network_endpoint_group" "serverless_neg" {
-  provider              = google-beta
-  name                  = var.name
-  network_endpoint_type = "SERVERLESS"
-  region                = var.region
-  project               = var.PROJECT_ID
-  cloud_run {
-    service = var.run_name
-  }
-}
 resource "google_compute_global_address" "global_ipv4_address" {
   name = "${var.name}-address"
 }
 resource "google_compute_managed_ssl_certificate" "ssl_cert" {
   provider = google-beta
-  name     = "${var.name}-cert"
+  name     = "${var.name}-cert-${substr(uuid(), 0, 6)}"
   managed {
     domains = var.domains
   }
-}
-resource "google_compute_backend_service" "backend" {
-  name        = "${var.name}-backend"
-  protocol    = "HTTP"
-  port_name   = "http"
-  timeout_sec = 30
-  backend {
-    group = google_compute_region_network_endpoint_group.serverless_neg.id
+  lifecycle {
+    create_before_destroy = true
+    ignore_changes = [
+      name
+    ]
   }
 }
-resource "google_compute_url_map" "url_map" {
-  name            = "${var.name}-urlmap"
-  default_service = google_compute_backend_service.backend.id
-}
 resource "google_compute_target_https_proxy" "https_proxy" {
-  name = "${var.name}-https-proxy"
+  name = "${var.name}-https-proxy-${substr(uuid(), 0, 6)}"
 
   url_map = google_compute_url_map.url_map.id
   ssl_certificates = [
     google_compute_managed_ssl_certificate.ssl_cert.id
   ]
+  lifecycle {
+    ignore_changes = [
+      name
+    ]
+  }
 }
 resource "google_compute_global_forwarding_rule" "lb" {
   name       = "${var.name}-lb"
@@ -63,3 +51,4 @@ resource "google_compute_global_forwarding_rule" "https_redirect" {
   port_range = "80"
   ip_address = google_compute_global_address.global_ipv4_address.address
 }
+
