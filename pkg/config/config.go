@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"fmt"
 	"github.com/kanade0404/tenhou-log/pkg/driver/secret_manager"
 	"os"
@@ -49,7 +50,27 @@ func (c *Config) CompressedLogBucketName() string {
 	return c.compressedLogBucketName
 }
 
-func NewLocalEnv() (*Config, error) {
+func NewEnv(ctx context.Context) (*Config, error) {
+	if IsLocal() {
+		env, err := newLocalEnv()
+		if err != nil {
+			return nil, fmt.Errorf("failed to load dev env: %v", err)
+		}
+		return env, nil
+	} else {
+		sm, err := secret_manager.NewSecretManager(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to initialize SecretManager: %v", err)
+		}
+		env, err := newRemoteEnv(sm)
+		if err != nil {
+			return nil, fmt.Errorf("failed load remote env: %v", err)
+		}
+		return env, nil
+	}
+}
+
+func newLocalEnv() (*Config, error) {
 	return &Config{
 		isLocal:                 true,
 		appPort:                 os.Getenv("PORT"),
@@ -69,7 +90,7 @@ func NewLocalEnv() (*Config, error) {
 	}, nil
 }
 
-func NewRemoteEnv(manager *secret_manager.SecretManager) (*Config, error) {
+func newRemoteEnv(manager *secret_manager.SecretManager) (*Config, error) {
 	appPort, err := manager.GetVersion("PORT")
 	if err != nil {
 		return nil, err
