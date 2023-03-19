@@ -5,6 +5,10 @@ on:
       - services/web/**
       - docker/web/**
       - .github/workflows/node-ci.yaml
+defaults:
+  run:
+    shell: bash
+    working-directory: services/web
 jobs:
   ci:
     runs-on: ubuntu-22.04
