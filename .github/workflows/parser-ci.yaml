@@ -9,7 +9,7 @@ defaults:
     shell: bash
     working-directory: pkg/parser
 jobs:
-  serdes-ci:
+  parser-ci:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
