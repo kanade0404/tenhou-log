@@ -1,15 +1,11 @@
-name: Serdes CI
+name: Parser CI
 on:
   pull_request:
     paths:
       - pkg/parser/**
       - go.*
       - .github/workflows/parser-ci.yaml
-defaults:
-  run:
-    working-directory: pkg/parser
-env:
-  go-version: 1.18
+
 jobs:
   serdes-ci:
     runs-on: ubuntu-22.04
@@ -19,7 +15,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
-          go-version: ${{ env.go-version }}
+          go-version: 1.18
       - name: Test
         run: go test ./...
       - name: Format
@@ -29,5 +25,3 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         continue-on-error: true
-      - name: Build
-        run: go build .

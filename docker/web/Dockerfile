@@ -4,20 +4,14 @@ FROM node:19 AS builder
 ENV NODE_ENV=development
 
 WORKDIR /app
-COPY package.json ./
-COPY yarn.lock ./
-RUN yarn install
 COPY . .
-RUN yarn build
+RUN yarn install && yarn build
 
-
-FROM node:alpine AS runner
+FROM node:alpine
 ENV NODE_ENV=production
 
 WORKDIR /app
-COPY package.json ./
-COPY yarn.lock ./
-# NODE_ENV=productionにしてyarn install(npm install)するとdevDependenciesがインストールされません
+COPY ./package.json ./yarn.lock ./
 RUN yarn install
 COPY --from=builder /app/next.config.js ./
 COPY --from=builder /app/.next ./.next

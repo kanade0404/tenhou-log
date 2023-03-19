@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - services/web/**
+      - docker/web/**
+      - .github/workflows/node-ci.yaml
 defaults:
   run:
     shell: bash
