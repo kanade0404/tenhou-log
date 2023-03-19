@@ -3,9 +3,11 @@ on:
   pull_request:
     paths:
       - pkg/parser/**
-      - go.*
       - .github/workflows/parser-ci.yaml
-
+defaults:
+  run:
+    shell: bash
+    working-directory: pkg/parser
 jobs:
   serdes-ci:
     runs-on: ubuntu-22.04
