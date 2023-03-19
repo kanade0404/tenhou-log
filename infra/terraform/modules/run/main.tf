@@ -4,10 +4,11 @@ resource "google_cloud_run_service" "run" {
   project  = var.PROJECT_ID
   template {
     spec {
+      service_account_name = var.service_account_name
       containers {
         image = var.image_name
         ports {
-          container_port = 3000
+          container_port = var.port
           name           = "http1"
         }
         resources {
@@ -16,14 +17,25 @@ resource "google_cloud_run_service" "run" {
             "memory" = "512Mi"
           }
         }
+        dynamic "env" {
+          for_each = { for v in var.secrets : v.name => v }
+          content {
+            name = env.value.name
+            value_from {
+              secret_key_ref {
+                key  = data.google_secret_manager_secret_version.version[env.value.name].version
+                name = data.google_secret_manager_secret_version.version[env.value.name].secret
+              }
+            }
+          }
+        }
       }
     }
     metadata {
       annotations = {
         "autoscaling.knative.dev/maxScale" = "1000"
-        #        "run.googleapis.com/cloudsql-instances" = var.sql_instance_name
-        "run.googleapis.com/client-name" = "terraform"
-        "client.knative.dev/user-image"  = var.image_name
+        "run.googleapis.com/client-name"   = "terraform"
+        "client.knative.dev/user-image"    = var.image_name
       }
     }
   }
@@ -40,6 +52,7 @@ resource "google_cloud_run_service" "run" {
   }
   lifecycle {
     ignore_changes = [
+      metadata[0].annotations["run.googleapis.com/operation-id"],
       template[0].metadata[0].annotations["client.knative.dev/user-image"],
       template[0].metadata[0].annotations["run.googleapis.com/client-name"],
       template[0].metadata[0].annotations["run.googleapis.com/client-version"],

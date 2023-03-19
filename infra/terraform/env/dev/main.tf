@@ -13,15 +13,15 @@ terraform {
 provider "google" {
   credentials = var.GOOGLE_CREDENTIALS
   project     = var.PROJECT_ID
-  region      = var.location
-  zone        = var.default_zone
+  region      = local.location
+  zone        = local.default_zone
 }
 
 provider "google-beta" {
   credentials = var.GOOGLE_CREDENTIALS
   project     = var.PROJECT_ID
-  region      = var.location
-  zone        = var.default_zone
+  region      = local.location
+  zone        = local.default_zone
 }
 
 module "project" {

@@ -14,9 +14,6 @@ variable "traffic_percentile" {
   type    = number
   default = 100
 }
-variable "sql_instance_name" {
-  type = string
-}
 variable "ingress" {
   type    = string
   default = "all"
@@ -24,4 +21,26 @@ variable "ingress" {
     error_message = "Ingress must be one of: [\"all\", \"internal\", \"internal-and-cloud-load-balancing\"]."
     condition     = contains(["all", "internal", "internal-and-cloud-load-balancing"], var.ingress)
   }
+}
+
+variable "port" {
+  type = number
+}
+
+variable "secrets" {
+  type = list(object({
+    name    = string
+    version = optional(string)
+  }))
+  default = []
+}
+variable "iam_members" {
+  type = list(object({
+    name = string
+    role = string
+  }))
+  default = []
+}
+variable "service_account_name" {
+  type = string
 }

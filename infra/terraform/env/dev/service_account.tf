@@ -3,10 +3,23 @@ locals {
     {
       name         = "scraper-invoker",
       display_name = "scraper invoker"
-    }
+    },
+    {
+      name         = "web-invoker",
+      display_name = "web app invoker"
+    },
+    {
+      name         = "api-invoker",
+      display_name = "api app invoker"
+    },
   ]
   run_invokers = [
-    module.service_account["scraper-invoker"].email
+    module.service_account["scraper-invoker"].email,
+    module.service_account["web-invoker"].email,
+    module.service_account["api-invoker"].email
+  ]
+  secret_manager_accessor = [
+    module.service_account["api-invoker"].email,
   ]
   sa_token_creators = [
     "service-${module.project.number}@gcp-sa-pubsub.iam.gserviceaccount.com"
@@ -16,8 +29,8 @@ module "service_account" {
   for_each     = { for v in local.accounts : v.name => v }
   source       = "../../modules/service_account"
   PROJECT_ID   = var.PROJECT_ID
-  display_name = each.value["display_name"]
-  id           = each.value["name"]
+  display_name = each.value.display_name
+  id           = each.value.name
   depends_on   = [module.enabled_services.services]
 }
 module "run_invoker_iam_role" {
@@ -34,6 +47,14 @@ module "sa_token_creator_iam_role" {
   PROJECT_ID = var.PROJECT_ID
   name       = each.value
   role       = "roles/iam.serviceAccountTokenCreator"
+  depends_on = [module.enabled_services.services]
+}
+module "secret_manager_accessor" {
+  for_each   = toset(local.secret_manager_accessor)
+  source     = "../../modules/iam"
+  PROJECT_ID = var.PROJECT_ID
+  name       = each.value
+  role       = "roles/secretmanager.secretAccessor"
   depends_on = [module.enabled_services.services]
 }
 locals {

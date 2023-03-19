@@ -221,7 +221,7 @@ func TestNewDrawnGame(t *testing.T) {
 				if tt.wantErr {
 					return
 				} else {
-					t.Errorf("NewDrawnGame() custom_error = %v, wantErr %v", err, tt.wantErr)
+					t.Errorf("NewDrawnGame() error = %v, wantErr %v", err, tt.wantErr)
 				}
 				return
 			}

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/kanade0404/tenhou-log/pkg/config"
 	"github.com/kanade0404/tenhou-log/pkg/database"
-	"github.com/kanade0404/tenhou-log/pkg/driver/secret_manager"
 	"github.com/kanade0404/tenhou-log/services/ent"
 	_ "github.com/lib/pq"
 	"log"
@@ -27,7 +26,7 @@ var chineseNumeral = map[int]string{
 
 func TenhouDans() []string {
 	dans := []string{"新人"}
-	for i := 9; i >= 0; i-- {
+	for i := 9; i > 0; i-- {
 		dans = append(dans, fmt.Sprintf("%d級", i))
 	}
 	dans = append(dans, "初段")
@@ -40,27 +39,11 @@ func TenhouDans() []string {
 func main() {
 	log.Println("Run start")
 	ctx := context.Background()
-	isLocal := config.IsLocal()
-	var (
-		env *config.Config
-		err error
-	)
-	if isLocal {
-		env, err = config.NewLocalEnv()
-		if err != nil {
-			log.Fatalf("failed load dev env: %v", err)
-		}
-	} else {
-		sm, err := secret_manager.NewSecretManager(ctx)
-		if err != nil {
-			log.Fatalf("failed initialize SecretManager: %v", err)
-		}
-		env, err = config.NewRemoteEnv(sm)
-		if err != nil {
-			log.Fatalf("failed load remote env: %v", err)
-		}
+	env, err := config.NewEnv(ctx)
+	if err != nil {
+		log.Fatalln(err)
 	}
-	client, err := ent.Open(env.Dialect(), env.ConnectionString())
+	client, err := database.CreateClient(ctx, env.Dialect(), env.ConnectionString())
 	if err != nil {
 		log.Fatalf("failed database connection: %v", err)
 	}
@@ -77,7 +60,7 @@ func main() {
 	dans := TenhouDans()
 	for _, dan := range dans {
 		err := tx.Dan.Create().SetName(dan).OnConflict(sql.ConflictColumns("name")).DoNothing().Exec(ctx)
-		if !strings.Contains(err.Error(), "sql: no rows in result set") && err != nil {
+		if err != nil && !strings.Contains(err.Error(), "sql: no rows in result set") {
 			err := database.Rollback(tx, err)
 			if err != nil {
 				log.Fatalf("rollback: %v", err)
