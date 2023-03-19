@@ -1,19 +1,14 @@
-FROM node:19 AS builder
-
-# ビルドには devDependencies もインストールする必要があるため
-ENV NODE_ENV=development
+FROM node:18 AS builder
 
 WORKDIR /app
 COPY . .
-RUN yarn install && yarn build
+RUN yarn install --frozen-lockfile && yarn build && yarn install --frozen-lockfile --production
 
-FROM node:alpine
-ENV NODE_ENV=production
+FROM gcr.io/distroless/nodejs18-debian11
 
 WORKDIR /app
-COPY ./package.json ./yarn.lock ./
-RUN yarn install
-COPY --from=builder /app/next.config.js ./
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
+COPY --from=builder /app .
+COPY ./next.config.js ./
+COPY ./.next ./.next
+COPY ./public ./public
 CMD ["yarn", "start"]

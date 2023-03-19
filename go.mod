@@ -1,6 +1,6 @@
 module github.com/kanade0404/tenhou-log
 
-go 1.18
+go 1.20
 
 require (
 	ariga.io/atlas v0.10.0
