@@ -1,4 +1,4 @@
-name: Serdes CI
+name: Parser CI
 on:
   pull_request:
     paths:
@@ -25,5 +25,3 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         continue-on-error: true
-      - name: Build
-        run: go build .
