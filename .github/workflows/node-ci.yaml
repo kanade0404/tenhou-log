@@ -3,10 +3,8 @@ on:
   pull_request:
     paths:
       - services/web/**
-defaults:
-  run:
-    shell: bash
-    working-directory: services/web
+      - docker/web/**
+      - .github/workflows/node-ci.yaml
 jobs:
   ci:
     runs-on: ubuntu-22.04

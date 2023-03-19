@@ -15,6 +15,15 @@ module "web_app_container" {
   ]
   service_account_name = module.service_account["web-invoker"].email
 }
+module "scraper_app_container" {
+  source               = "../../modules/run"
+  PROJECT_ID           = var.PROJECT_ID
+  image_name           = "${module.artifact_registry_backend.image}/scraper"
+  location             = local.location
+  name                 = "scraper"
+  port                 = 8080
+  service_account_name = module.service_account["scraper-invoker"].email
+}
 module "api_app_container" {
   source     = "../../modules/run"
   PROJECT_ID = var.PROJECT_ID

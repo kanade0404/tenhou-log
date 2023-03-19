@@ -5,11 +5,9 @@ on:
       - master
     paths:
       - services/web/**
+      - docker/web/**
+      - .github/workflows/node-cd.yaml
   workflow_dispatch:
-defaults:
-  run:
-    shell: bash
-    working-directory: services/web
 env:
   IMAGE: asia-northeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID_DEV }}/web/next
 jobs:
@@ -34,12 +32,6 @@ jobs:
           project_id: ${{ secrets.GCP_PROJECT_ID_DEV }}
       - name: 'Set up Cloud SDK'
         uses: 'google-github-actions/setup-gcloud@v1'
-      - name: Install packages
-        run: yarn install --frozen-lockfile
-      - name: Run build
-        run: yarn build
-      - name: Run lint
-        run: yarn lint
       - name: Create docker authentication
         run: gcloud auth configure-docker asia-northeast1-docker.pkg.dev
       - name: Build App
