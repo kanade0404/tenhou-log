@@ -86,7 +86,7 @@ func newLocalEnv() (*Config, error) {
 }
 
 func newRemoteEnv(manager *secret_manager.SecretManager) (*Config, error) {
-	appPort, err := manager.GetVersion("PORT")
+	appPort, err := manager.GetVersion("SCRAPER_PORT")
 	if err != nil {
 		return nil, err
 	}
