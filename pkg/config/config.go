@@ -10,6 +10,9 @@ import (
 type localDatabaseConfig struct {
 	dbHost string
 }
+type remoteConfig struct {
+	projectIDNum string
+}
 type databaseConfig struct {
 	dialect  string
 	dbName   string
@@ -25,6 +28,7 @@ type Config struct {
 	compressedLogBucketName string
 	googleAppEnv            string
 	databaseConfig
+	remoteConfig
 }
 
 func (c *Config) Port() string {
@@ -53,7 +57,7 @@ func NewEnv(ctx context.Context) (*Config, error) {
 		}
 		return env, nil
 	} else {
-		sm, err := secret_manager.NewSecretManager(ctx)
+		sm, err := secret_manager.NewSecretManager(ctx, os.Getenv("PROJECT_ID_NUMBER"))
 		if err != nil {
 			return nil, fmt.Errorf("failed to initialize SecretManager: %v", err)
 		}
