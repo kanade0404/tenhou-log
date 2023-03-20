@@ -10,10 +10,6 @@ import (
 type localDatabaseConfig struct {
 	dbHost string
 }
-type remoteDatabaseConfig struct {
-	instanceConnectionName string
-	instancePrivateIP      string
-}
 type databaseConfig struct {
 	dialect  string
 	dbName   string
@@ -22,7 +18,6 @@ type databaseConfig struct {
 	dbPort   string
 	sslMode  string
 	localDatabaseConfig
-	remoteDatabaseConfig
 }
 type Config struct {
 	isLocal                 bool
@@ -95,10 +90,6 @@ func newRemoteEnv(manager *secret_manager.SecretManager) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	googleAppCredentials, err := manager.GetVersion("GOOGLE_APPLICATION_CREDENTIALS")
-	if err != nil {
-		return nil, err
-	}
 	compressedLogBucketName, err := manager.GetVersion("COMPRESSED_LOG_BUCKET_NAME")
 	if err != nil {
 		return nil, err
@@ -119,18 +110,9 @@ func newRemoteEnv(manager *secret_manager.SecretManager) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	instanceConnName, err := manager.GetVersion("INSTANCE_CONNECTION_NAME")
-	if err != nil {
-		return nil, err
-	}
-	instancePrivateIP, err := manager.GetVersion("INSTANCE_PRIVATE_IP")
-	if err != nil {
-		return nil, err
-	}
 	return &Config{
 		isLocal:                 false,
 		appPort:                 appPort,
-		googleAppEnv:            googleAppCredentials,
 		compressedLogBucketName: compressedLogBucketName,
 		databaseConfig: databaseConfig{
 			dialect:  dialect,
@@ -138,10 +120,6 @@ func newRemoteEnv(manager *secret_manager.SecretManager) (*Config, error) {
 			dbUser:   dbUser,
 			password: dbPassword,
 			sslMode:  "disable",
-			remoteDatabaseConfig: remoteDatabaseConfig{
-				instanceConnectionName: instanceConnName,
-				instancePrivateIP:      instancePrivateIP,
-			},
 		},
 	}, nil
 }
