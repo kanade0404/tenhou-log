@@ -9,6 +9,7 @@ FROM gcr.io/distroless/static-debian11
 
 WORKDIR /app
 COPY --from=builder /app/services/scraper/main .
+COPY --from=builder /app/services/database/migrations .
 EXPOSE 8088
 ENV ENV=dev
 CMD ["./main"]
