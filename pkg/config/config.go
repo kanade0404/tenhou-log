@@ -68,7 +68,7 @@ func NewEnv(ctx context.Context) (*Config, error) {
 func newLocalEnv() (*Config, error) {
 	return &Config{
 		isLocal:                 true,
-		appPort:                 os.Getenv("PORT"),
+		appPort:                 os.Getenv("SCRAPER_PORT"),
 		googleAppEnv:            os.Getenv("GOOGLE_APPLICATION_CREDENTIALS"),
 		compressedLogBucketName: os.Getenv("COMPRESSED_LOG_BUCKET_NAME"),
 		databaseConfig: databaseConfig{
