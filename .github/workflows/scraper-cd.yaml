@@ -42,4 +42,4 @@ jobs:
       - name: Push Image
         run: docker push ${{ env.IMAGE }}
       - name: Deploy App
-        run: gcloud run deploy scraper --image ${{ env.IMAGE }}
+        run: gcloud run deploy scraper --image ${{ env.IMAGE }} --region asia-northeast-1
