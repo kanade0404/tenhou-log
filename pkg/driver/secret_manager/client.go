@@ -2,23 +2,24 @@ package secret_manager
 
 import (
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
+	"cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
 	"context"
 	"fmt"
-	secretmanagerpb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
 	"hash/crc32"
 )
 
 type SecretManager struct {
 	*secretmanager.Client
 	context.Context
+	projectID string
 }
 
-func NewSecretManager(ctx context.Context) (*SecretManager, error) {
+func NewSecretManager(ctx context.Context, projectIDNumber string) (*SecretManager, error) {
 	client, err := createClient(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return &SecretManager{Context: ctx, Client: client}, nil
+	return &SecretManager{Context: ctx, Client: client, projectID: projectIDNumber}, nil
 }
 func createClient(ctx context.Context) (*secretmanager.Client, error) {
 	c, err := secretmanager.NewClient(ctx)
@@ -28,7 +29,7 @@ func createClient(ctx context.Context) (*secretmanager.Client, error) {
 	return c, nil
 }
 func (m *SecretManager) GetVersion(name string) (string, error) {
-	req := &secretmanagerpb.AccessSecretVersionRequest{Name: name}
+	req := &secretmanagerpb.AccessSecretVersionRequest{Name: fmt.Sprintf("projects/%s/secrets/%s/versions/latest", m.projectID, name)}
 	result, err := m.Client.AccessSecretVersion(m.Context, req)
 	if err != nil {
 		return "", err

@@ -10,9 +10,8 @@ import (
 type localDatabaseConfig struct {
 	dbHost string
 }
-type remoteDatabaseConfig struct {
-	instanceConnectionName string
-	instancePrivateIP      string
+type remoteConfig struct {
+	projectIDNum string
 }
 type databaseConfig struct {
 	dialect  string
@@ -22,7 +21,6 @@ type databaseConfig struct {
 	dbPort   string
 	sslMode  string
 	localDatabaseConfig
-	remoteDatabaseConfig
 }
 type Config struct {
 	isLocal                 bool
@@ -30,6 +28,7 @@ type Config struct {
 	compressedLogBucketName string
 	googleAppEnv            string
 	databaseConfig
+	remoteConfig
 }
 
 func (c *Config) Port() string {
@@ -58,7 +57,7 @@ func NewEnv(ctx context.Context) (*Config, error) {
 		}
 		return env, nil
 	} else {
-		sm, err := secret_manager.NewSecretManager(ctx)
+		sm, err := secret_manager.NewSecretManager(ctx, os.Getenv("PROJECT_ID_NUMBER"))
 		if err != nil {
 			return nil, fmt.Errorf("failed to initialize SecretManager: %v", err)
 		}
@@ -73,7 +72,7 @@ func NewEnv(ctx context.Context) (*Config, error) {
 func newLocalEnv() (*Config, error) {
 	return &Config{
 		isLocal:                 true,
-		appPort:                 os.Getenv("PORT"),
+		appPort:                 os.Getenv("SCRAPER_PORT"),
 		googleAppEnv:            os.Getenv("GOOGLE_APPLICATION_CREDENTIALS"),
 		compressedLogBucketName: os.Getenv("COMPRESSED_LOG_BUCKET_NAME"),
 		databaseConfig: databaseConfig{
@@ -91,11 +90,7 @@ func newLocalEnv() (*Config, error) {
 }
 
 func newRemoteEnv(manager *secret_manager.SecretManager) (*Config, error) {
-	appPort, err := manager.GetVersion("PORT")
-	if err != nil {
-		return nil, err
-	}
-	googleAppCredentials, err := manager.GetVersion("GOOGLE_APPLICATION_CREDENTIALS")
+	appPort, err := manager.GetVersion("SCRAPER_PORT")
 	if err != nil {
 		return nil, err
 	}
@@ -119,18 +114,9 @@ func newRemoteEnv(manager *secret_manager.SecretManager) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	instanceConnName, err := manager.GetVersion("INSTANCE_CONNECTION_NAME")
-	if err != nil {
-		return nil, err
-	}
-	instancePrivateIP, err := manager.GetVersion("INSTANCE_PRIVATE_IP")
-	if err != nil {
-		return nil, err
-	}
 	return &Config{
 		isLocal:                 false,
 		appPort:                 appPort,
-		googleAppEnv:            googleAppCredentials,
 		compressedLogBucketName: compressedLogBucketName,
 		databaseConfig: databaseConfig{
 			dialect:  dialect,
@@ -138,10 +124,6 @@ func newRemoteEnv(manager *secret_manager.SecretManager) (*Config, error) {
 			dbUser:   dbUser,
 			password: dbPassword,
 			sslMode:  "disable",
-			remoteDatabaseConfig: remoteDatabaseConfig{
-				instanceConnectionName: instanceConnName,
-				instancePrivateIP:      instancePrivateIP,
-			},
 		},
 	}, nil
 }

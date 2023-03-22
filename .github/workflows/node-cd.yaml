@@ -13,7 +13,6 @@ env:
 jobs:
   cd:
     runs-on: ubuntu-22.04
-    if: github.event.pull_request.merged == true
     permissions:
       contents: 'read'
       id-token: 'write'
@@ -34,7 +33,9 @@ jobs:
         uses: 'google-github-actions/setup-gcloud@v1'
       - name: Create docker authentication
         run: gcloud auth configure-docker asia-northeast1-docker.pkg.dev
-      - name: Build App
+      - name: Build Image
         run: docker build -t ${{ env.IMAGE }} services/web -f docker/web/Dockerfile
-      - name: Deploy App
+      - name: Push Image
         run: docker push ${{ env.IMAGE }}
+      - name: Deploy App
+        run: gcloud run deploy web --image ${{ env.IMAGE }} --region asia-northeast1
