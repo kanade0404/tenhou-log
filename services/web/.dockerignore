@@ -1,0 +1,11 @@
+### Node template
+# Logs
+logs
+*.log
+
+# Next.js build output
+.next
+
+/node_modules
+
+.DS_Store
