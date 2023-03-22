@@ -9,6 +9,6 @@ FROM gcr.io/distroless/nodejs18-debian11
 WORKDIR /app
 COPY --from=builder /app .
 COPY ./next.config.js ./
-COPY ./.next ./.next
-COPY ./public ./public
+COPY ./.next ./
+COPY ./public ./
 CMD ["yarn", "start"]
