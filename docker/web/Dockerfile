@@ -7,8 +7,7 @@ RUN yarn install --frozen-lockfile && yarn build && yarn install --frozen-lockfi
 FROM gcr.io/distroless/nodejs18-debian11
 
 WORKDIR /app
-COPY --from=builder /app .
-COPY ./next.config.js ./
-COPY ./.next ./
-COPY ./public ./
+COPY --from=builder /app/next.config.js .
+COPY --from=builder /app/.next .
+COPY --from=builder /app/public .
 CMD ["yarn", "start"]
