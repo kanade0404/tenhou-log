@@ -13,16 +13,23 @@ module "web_app_container" {
       role = "roles/run.invoker"
     }
   ]
-  service_account_name = module.service_account["web-invoker"].email
+  service_account_name = module.service_account["web-runner"].email
 }
 module "scraper_app_container" {
-  source               = "../../modules/run"
-  PROJECT_ID           = var.PROJECT_ID
-  image_name           = "${module.artifact_registry_backend.image}/scraper"
-  location             = local.location
-  name                 = "scraper"
-  port                 = 8080
-  service_account_name = module.service_account["scraper-invoker"].email
+  source     = "../../modules/run"
+  PROJECT_ID = var.PROJECT_ID
+  image_name = "${module.artifact_registry_backend.image}/scraper"
+  location   = local.location
+  ingress    = "internal"
+  name       = "scraper"
+  port       = 8088
+  secrets = [
+    {
+      name = "PROJECT_ID_NUMBER"
+    },
+  ]
+  service_account_name = module.service_account["scraper-runner"].email
+  depends_on           = [module.enabled_services.services]
 }
 module "api_app_container" {
   source     = "../../modules/run"
@@ -56,5 +63,5 @@ module "api_app_container" {
       role = "roles/run.invoker"
     }
   ]
-  service_account_name = module.service_account["api-invoker"].email
+  service_account_name = module.service_account["api-runner"].email
 }

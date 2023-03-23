@@ -6,7 +6,7 @@ resource "google_cloud_run_service" "run" {
     spec {
       service_account_name = var.service_account_name
       containers {
-        image = var.image_name
+        image = "${var.image_name}:latest"
         ports {
           container_port = var.port
           name           = "http1"
@@ -53,15 +53,21 @@ resource "google_cloud_run_service" "run" {
   lifecycle {
     ignore_changes = [
       metadata[0].annotations["run.googleapis.com/operation-id"],
-      template[0].metadata[0].annotations["client.knative.dev/user-image"],
-      template[0].metadata[0].annotations["run.googleapis.com/client-name"],
-      template[0].metadata[0].annotations["run.googleapis.com/client-version"],
-      template[0].metadata[0].annotations["run.googleapis.com/sandbox"],
+      metadata[0].annotations["client.knative.dev/user-image"],
+      metadata[0].annotations["run.googleapis.com/client-name"],
+      metadata[0].annotations["run.googleapis.com/client-version"],
       metadata[0].annotations["serving.knative.dev/creator"],
       metadata[0].annotations["serving.knative.dev/lastModifier"],
       metadata[0].annotations["run.googleapis.com/ingress-status"],
       metadata[0].annotations["run.googleapis.com/launch-stage"],
       metadata[0].labels["cloud.googleapis.com/location"],
+      status[0].latest_created_revision_name,
+      status[0].latest_ready_revision_name,
+      status[0].observed_generation,
+      template[0].metadata[0].annotations["client.knative.dev/user-image"],
+      template[0].metadata[0].annotations["run.googleapis.com/client-name"],
+      template[0].metadata[0].annotations["run.googleapis.com/client-version"],
+      template[0].metadata[0].annotations["run.googleapis.com/sandbox"],
     ]
   }
 }

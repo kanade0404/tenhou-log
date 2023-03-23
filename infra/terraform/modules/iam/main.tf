@@ -3,3 +3,4 @@ resource "google_project_iam_member" "member" {
   project = var.PROJECT_ID
   role    = var.role
 }
+
