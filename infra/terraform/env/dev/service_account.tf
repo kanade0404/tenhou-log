@@ -1,28 +1,17 @@
 locals {
   accounts = [
     {
-      name         = "scraper-invoker",
-      display_name = "scraper invoker"
+      name         = "scraper-runner",
+      display_name = "scraper runner"
     },
     {
-      name         = "web-invoker",
-      display_name = "web app invoker"
+      name         = "web-runner",
+      display_name = "web app runner"
     },
     {
-      name         = "api-invoker",
-      display_name = "api app invoker"
+      name         = "api-runner",
+      display_name = "api app runner"
     },
-  ]
-  run_invokers = [
-    module.service_account["scraper-invoker"].email,
-    module.service_account["web-invoker"].email,
-    module.service_account["api-invoker"].email
-  ]
-  secret_manager_accessor = [
-    module.service_account["api-invoker"].email,
-  ]
-  sa_token_creators = [
-    "service-${module.project.number}@gcp-sa-pubsub.iam.gserviceaccount.com"
   ]
 }
 module "service_account" {
@@ -33,6 +22,13 @@ module "service_account" {
   id           = each.value.name
   depends_on   = [module.enabled_services.services]
 }
+locals {
+  run_invokers = [
+    module.service_account["scraper-runner"].email,
+    module.service_account["web-runner"].email,
+    module.service_account["api-runner"].email
+  ]
+}
 module "run_invoker_iam_role" {
   for_each   = toset(local.run_invokers)
   source     = "../../modules/iam"
@@ -40,6 +36,12 @@ module "run_invoker_iam_role" {
   name       = each.value
   role       = "roles/run.invoker"
   depends_on = [module.enabled_services.services]
+}
+locals {
+  sa_token_creators = [
+    "service-${module.project.number}@gcp-sa-pubsub.iam.gserviceaccount.com"
+
+  ]
 }
 module "sa_token_creator_iam_role" {
   for_each   = toset(local.sa_token_creators)
@@ -49,8 +51,14 @@ module "sa_token_creator_iam_role" {
   role       = "roles/iam.serviceAccountTokenCreator"
   depends_on = [module.enabled_services.services]
 }
+locals {
+  secret_manager_accessors = [
+    module.service_account["scraper-runner"].email,
+    module.service_account["api-runner"].email
+  ]
+}
 module "secret_manager_accessor" {
-  for_each   = toset(local.secret_manager_accessor)
+  for_each   = toset(local.secret_manager_accessors)
   source     = "../../modules/iam"
   PROJECT_ID = var.PROJECT_ID
   name       = each.value
@@ -58,14 +66,39 @@ module "secret_manager_accessor" {
   depends_on = [module.enabled_services.services]
 }
 locals {
-  artifact_registry_writer = [
-    module.workload-identity-service-account.email
+  storage_admins = [
+    module.service_account["scraper-runner"].email
   ]
 }
-module "artifact_registry_writer" {
-  for_each   = toset(local.artifact_registry_writer)
+module "storage_admin" {
+  for_each   = toset(local.storage_admins)
   source     = "../../modules/iam"
   PROJECT_ID = var.PROJECT_ID
   name       = each.value
-  role       = "roles/artifactregistry.writer"
+  role       = "roles/storage.admin"
+}
+
+module "github_actions_role" {
+  source = "../../modules/iam/custom_role"
+  id     = "actions.runner"
+  permissions = [
+    "iam.serviceAccounts.actAs",
+    "run.services.create",
+    "run.services.update",
+    "run.services.get",
+    "artifactregistry.repositories.uploadArtifacts"
+  ]
+  title = "GitHub Actions Role"
+}
+locals {
+  github_actions = [
+    module.workload-identity-service-account.email
+  ]
+}
+module "github_actions" {
+  for_each   = toset(local.github_actions)
+  source     = "../../modules/iam"
+  PROJECT_ID = var.PROJECT_ID
+  name       = each.value
+  role       = module.github_actions_role.id
 }

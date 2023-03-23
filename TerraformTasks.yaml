@@ -31,6 +31,9 @@ tasks:
     cmds:
       - docker compose exec terraform mkdir /terraform/modules/{{.MOD}}
       - docker compose exec terraform touch /terraform/modules/{{.MOD}}/main.tf /terraform/modules/{{.MOD}}/outputs.tf /terraform/modules/{{.MOD}}/variables.tf
+  import:
+    cmds:
+      - docker compose exec terraform terraform  -chdir=/terraform/env/{{.ENV}} import '{{.FROM}}' "{{.TO}}"
   mv:
     cmds:
       - docker compose exec terraform terraform  -chdir=/terraform/env/{{.ENV}} state mv '{{.FROM}}' '{{.TO}}'
@@ -39,23 +42,41 @@ tasks:
       - docker compose exec terraform bash
   encrypt:dev:
     cmds:
-      - docker compose exec terraform gcloud kms encrypt --location asia-northeast1 --keyring {{.KEYRING}} --key {{.KEY}} --plaintext-file /terraform/env/{{.ENV}}/credentials/scraper.json --ciphertext-file /terraform/env/{{.ENV}}/credentials/scraper.json.enc
-      - docker compose exec terraform gcloud kms encrypt --location asia-northeast1 --keyring {{.KEYRING}} --key {{.KEY}} --plaintext-file /terraform/env/{{.ENV}}/credentials/database.json --ciphertext-file /terraform/env/{{.ENV}}/credentials/database.json.enc
-      - docker compose exec terraform gcloud kms encrypt --location asia-northeast1 --keyring {{.KEYRING}} --key {{.KEY}} --plaintext-file /terraform/env/{{.ENV}}/credentials/api.json --ciphertext-file /terraform/env/{{.ENV}}/credentials/api.json.enc
-      - docker compose exec terraform gcloud kms encrypt --location asia-northeast1 --keyring {{.KEYRING}} --key {{.KEY}} --plaintext-file /terraform/env/{{.ENV}}/credentials/secret.json --ciphertext-file /terraform/env/{{.ENV}}/credentials/secret.json.enc
-      - docker compose exec terraform gcloud kms encrypt --location asia-northeast1 --keyring {{.KEYRING}} --key {{.KEY}} --plaintext-file /terraform/env/{{.ENV}}/terraform.tfvars --ciphertext-file /terraform/env/{{.ENV}}/terraform.tfvars.enc
+      - task:credential:scraper
+      - task:credential:database
+      - task:credential:api
+      - task:credential:secret
+      - task:credential:tfvars
     vars:
       ENV: dev
       KEYRING: keyring-dev
       KEY: terraform
+      ENC_OR_DEC: encrypt
   decrypt:dev:
     cmds:
-      - docker compose exec terraform gcloud kms decrypt --location asia-northeast1 --keyring {{.KEYRING}} --key {{.KEY}} --plaintext-file /terraform/env/{{.ENV}}/credentials/scraper.json --ciphertext-file /terraform/env/{{.ENV}}/credentials/scraper.json.enc
-      - docker compose exec terraform gcloud kms decrypt --location asia-northeast1 --keyring {{.KEYRING}} --key {{.KEY}} --plaintext-file /terraform/env/{{.ENV}}/credentials/database.json --ciphertext-file /terraform/env/{{.ENV}}/credentials/database.json.enc
-      - docker compose exec terraform gcloud kms decrypt --location asia-northeast1 --keyring {{.KEYRING}} --key {{.KEY}} --plaintext-file /terraform/env/{{.ENV}}/credentials/api.json --ciphertext-file /terraform/env/{{.ENV}}/credentials/api.json.enc
-      - docker compose exec terraform gcloud kms decrypt --location asia-northeast1 --keyring {{.KEYRING}} --key {{.KEY}} --plaintext-file /terraform/env/{{.ENV}}/credentials/secret.json --ciphertext-file /terraform/env/{{.ENV}}/credentials/secret.json.enc
-      - docker compose exec terraform gcloud kms decrypt --location asia-northeast1 --keyring {{.KEYRING}} --key {{.KEY}} --plaintext-file /terraform/env/{{.ENV}}/terraform.tfvars --ciphertext-file /terraform/env/{{.ENV}}/terraform.tfvars.enc
+      - task:credential:scraper
+      - task:credential:database
+      - task:credential:api
+      - task:credential:secret
+      - task:credential:tfvars
     vars:
       ENV: dev
       KEYRING: keyring-dev
       KEY: terraform
+      ENC_OR_DEC: decrypt
+  credential:scraper:
+    cmds:
+      - docker compose exec terraform gcloud kms {{.ENC_OR_DEC}} --location asia-northeast1 --keyring {{.KEYRING}} --key {{.KEY}} --plaintext-file /terraform/env/{{.ENV}}/credentials/scraper.json --ciphertext-file /terraform/env/{{.ENV}}/credentials/scraper.json.enc
+  credential:database:
+    cmds:
+      - docker compose exec terraform gcloud kms {{.ENC_OR_DEC}} --location asia-northeast1 --keyring {{.KEYRING}} --key {{.KEY}} --plaintext-file /terraform/env/{{.ENV}}/credentials/database.json --ciphertext-file /terraform/env/{{.ENV}}/credentials/database.json.enc
+  credential:api:
+    cmds:
+      - docker compose exec terraform gcloud kms {{.ENC_OR_DEC}} --location asia-northeast1 --keyring {{.KEYRING}} --key {{.KEY}} --plaintext-file /terraform/env/{{.ENV}}/credentials/api.json --ciphertext-file /terraform/env/{{.ENV}}/credentials/api.json.enc
+  credential:secret:
+    cmds:
+      - docker compose exec terraform gcloud kms {{.ENC_OR_DEC}} --location asia-northeast1 --keyring {{.KEYRING}} --key {{.KEY}} --plaintext-file /terraform/env/{{.ENV}}/credentials/secret.json --ciphertext-file /terraform/env/{{.ENV}}/credentials/secret.json.enc
+  credential:tfvars:
+    cmds:
+      - docker compose exec terraform gcloud kms {{.ENC_OR_DEC}} --location asia-northeast1 --keyring {{.KEYRING}} --key {{.KEY}} --plaintext-file /terraform/env/{{.ENV}}/terraform.tfvars --ciphertext-file /terraform/env/{{.ENV}}/terraform.tfvars.enc
+
