@@ -4,7 +4,7 @@ module "web_app_container" {
   location   = local.location
   name       = "web"
   image_name = "${module.artifact_registry_web.image}/next"
-  ingress    = "internal-and-cloud-load-balancing"
+  ingress    = "all"
   port       = 3000
   depends_on = [module.enabled_services.services]
   iam_members = [
@@ -27,6 +27,12 @@ module "scraper_app_container" {
     {
       name = "PROJECT_ID_NUMBER"
     },
+    {
+      name = "COMPRESSED_LOG_TRAIL_BUCKET_NAME"
+    },
+    {
+      name = "PROJECT_ID"
+    }
   ]
   service_account_name = module.service_account["scraper-runner"].email
   depends_on           = [module.enabled_services.services]
@@ -37,7 +43,7 @@ module "api_app_container" {
   location   = local.location
   name       = "api"
   image_name = "${module.artifact_registry_backend.image}/api"
-  ingress    = "internal-and-cloud-load-balancing"
+  ingress    = "internal"
   port       = 8080
   secrets = [
     {
@@ -54,14 +60,11 @@ module "api_app_container" {
     },
     {
       name = "HASURA_GRAPHQL_DATABASE_URL"
-    }
-  ]
-  depends_on = [module.enabled_services.services]
-  iam_members = [
+    },
     {
-      name = "allUsers"
-      role = "roles/run.invoker"
+      name = "PROJECT_ID"
     }
   ]
+  depends_on           = [module.enabled_services.services]
   service_account_name = module.service_account["api-runner"].email
 }

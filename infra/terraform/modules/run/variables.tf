@@ -44,3 +44,7 @@ variable "iam_members" {
 variable "service_account_name" {
   type = string
 }
+variable "mapping_domains" {
+  type    = list(string)
+  default = []
+}

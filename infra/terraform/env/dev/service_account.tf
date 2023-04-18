@@ -12,6 +12,26 @@ locals {
       name         = "api-runner",
       display_name = "api app runner"
     },
+    {
+      name         = "workflow-runner",
+      display_name = "workflows pipeline runner"
+    },
+    {
+      name         = "log-converter-runner",
+      display_name = "log converter runner"
+    },
+    {
+      name         = "log-decompressor-runner",
+      display_name = "log decompressor runner"
+    },
+    {
+      name         = "log-downloader-runner",
+      display_name = "log downloader runner"
+    },
+    {
+      name         = "scheduler-runner",
+      display_name = "scheduler runner"
+    }
   ]
 }
 module "service_account" {
@@ -26,7 +46,8 @@ locals {
   run_invokers = [
     module.service_account["scraper-runner"].email,
     module.service_account["web-runner"].email,
-    module.service_account["api-runner"].email
+    module.service_account["api-runner"].email,
+    module.service_account["workflow-runner"].email
   ]
 }
 module "run_invoker_iam_role" {
@@ -39,8 +60,8 @@ module "run_invoker_iam_role" {
 }
 locals {
   sa_token_creators = [
-    "service-${module.project.number}@gcp-sa-pubsub.iam.gserviceaccount.com"
-
+    "service-${module.project.number}@gcp-sa-pubsub.iam.gserviceaccount.com",
+    module.service_account["workflow-runner"].email
   ]
 }
 module "sa_token_creator_iam_role" {
@@ -54,7 +75,10 @@ module "sa_token_creator_iam_role" {
 locals {
   secret_manager_accessors = [
     module.service_account["scraper-runner"].email,
-    module.service_account["api-runner"].email
+    module.service_account["api-runner"].email,
+    module.service_account["log-converter-runner"].email,
+    module.service_account["log-decompressor-runner"].email,
+    module.service_account["log-downloader-runner"].email
   ]
 }
 module "secret_manager_accessor" {
@@ -67,7 +91,10 @@ module "secret_manager_accessor" {
 }
 locals {
   storage_admins = [
-    module.service_account["scraper-runner"].email
+    module.service_account["scraper-runner"].email,
+    module.service_account["log-converter-runner"].email,
+    module.service_account["log-decompressor-runner"].email,
+    module.service_account["log-downloader-runner"].email
   ]
 }
 module "storage_admin" {
@@ -77,7 +104,6 @@ module "storage_admin" {
   name       = each.value
   role       = "roles/storage.admin"
 }
-
 module "github_actions_role" {
   source = "../../modules/iam/custom_role"
   id     = "actions.runner"
@@ -101,4 +127,32 @@ module "github_actions" {
   PROJECT_ID = var.PROJECT_ID
   name       = each.value
   role       = module.github_actions_role.id
+}
+module "workflow_admin" {
+  for_each = toset([
+    module.service_account["workflow-runner"].email
+  ])
+  source     = "../../modules/iam"
+  PROJECT_ID = var.PROJECT_ID
+  name       = each.value
+  role       = "roles/workflows.admin"
+}
+module "workflow_invoker" {
+  for_each = toset([
+    module.service_account["scheduler-runner"].email
+  ])
+  source     = "../../modules/iam"
+  PROJECT_ID = var.PROJECT_ID
+  name       = each.value
+  role       = "roles/logging.logWriter"
+}
+module "log_writer" {
+  for_each = toset([
+    module.service_account["scheduler-runner"].email,
+    module.service_account["workflow-runner"].email
+  ])
+  source     = "../../modules/iam"
+  PROJECT_ID = var.PROJECT_ID
+  name       = each.value
+  role       = "roles/logging.logWriter"
 }
