@@ -40,15 +40,7 @@ func (rd *RoomDelete) ExecX(ctx context.Context) int {
 }
 
 func (rd *RoomDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: room.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: room.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(room.Table, sqlgraph.NewFieldSpec(room.FieldID, field.TypeUUID))
 	if ps := rd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -69,6 +61,12 @@ type RoomDeleteOne struct {
 	rd *RoomDelete
 }
 
+// Where appends a list predicates to the RoomDelete builder.
+func (rdo *RoomDeleteOne) Where(ps ...predicate.Room) *RoomDeleteOne {
+	rdo.rd.mutation.Where(ps...)
+	return rdo
+}
+
 // Exec executes the deletion query.
 func (rdo *RoomDeleteOne) Exec(ctx context.Context) error {
 	n, err := rdo.rd.Exec(ctx)
@@ -84,5 +82,7 @@ func (rdo *RoomDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (rdo *RoomDeleteOne) ExecX(ctx context.Context) {
-	rdo.rd.ExecX(ctx)
+	if err := rdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

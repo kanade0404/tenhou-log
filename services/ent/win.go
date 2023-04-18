@@ -89,14 +89,14 @@ func (w *Win) assignValues(columns []string, values []any) error {
 
 // QueryEvent queries the "event" edge of the Win entity.
 func (w *Win) QueryEvent() *EventQuery {
-	return (&WinClient{config: w.config}).QueryEvent(w)
+	return NewWinClient(w.config).QueryEvent(w)
 }
 
 // Update returns a builder for updating this Win.
 // Note that you need to call Win.Unwrap() before calling this method if this Win
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (w *Win) Update() *WinUpdateOne {
-	return (&WinClient{config: w.config}).UpdateOne(w)
+	return NewWinClient(w.config).UpdateOne(w)
 }
 
 // Unwrap unwraps the Win entity that was returned from a transaction after it was closed,
@@ -121,9 +121,3 @@ func (w *Win) String() string {
 
 // Wins is a parsable slice of Win.
 type Wins []*Win
-
-func (w Wins) config(cfg config) {
-	for _i := range w {
-		w[_i].config = cfg
-	}
-}

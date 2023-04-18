@@ -40,15 +40,7 @@ func (gppd *GamePlayerPointDelete) ExecX(ctx context.Context) int {
 }
 
 func (gppd *GamePlayerPointDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: gameplayerpoint.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: gameplayerpoint.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(gameplayerpoint.Table, sqlgraph.NewFieldSpec(gameplayerpoint.FieldID, field.TypeUUID))
 	if ps := gppd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -69,6 +61,12 @@ type GamePlayerPointDeleteOne struct {
 	gppd *GamePlayerPointDelete
 }
 
+// Where appends a list predicates to the GamePlayerPointDelete builder.
+func (gppdo *GamePlayerPointDeleteOne) Where(ps ...predicate.GamePlayerPoint) *GamePlayerPointDeleteOne {
+	gppdo.gppd.mutation.Where(ps...)
+	return gppdo
+}
+
 // Exec executes the deletion query.
 func (gppdo *GamePlayerPointDeleteOne) Exec(ctx context.Context) error {
 	n, err := gppdo.gppd.Exec(ctx)
@@ -84,5 +82,7 @@ func (gppdo *GamePlayerPointDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (gppdo *GamePlayerPointDeleteOne) ExecX(ctx context.Context) {
-	gppdo.gppd.ExecX(ctx)
+	if err := gppdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

@@ -159,13 +159,7 @@ func (rc *RoundCreate) sqlSave(ctx context.Context) (*Round, error) {
 func (rc *RoundCreate) createSpec() (*Round, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Round{config: rc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: round.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: round.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(round.Table, sqlgraph.NewFieldSpec(round.FieldID, field.TypeUUID))
 	)
 	_spec.OnConflict = rc.conflict
 	if id, ok := rc.mutation.ID(); ok {
@@ -184,10 +178,7 @@ func (rc *RoundCreate) createSpec() (*Round, *sqlgraph.CreateSpec) {
 			Columns: []string{round.GamesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: game.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(game.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -204,10 +195,7 @@ func (rc *RoundCreate) createSpec() (*Round, *sqlgraph.CreateSpec) {
 			Columns: []string{round.HandsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: hand.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(hand.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

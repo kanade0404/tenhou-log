@@ -40,15 +40,7 @@ func (rd *RoundDelete) ExecX(ctx context.Context) int {
 }
 
 func (rd *RoundDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: round.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: round.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(round.Table, sqlgraph.NewFieldSpec(round.FieldID, field.TypeUUID))
 	if ps := rd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -69,6 +61,12 @@ type RoundDeleteOne struct {
 	rd *RoundDelete
 }
 
+// Where appends a list predicates to the RoundDelete builder.
+func (rdo *RoundDeleteOne) Where(ps ...predicate.Round) *RoundDeleteOne {
+	rdo.rd.mutation.Where(ps...)
+	return rdo
+}
+
 // Exec executes the deletion query.
 func (rdo *RoundDeleteOne) Exec(ctx context.Context) error {
 	n, err := rdo.rd.Exec(ctx)
@@ -84,5 +82,7 @@ func (rdo *RoundDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (rdo *RoundDeleteOne) ExecX(ctx context.Context) {
-	rdo.rd.ExecX(ctx)
+	if err := rdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

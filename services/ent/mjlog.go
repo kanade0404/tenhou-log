@@ -154,19 +154,19 @@ func (ml *MJLog) assignValues(columns []string, values []any) error {
 
 // QueryMjlogFiles queries the "mjlog_files" edge of the MJLog entity.
 func (ml *MJLog) QueryMjlogFiles() *MJLogFileQuery {
-	return (&MJLogClient{config: ml.config}).QueryMjlogFiles(ml)
+	return NewMJLogClient(ml.config).QueryMjlogFiles(ml)
 }
 
 // QueryGames queries the "games" edge of the MJLog entity.
 func (ml *MJLog) QueryGames() *GameQuery {
-	return (&MJLogClient{config: ml.config}).QueryGames(ml)
+	return NewMJLogClient(ml.config).QueryGames(ml)
 }
 
 // Update returns a builder for updating this MJLog.
 // Note that you need to call MJLog.Unwrap() before calling this method if this MJLog
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (ml *MJLog) Update() *MJLogUpdateOne {
-	return (&MJLogClient{config: ml.config}).UpdateOne(ml)
+	return NewMJLogClient(ml.config).UpdateOne(ml)
 }
 
 // Unwrap unwraps the MJLog entity that was returned from a transaction after it was closed,
@@ -202,9 +202,3 @@ func (ml *MJLog) String() string {
 
 // MJLogs is a parsable slice of MJLog.
 type MJLogs []*MJLog
-
-func (ml MJLogs) config(cfg config) {
-	for _i := range ml {
-		ml[_i].config = cfg
-	}
-}

@@ -116,16 +116,7 @@ func (mlu *MJLogUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if err := mlu.check(); err != nil {
 		return n, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   mjlog.Table,
-			Columns: mjlog.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: mjlog.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(mjlog.Table, mjlog.Columns, sqlgraph.NewFieldSpec(mjlog.FieldID, field.TypeUUID))
 	if ps := mlu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -141,10 +132,7 @@ func (mlu *MJLogUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{mjlog.MjlogFilesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: mjlogfile.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(mjlogfile.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -157,10 +145,7 @@ func (mlu *MJLogUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{mjlog.MjlogFilesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: mjlogfile.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(mjlogfile.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -176,10 +161,7 @@ func (mlu *MJLogUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{mjlog.GamesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: game.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(game.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -192,10 +174,7 @@ func (mlu *MJLogUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{mjlog.GamesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: game.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(game.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -270,6 +249,12 @@ func (mluo *MJLogUpdateOne) ClearGames() *MJLogUpdateOne {
 	return mluo
 }
 
+// Where appends a list predicates to the MJLogUpdate builder.
+func (mluo *MJLogUpdateOne) Where(ps ...predicate.MJLog) *MJLogUpdateOne {
+	mluo.mutation.Where(ps...)
+	return mluo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (mluo *MJLogUpdateOne) Select(field string, fields ...string) *MJLogUpdateOne {
@@ -316,16 +301,7 @@ func (mluo *MJLogUpdateOne) sqlSave(ctx context.Context) (_node *MJLog, err erro
 	if err := mluo.check(); err != nil {
 		return _node, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   mjlog.Table,
-			Columns: mjlog.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: mjlog.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(mjlog.Table, mjlog.Columns, sqlgraph.NewFieldSpec(mjlog.FieldID, field.TypeUUID))
 	id, ok := mluo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "MJLog.id" for update`)}
@@ -358,10 +334,7 @@ func (mluo *MJLogUpdateOne) sqlSave(ctx context.Context) (_node *MJLog, err erro
 			Columns: []string{mjlog.MjlogFilesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: mjlogfile.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(mjlogfile.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -374,10 +347,7 @@ func (mluo *MJLogUpdateOne) sqlSave(ctx context.Context) (_node *MJLog, err erro
 			Columns: []string{mjlog.MjlogFilesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: mjlogfile.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(mjlogfile.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -393,10 +363,7 @@ func (mluo *MJLogUpdateOne) sqlSave(ctx context.Context) (_node *MJLog, err erro
 			Columns: []string{mjlog.GamesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: game.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(game.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -409,10 +376,7 @@ func (mluo *MJLogUpdateOne) sqlSave(ctx context.Context) (_node *MJLog, err erro
 			Columns: []string{mjlog.GamesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: game.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(game.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

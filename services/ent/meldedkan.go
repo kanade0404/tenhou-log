@@ -78,14 +78,14 @@ func (mk *MeldedKan) assignValues(columns []string, values []any) error {
 
 // QueryCall queries the "call" edge of the MeldedKan entity.
 func (mk *MeldedKan) QueryCall() *CallQuery {
-	return (&MeldedKanClient{config: mk.config}).QueryCall(mk)
+	return NewMeldedKanClient(mk.config).QueryCall(mk)
 }
 
 // Update returns a builder for updating this MeldedKan.
 // Note that you need to call MeldedKan.Unwrap() before calling this method if this MeldedKan
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (mk *MeldedKan) Update() *MeldedKanUpdateOne {
-	return (&MeldedKanClient{config: mk.config}).UpdateOne(mk)
+	return NewMeldedKanClient(mk.config).UpdateOne(mk)
 }
 
 // Unwrap unwraps the MeldedKan entity that was returned from a transaction after it was closed,
@@ -110,9 +110,3 @@ func (mk *MeldedKan) String() string {
 
 // MeldedKans is a parsable slice of MeldedKan.
 type MeldedKans []*MeldedKan
-
-func (mk MeldedKans) config(cfg config) {
-	for _i := range mk {
-		mk[_i].config = cfg
-	}
-}

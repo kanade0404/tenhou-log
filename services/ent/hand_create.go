@@ -182,13 +182,7 @@ func (hc *HandCreate) sqlSave(ctx context.Context) (*Hand, error) {
 func (hc *HandCreate) createSpec() (*Hand, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Hand{config: hc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: hand.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: hand.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(hand.Table, sqlgraph.NewFieldSpec(hand.FieldID, field.TypeUUID))
 	)
 	_spec.OnConflict = hc.conflict
 	if id, ok := hc.mutation.ID(); ok {
@@ -215,10 +209,7 @@ func (hc *HandCreate) createSpec() (*Hand, *sqlgraph.CreateSpec) {
 			Columns: []string{hand.RoundsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: round.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(round.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -235,10 +226,7 @@ func (hc *HandCreate) createSpec() (*Hand, *sqlgraph.CreateSpec) {
 			Columns: hand.TurnsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: turn.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(turn.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

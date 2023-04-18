@@ -111,16 +111,7 @@ func (du *DrawnUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if err := du.check(); err != nil {
 		return n, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   drawn.Table,
-			Columns: drawn.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: drawn.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(drawn.Table, drawn.Columns, sqlgraph.NewFieldSpec(drawn.FieldID, field.TypeUUID))
 	if ps := du.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -136,10 +127,7 @@ func (du *DrawnUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{drawn.EventColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: event.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -152,10 +140,7 @@ func (du *DrawnUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{drawn.EventColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: event.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -171,10 +156,7 @@ func (du *DrawnUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{drawn.DiscardColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: discard.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(discard.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -187,10 +169,7 @@ func (du *DrawnUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{drawn.DiscardColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: discard.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(discard.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -257,6 +236,12 @@ func (duo *DrawnUpdateOne) ClearDiscard() *DrawnUpdateOne {
 	return duo
 }
 
+// Where appends a list predicates to the DrawnUpdate builder.
+func (duo *DrawnUpdateOne) Where(ps ...predicate.Drawn) *DrawnUpdateOne {
+	duo.mutation.Where(ps...)
+	return duo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (duo *DrawnUpdateOne) Select(field string, fields ...string) *DrawnUpdateOne {
@@ -306,16 +291,7 @@ func (duo *DrawnUpdateOne) sqlSave(ctx context.Context) (_node *Drawn, err error
 	if err := duo.check(); err != nil {
 		return _node, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   drawn.Table,
-			Columns: drawn.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: drawn.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(drawn.Table, drawn.Columns, sqlgraph.NewFieldSpec(drawn.FieldID, field.TypeUUID))
 	id, ok := duo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Drawn.id" for update`)}
@@ -348,10 +324,7 @@ func (duo *DrawnUpdateOne) sqlSave(ctx context.Context) (_node *Drawn, err error
 			Columns: []string{drawn.EventColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: event.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -364,10 +337,7 @@ func (duo *DrawnUpdateOne) sqlSave(ctx context.Context) (_node *Drawn, err error
 			Columns: []string{drawn.EventColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: event.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -383,10 +353,7 @@ func (duo *DrawnUpdateOne) sqlSave(ctx context.Context) (_node *Drawn, err error
 			Columns: []string{drawn.DiscardColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: discard.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(discard.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -399,10 +366,7 @@ func (duo *DrawnUpdateOne) sqlSave(ctx context.Context) (_node *Drawn, err error
 			Columns: []string{drawn.DiscardColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: discard.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(discard.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

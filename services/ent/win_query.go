@@ -19,11 +19,8 @@ import (
 // WinQuery is the builder for querying Win entities.
 type WinQuery struct {
 	config
-	limit      *int
-	offset     *int
-	unique     *bool
+	ctx        *QueryContext
 	order      []OrderFunc
-	fields     []string
 	inters     []Interceptor
 	predicates []predicate.Win
 	withEvent  *EventQuery
@@ -41,20 +38,20 @@ func (wq *WinQuery) Where(ps ...predicate.Win) *WinQuery {
 
 // Limit the number of records to be returned by this query.
 func (wq *WinQuery) Limit(limit int) *WinQuery {
-	wq.limit = &limit
+	wq.ctx.Limit = &limit
 	return wq
 }
 
 // Offset to start from.
 func (wq *WinQuery) Offset(offset int) *WinQuery {
-	wq.offset = &offset
+	wq.ctx.Offset = &offset
 	return wq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (wq *WinQuery) Unique(unique bool) *WinQuery {
-	wq.unique = &unique
+	wq.ctx.Unique = &unique
 	return wq
 }
 
@@ -89,7 +86,7 @@ func (wq *WinQuery) QueryEvent() *EventQuery {
 // First returns the first Win entity from the query.
 // Returns a *NotFoundError when no Win was found.
 func (wq *WinQuery) First(ctx context.Context) (*Win, error) {
-	nodes, err := wq.Limit(1).All(newQueryContext(ctx, TypeWin, "First"))
+	nodes, err := wq.Limit(1).All(setContextOp(ctx, wq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +109,7 @@ func (wq *WinQuery) FirstX(ctx context.Context) *Win {
 // Returns a *NotFoundError when no Win ID was found.
 func (wq *WinQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = wq.Limit(1).IDs(newQueryContext(ctx, TypeWin, "FirstID")); err != nil {
+	if ids, err = wq.Limit(1).IDs(setContextOp(ctx, wq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -135,7 +132,7 @@ func (wq *WinQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one Win entity is found.
 // Returns a *NotFoundError when no Win entities are found.
 func (wq *WinQuery) Only(ctx context.Context) (*Win, error) {
-	nodes, err := wq.Limit(2).All(newQueryContext(ctx, TypeWin, "Only"))
+	nodes, err := wq.Limit(2).All(setContextOp(ctx, wq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +160,7 @@ func (wq *WinQuery) OnlyX(ctx context.Context) *Win {
 // Returns a *NotFoundError when no entities are found.
 func (wq *WinQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = wq.Limit(2).IDs(newQueryContext(ctx, TypeWin, "OnlyID")); err != nil {
+	if ids, err = wq.Limit(2).IDs(setContextOp(ctx, wq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -188,7 +185,7 @@ func (wq *WinQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of Wins.
 func (wq *WinQuery) All(ctx context.Context) ([]*Win, error) {
-	ctx = newQueryContext(ctx, TypeWin, "All")
+	ctx = setContextOp(ctx, wq.ctx, "All")
 	if err := wq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
@@ -206,10 +203,12 @@ func (wq *WinQuery) AllX(ctx context.Context) []*Win {
 }
 
 // IDs executes the query and returns a list of Win IDs.
-func (wq *WinQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	ctx = newQueryContext(ctx, TypeWin, "IDs")
-	if err := wq.Select(win.FieldID).Scan(ctx, &ids); err != nil {
+func (wq *WinQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if wq.ctx.Unique == nil && wq.path != nil {
+		wq.Unique(true)
+	}
+	ctx = setContextOp(ctx, wq.ctx, "IDs")
+	if err = wq.Select(win.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -226,7 +225,7 @@ func (wq *WinQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (wq *WinQuery) Count(ctx context.Context) (int, error) {
-	ctx = newQueryContext(ctx, TypeWin, "Count")
+	ctx = setContextOp(ctx, wq.ctx, "Count")
 	if err := wq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
@@ -244,7 +243,7 @@ func (wq *WinQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (wq *WinQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = newQueryContext(ctx, TypeWin, "Exist")
+	ctx = setContextOp(ctx, wq.ctx, "Exist")
 	switch _, err := wq.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
@@ -272,16 +271,14 @@ func (wq *WinQuery) Clone() *WinQuery {
 	}
 	return &WinQuery{
 		config:     wq.config,
-		limit:      wq.limit,
-		offset:     wq.offset,
+		ctx:        wq.ctx.Clone(),
 		order:      append([]OrderFunc{}, wq.order...),
 		inters:     append([]Interceptor{}, wq.inters...),
 		predicates: append([]predicate.Win{}, wq.predicates...),
 		withEvent:  wq.withEvent.Clone(),
 		// clone intermediate query.
-		sql:    wq.sql.Clone(),
-		path:   wq.path,
-		unique: wq.unique,
+		sql:  wq.sql.Clone(),
+		path: wq.path,
 	}
 }
 
@@ -299,9 +296,9 @@ func (wq *WinQuery) WithEvent(opts ...func(*EventQuery)) *WinQuery {
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
 func (wq *WinQuery) GroupBy(field string, fields ...string) *WinGroupBy {
-	wq.fields = append([]string{field}, fields...)
+	wq.ctx.Fields = append([]string{field}, fields...)
 	grbuild := &WinGroupBy{build: wq}
-	grbuild.flds = &wq.fields
+	grbuild.flds = &wq.ctx.Fields
 	grbuild.label = win.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -310,10 +307,10 @@ func (wq *WinQuery) GroupBy(field string, fields ...string) *WinGroupBy {
 // Select allows the selection one or more fields/columns for the given query,
 // instead of selecting all fields in the entity.
 func (wq *WinQuery) Select(fields ...string) *WinSelect {
-	wq.fields = append(wq.fields, fields...)
+	wq.ctx.Fields = append(wq.ctx.Fields, fields...)
 	sbuild := &WinSelect{WinQuery: wq}
 	sbuild.label = win.Label
-	sbuild.flds, sbuild.scan = &wq.fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &wq.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
@@ -333,7 +330,7 @@ func (wq *WinQuery) prepareQuery(ctx context.Context) error {
 			}
 		}
 	}
-	for _, f := range wq.fields {
+	for _, f := range wq.ctx.Fields {
 		if !win.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -403,6 +400,9 @@ func (wq *WinQuery) loadEvent(ctx context.Context, query *EventQuery, nodes []*W
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
+	if len(ids) == 0 {
+		return nil
+	}
 	query.Where(event.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -422,30 +422,22 @@ func (wq *WinQuery) loadEvent(ctx context.Context, query *EventQuery, nodes []*W
 
 func (wq *WinQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := wq.querySpec()
-	_spec.Node.Columns = wq.fields
-	if len(wq.fields) > 0 {
-		_spec.Unique = wq.unique != nil && *wq.unique
+	_spec.Node.Columns = wq.ctx.Fields
+	if len(wq.ctx.Fields) > 0 {
+		_spec.Unique = wq.ctx.Unique != nil && *wq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, wq.driver, _spec)
 }
 
 func (wq *WinQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   win.Table,
-			Columns: win.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: win.FieldID,
-			},
-		},
-		From:   wq.sql,
-		Unique: true,
-	}
-	if unique := wq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(win.Table, win.Columns, sqlgraph.NewFieldSpec(win.FieldID, field.TypeUUID))
+	_spec.From = wq.sql
+	if unique := wq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if wq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := wq.fields; len(fields) > 0 {
+	if fields := wq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, win.FieldID)
 		for i := range fields {
@@ -461,10 +453,10 @@ func (wq *WinQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := wq.limit; limit != nil {
+	if limit := wq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := wq.offset; offset != nil {
+	if offset := wq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := wq.order; len(ps) > 0 {
@@ -480,7 +472,7 @@ func (wq *WinQuery) querySpec() *sqlgraph.QuerySpec {
 func (wq *WinQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(wq.driver.Dialect())
 	t1 := builder.Table(win.Table)
-	columns := wq.fields
+	columns := wq.ctx.Fields
 	if len(columns) == 0 {
 		columns = win.Columns
 	}
@@ -489,7 +481,7 @@ func (wq *WinQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = wq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if wq.unique != nil && *wq.unique {
+	if wq.ctx.Unique != nil && *wq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range wq.predicates {
@@ -498,12 +490,12 @@ func (wq *WinQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range wq.order {
 		p(selector)
 	}
-	if offset := wq.offset; offset != nil {
+	if offset := wq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := wq.limit; limit != nil {
+	if limit := wq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -523,7 +515,7 @@ func (wgb *WinGroupBy) Aggregate(fns ...AggregateFunc) *WinGroupBy {
 
 // Scan applies the selector query and scans the result into the given value.
 func (wgb *WinGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeWin, "GroupBy")
+	ctx = setContextOp(ctx, wgb.build.ctx, "GroupBy")
 	if err := wgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
@@ -571,7 +563,7 @@ func (ws *WinSelect) Aggregate(fns ...AggregateFunc) *WinSelect {
 
 // Scan applies the selector query and scans the result into the given value.
 func (ws *WinSelect) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeWin, "Select")
+	ctx = setContextOp(ctx, ws.ctx, "Select")
 	if err := ws.prepareQuery(ctx); err != nil {
 		return err
 	}

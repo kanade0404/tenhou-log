@@ -169,13 +169,7 @@ func (cmlc *CompressedMJLogCreate) sqlSave(ctx context.Context) (*CompressedMJLo
 func (cmlc *CompressedMJLogCreate) createSpec() (*CompressedMJLog, *sqlgraph.CreateSpec) {
 	var (
 		_node = &CompressedMJLog{config: cmlc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: compressedmjlog.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: compressedmjlog.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(compressedmjlog.Table, sqlgraph.NewFieldSpec(compressedmjlog.FieldID, field.TypeUUID))
 	)
 	_spec.OnConflict = cmlc.conflict
 	if id, ok := cmlc.mutation.ID(); ok {
@@ -202,10 +196,7 @@ func (cmlc *CompressedMJLogCreate) createSpec() (*CompressedMJLog, *sqlgraph.Cre
 			Columns: []string{compressedmjlog.MjlogFilesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: mjlogfile.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(mjlogfile.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

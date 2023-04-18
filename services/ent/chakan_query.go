@@ -20,11 +20,8 @@ import (
 // ChakanQuery is the builder for querying Chakan entities.
 type ChakanQuery struct {
 	config
-	limit      *int
-	offset     *int
-	unique     *bool
+	ctx        *QueryContext
 	order      []OrderFunc
-	fields     []string
 	inters     []Interceptor
 	predicates []predicate.Chakan
 	withCall   *CallQuery
@@ -41,20 +38,20 @@ func (cq *ChakanQuery) Where(ps ...predicate.Chakan) *ChakanQuery {
 
 // Limit the number of records to be returned by this query.
 func (cq *ChakanQuery) Limit(limit int) *ChakanQuery {
-	cq.limit = &limit
+	cq.ctx.Limit = &limit
 	return cq
 }
 
 // Offset to start from.
 func (cq *ChakanQuery) Offset(offset int) *ChakanQuery {
-	cq.offset = &offset
+	cq.ctx.Offset = &offset
 	return cq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (cq *ChakanQuery) Unique(unique bool) *ChakanQuery {
-	cq.unique = &unique
+	cq.ctx.Unique = &unique
 	return cq
 }
 
@@ -89,7 +86,7 @@ func (cq *ChakanQuery) QueryCall() *CallQuery {
 // First returns the first Chakan entity from the query.
 // Returns a *NotFoundError when no Chakan was found.
 func (cq *ChakanQuery) First(ctx context.Context) (*Chakan, error) {
-	nodes, err := cq.Limit(1).All(newQueryContext(ctx, TypeChakan, "First"))
+	nodes, err := cq.Limit(1).All(setContextOp(ctx, cq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +109,7 @@ func (cq *ChakanQuery) FirstX(ctx context.Context) *Chakan {
 // Returns a *NotFoundError when no Chakan ID was found.
 func (cq *ChakanQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = cq.Limit(1).IDs(newQueryContext(ctx, TypeChakan, "FirstID")); err != nil {
+	if ids, err = cq.Limit(1).IDs(setContextOp(ctx, cq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -135,7 +132,7 @@ func (cq *ChakanQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one Chakan entity is found.
 // Returns a *NotFoundError when no Chakan entities are found.
 func (cq *ChakanQuery) Only(ctx context.Context) (*Chakan, error) {
-	nodes, err := cq.Limit(2).All(newQueryContext(ctx, TypeChakan, "Only"))
+	nodes, err := cq.Limit(2).All(setContextOp(ctx, cq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +160,7 @@ func (cq *ChakanQuery) OnlyX(ctx context.Context) *Chakan {
 // Returns a *NotFoundError when no entities are found.
 func (cq *ChakanQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = cq.Limit(2).IDs(newQueryContext(ctx, TypeChakan, "OnlyID")); err != nil {
+	if ids, err = cq.Limit(2).IDs(setContextOp(ctx, cq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -188,7 +185,7 @@ func (cq *ChakanQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of Chakans.
 func (cq *ChakanQuery) All(ctx context.Context) ([]*Chakan, error) {
-	ctx = newQueryContext(ctx, TypeChakan, "All")
+	ctx = setContextOp(ctx, cq.ctx, "All")
 	if err := cq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
@@ -206,10 +203,12 @@ func (cq *ChakanQuery) AllX(ctx context.Context) []*Chakan {
 }
 
 // IDs executes the query and returns a list of Chakan IDs.
-func (cq *ChakanQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	ctx = newQueryContext(ctx, TypeChakan, "IDs")
-	if err := cq.Select(chakan.FieldID).Scan(ctx, &ids); err != nil {
+func (cq *ChakanQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if cq.ctx.Unique == nil && cq.path != nil {
+		cq.Unique(true)
+	}
+	ctx = setContextOp(ctx, cq.ctx, "IDs")
+	if err = cq.Select(chakan.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -226,7 +225,7 @@ func (cq *ChakanQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (cq *ChakanQuery) Count(ctx context.Context) (int, error) {
-	ctx = newQueryContext(ctx, TypeChakan, "Count")
+	ctx = setContextOp(ctx, cq.ctx, "Count")
 	if err := cq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
@@ -244,7 +243,7 @@ func (cq *ChakanQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (cq *ChakanQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = newQueryContext(ctx, TypeChakan, "Exist")
+	ctx = setContextOp(ctx, cq.ctx, "Exist")
 	switch _, err := cq.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
@@ -272,16 +271,14 @@ func (cq *ChakanQuery) Clone() *ChakanQuery {
 	}
 	return &ChakanQuery{
 		config:     cq.config,
-		limit:      cq.limit,
-		offset:     cq.offset,
+		ctx:        cq.ctx.Clone(),
 		order:      append([]OrderFunc{}, cq.order...),
 		inters:     append([]Interceptor{}, cq.inters...),
 		predicates: append([]predicate.Chakan{}, cq.predicates...),
 		withCall:   cq.withCall.Clone(),
 		// clone intermediate query.
-		sql:    cq.sql.Clone(),
-		path:   cq.path,
-		unique: cq.unique,
+		sql:  cq.sql.Clone(),
+		path: cq.path,
 	}
 }
 
@@ -299,9 +296,9 @@ func (cq *ChakanQuery) WithCall(opts ...func(*CallQuery)) *ChakanQuery {
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
 func (cq *ChakanQuery) GroupBy(field string, fields ...string) *ChakanGroupBy {
-	cq.fields = append([]string{field}, fields...)
+	cq.ctx.Fields = append([]string{field}, fields...)
 	grbuild := &ChakanGroupBy{build: cq}
-	grbuild.flds = &cq.fields
+	grbuild.flds = &cq.ctx.Fields
 	grbuild.label = chakan.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -310,10 +307,10 @@ func (cq *ChakanQuery) GroupBy(field string, fields ...string) *ChakanGroupBy {
 // Select allows the selection one or more fields/columns for the given query,
 // instead of selecting all fields in the entity.
 func (cq *ChakanQuery) Select(fields ...string) *ChakanSelect {
-	cq.fields = append(cq.fields, fields...)
+	cq.ctx.Fields = append(cq.ctx.Fields, fields...)
 	sbuild := &ChakanSelect{ChakanQuery: cq}
 	sbuild.label = chakan.Label
-	sbuild.flds, sbuild.scan = &cq.fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &cq.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
@@ -333,7 +330,7 @@ func (cq *ChakanQuery) prepareQuery(ctx context.Context) error {
 			}
 		}
 	}
-	for _, f := range cq.fields {
+	for _, f := range cq.ctx.Fields {
 		if !chakan.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -414,30 +411,22 @@ func (cq *ChakanQuery) loadCall(ctx context.Context, query *CallQuery, nodes []*
 
 func (cq *ChakanQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := cq.querySpec()
-	_spec.Node.Columns = cq.fields
-	if len(cq.fields) > 0 {
-		_spec.Unique = cq.unique != nil && *cq.unique
+	_spec.Node.Columns = cq.ctx.Fields
+	if len(cq.ctx.Fields) > 0 {
+		_spec.Unique = cq.ctx.Unique != nil && *cq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, cq.driver, _spec)
 }
 
 func (cq *ChakanQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   chakan.Table,
-			Columns: chakan.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: chakan.FieldID,
-			},
-		},
-		From:   cq.sql,
-		Unique: true,
-	}
-	if unique := cq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(chakan.Table, chakan.Columns, sqlgraph.NewFieldSpec(chakan.FieldID, field.TypeUUID))
+	_spec.From = cq.sql
+	if unique := cq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if cq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := cq.fields; len(fields) > 0 {
+	if fields := cq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, chakan.FieldID)
 		for i := range fields {
@@ -453,10 +442,10 @@ func (cq *ChakanQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := cq.limit; limit != nil {
+	if limit := cq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := cq.offset; offset != nil {
+	if offset := cq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := cq.order; len(ps) > 0 {
@@ -472,7 +461,7 @@ func (cq *ChakanQuery) querySpec() *sqlgraph.QuerySpec {
 func (cq *ChakanQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(cq.driver.Dialect())
 	t1 := builder.Table(chakan.Table)
-	columns := cq.fields
+	columns := cq.ctx.Fields
 	if len(columns) == 0 {
 		columns = chakan.Columns
 	}
@@ -481,7 +470,7 @@ func (cq *ChakanQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = cq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if cq.unique != nil && *cq.unique {
+	if cq.ctx.Unique != nil && *cq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range cq.predicates {
@@ -490,12 +479,12 @@ func (cq *ChakanQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range cq.order {
 		p(selector)
 	}
-	if offset := cq.offset; offset != nil {
+	if offset := cq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := cq.limit; limit != nil {
+	if limit := cq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -515,7 +504,7 @@ func (cgb *ChakanGroupBy) Aggregate(fns ...AggregateFunc) *ChakanGroupBy {
 
 // Scan applies the selector query and scans the result into the given value.
 func (cgb *ChakanGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeChakan, "GroupBy")
+	ctx = setContextOp(ctx, cgb.build.ctx, "GroupBy")
 	if err := cgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
@@ -563,7 +552,7 @@ func (cs *ChakanSelect) Aggregate(fns ...AggregateFunc) *ChakanSelect {
 
 // Scan applies the selector query and scans the result into the given value.
 func (cs *ChakanSelect) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeChakan, "Select")
+	ctx = setContextOp(ctx, cs.ctx, "Select")
 	if err := cs.prepareQuery(ctx); err != nil {
 		return err
 	}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/kanade0404/tenhou-log/pkg/parser/xml"
 	"github.com/kanade0404/tenhou-log/pkg/parser/xml/hai"
+	"strconv"
 )
 
 type DrawType string
@@ -56,4 +57,12 @@ func NewDraw(drawType string, haiID int, gameInfo *xml.GameInfo) (*Draw, error) 
 		}, nil
 	}
 	return nil, fmt.Errorf(": error: %w, \nisDrawType: %t", err, isDrawType)
+}
+func Unmarshal(e xml.XmlElement, i *xml.GameInfo) (*Draw, error) {
+	player := e.Name[0]
+	haiID, err := strconv.Atoi(e.Name[1:])
+	if err != nil {
+		return nil, err
+	}
+	return NewDraw(string(player), haiID, i)
 }

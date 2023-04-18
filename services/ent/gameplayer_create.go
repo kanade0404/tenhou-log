@@ -188,13 +188,7 @@ func (gpc *GamePlayerCreate) sqlSave(ctx context.Context) (*GamePlayer, error) {
 func (gpc *GamePlayerCreate) createSpec() (*GamePlayer, *sqlgraph.CreateSpec) {
 	var (
 		_node = &GamePlayer{config: gpc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: gameplayer.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: gameplayer.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(gameplayer.Table, sqlgraph.NewFieldSpec(gameplayer.FieldID, field.TypeUUID))
 	)
 	_spec.OnConflict = gpc.conflict
 	if id, ok := gpc.mutation.ID(); ok {
@@ -217,10 +211,7 @@ func (gpc *GamePlayerCreate) createSpec() (*GamePlayer, *sqlgraph.CreateSpec) {
 			Columns: gameplayer.GamesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: game.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(game.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -236,10 +227,7 @@ func (gpc *GamePlayerCreate) createSpec() (*GamePlayer, *sqlgraph.CreateSpec) {
 			Columns: []string{gameplayer.PlayersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: player.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(player.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -256,10 +244,7 @@ func (gpc *GamePlayerCreate) createSpec() (*GamePlayer, *sqlgraph.CreateSpec) {
 			Columns: []string{gameplayer.DansColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: dan.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(dan.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

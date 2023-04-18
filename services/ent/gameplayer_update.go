@@ -169,16 +169,7 @@ func (gpu *GamePlayerUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if err := gpu.check(); err != nil {
 		return n, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   gameplayer.Table,
-			Columns: gameplayer.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: gameplayer.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(gameplayer.Table, gameplayer.Columns, sqlgraph.NewFieldSpec(gameplayer.FieldID, field.TypeUUID))
 	if ps := gpu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -197,10 +188,7 @@ func (gpu *GamePlayerUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: gameplayer.GamesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: game.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(game.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -213,10 +201,7 @@ func (gpu *GamePlayerUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: gameplayer.GamesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: game.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(game.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -232,10 +217,7 @@ func (gpu *GamePlayerUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: gameplayer.GamesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: game.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(game.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -251,10 +233,7 @@ func (gpu *GamePlayerUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{gameplayer.PlayersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: player.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(player.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -267,10 +246,7 @@ func (gpu *GamePlayerUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{gameplayer.PlayersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: player.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(player.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -286,10 +262,7 @@ func (gpu *GamePlayerUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{gameplayer.DansColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: dan.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(dan.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -302,10 +275,7 @@ func (gpu *GamePlayerUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{gameplayer.DansColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: dan.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(dan.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -430,6 +400,12 @@ func (gpuo *GamePlayerUpdateOne) ClearDans() *GamePlayerUpdateOne {
 	return gpuo
 }
 
+// Where appends a list predicates to the GamePlayerUpdate builder.
+func (gpuo *GamePlayerUpdateOne) Where(ps ...predicate.GamePlayer) *GamePlayerUpdateOne {
+	gpuo.mutation.Where(ps...)
+	return gpuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (gpuo *GamePlayerUpdateOne) Select(field string, fields ...string) *GamePlayerUpdateOne {
@@ -478,16 +454,7 @@ func (gpuo *GamePlayerUpdateOne) sqlSave(ctx context.Context) (_node *GamePlayer
 	if err := gpuo.check(); err != nil {
 		return _node, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   gameplayer.Table,
-			Columns: gameplayer.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: gameplayer.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(gameplayer.Table, gameplayer.Columns, sqlgraph.NewFieldSpec(gameplayer.FieldID, field.TypeUUID))
 	id, ok := gpuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "GamePlayer.id" for update`)}
@@ -523,10 +490,7 @@ func (gpuo *GamePlayerUpdateOne) sqlSave(ctx context.Context) (_node *GamePlayer
 			Columns: gameplayer.GamesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: game.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(game.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -539,10 +503,7 @@ func (gpuo *GamePlayerUpdateOne) sqlSave(ctx context.Context) (_node *GamePlayer
 			Columns: gameplayer.GamesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: game.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(game.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -558,10 +519,7 @@ func (gpuo *GamePlayerUpdateOne) sqlSave(ctx context.Context) (_node *GamePlayer
 			Columns: gameplayer.GamesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: game.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(game.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -577,10 +535,7 @@ func (gpuo *GamePlayerUpdateOne) sqlSave(ctx context.Context) (_node *GamePlayer
 			Columns: []string{gameplayer.PlayersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: player.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(player.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -593,10 +548,7 @@ func (gpuo *GamePlayerUpdateOne) sqlSave(ctx context.Context) (_node *GamePlayer
 			Columns: []string{gameplayer.PlayersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: player.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(player.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -612,10 +564,7 @@ func (gpuo *GamePlayerUpdateOne) sqlSave(ctx context.Context) (_node *GamePlayer
 			Columns: []string{gameplayer.DansColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: dan.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(dan.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -628,10 +577,7 @@ func (gpuo *GamePlayerUpdateOne) sqlSave(ctx context.Context) (_node *GamePlayer
 			Columns: []string{gameplayer.DansColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: dan.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(dan.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

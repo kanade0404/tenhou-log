@@ -153,13 +153,7 @@ func (mlfc *MJLogFileCreate) sqlSave(ctx context.Context) (*MJLogFile, error) {
 func (mlfc *MJLogFileCreate) createSpec() (*MJLogFile, *sqlgraph.CreateSpec) {
 	var (
 		_node = &MJLogFile{config: mlfc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: mjlogfile.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: mjlogfile.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(mjlogfile.Table, sqlgraph.NewFieldSpec(mjlogfile.FieldID, field.TypeUUID))
 	)
 	_spec.OnConflict = mlfc.conflict
 	if id, ok := mlfc.mutation.ID(); ok {
@@ -178,10 +172,7 @@ func (mlfc *MJLogFileCreate) createSpec() (*MJLogFile, *sqlgraph.CreateSpec) {
 			Columns: []string{mjlogfile.CompressedMjlogFilesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: compressedmjlog.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(compressedmjlog.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -198,10 +189,7 @@ func (mlfc *MJLogFileCreate) createSpec() (*MJLogFile, *sqlgraph.CreateSpec) {
 			Columns: []string{mjlogfile.MjlogsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: mjlog.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(mjlog.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

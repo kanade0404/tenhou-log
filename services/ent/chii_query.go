@@ -20,11 +20,8 @@ import (
 // ChiiQuery is the builder for querying Chii entities.
 type ChiiQuery struct {
 	config
-	limit      *int
-	offset     *int
-	unique     *bool
+	ctx        *QueryContext
 	order      []OrderFunc
-	fields     []string
 	inters     []Interceptor
 	predicates []predicate.Chii
 	withCall   *CallQuery
@@ -41,20 +38,20 @@ func (cq *ChiiQuery) Where(ps ...predicate.Chii) *ChiiQuery {
 
 // Limit the number of records to be returned by this query.
 func (cq *ChiiQuery) Limit(limit int) *ChiiQuery {
-	cq.limit = &limit
+	cq.ctx.Limit = &limit
 	return cq
 }
 
 // Offset to start from.
 func (cq *ChiiQuery) Offset(offset int) *ChiiQuery {
-	cq.offset = &offset
+	cq.ctx.Offset = &offset
 	return cq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (cq *ChiiQuery) Unique(unique bool) *ChiiQuery {
-	cq.unique = &unique
+	cq.ctx.Unique = &unique
 	return cq
 }
 
@@ -89,7 +86,7 @@ func (cq *ChiiQuery) QueryCall() *CallQuery {
 // First returns the first Chii entity from the query.
 // Returns a *NotFoundError when no Chii was found.
 func (cq *ChiiQuery) First(ctx context.Context) (*Chii, error) {
-	nodes, err := cq.Limit(1).All(newQueryContext(ctx, TypeChii, "First"))
+	nodes, err := cq.Limit(1).All(setContextOp(ctx, cq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +109,7 @@ func (cq *ChiiQuery) FirstX(ctx context.Context) *Chii {
 // Returns a *NotFoundError when no Chii ID was found.
 func (cq *ChiiQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = cq.Limit(1).IDs(newQueryContext(ctx, TypeChii, "FirstID")); err != nil {
+	if ids, err = cq.Limit(1).IDs(setContextOp(ctx, cq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -135,7 +132,7 @@ func (cq *ChiiQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one Chii entity is found.
 // Returns a *NotFoundError when no Chii entities are found.
 func (cq *ChiiQuery) Only(ctx context.Context) (*Chii, error) {
-	nodes, err := cq.Limit(2).All(newQueryContext(ctx, TypeChii, "Only"))
+	nodes, err := cq.Limit(2).All(setContextOp(ctx, cq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +160,7 @@ func (cq *ChiiQuery) OnlyX(ctx context.Context) *Chii {
 // Returns a *NotFoundError when no entities are found.
 func (cq *ChiiQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = cq.Limit(2).IDs(newQueryContext(ctx, TypeChii, "OnlyID")); err != nil {
+	if ids, err = cq.Limit(2).IDs(setContextOp(ctx, cq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -188,7 +185,7 @@ func (cq *ChiiQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of Chiis.
 func (cq *ChiiQuery) All(ctx context.Context) ([]*Chii, error) {
-	ctx = newQueryContext(ctx, TypeChii, "All")
+	ctx = setContextOp(ctx, cq.ctx, "All")
 	if err := cq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
@@ -206,10 +203,12 @@ func (cq *ChiiQuery) AllX(ctx context.Context) []*Chii {
 }
 
 // IDs executes the query and returns a list of Chii IDs.
-func (cq *ChiiQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	ctx = newQueryContext(ctx, TypeChii, "IDs")
-	if err := cq.Select(chii.FieldID).Scan(ctx, &ids); err != nil {
+func (cq *ChiiQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if cq.ctx.Unique == nil && cq.path != nil {
+		cq.Unique(true)
+	}
+	ctx = setContextOp(ctx, cq.ctx, "IDs")
+	if err = cq.Select(chii.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -226,7 +225,7 @@ func (cq *ChiiQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (cq *ChiiQuery) Count(ctx context.Context) (int, error) {
-	ctx = newQueryContext(ctx, TypeChii, "Count")
+	ctx = setContextOp(ctx, cq.ctx, "Count")
 	if err := cq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
@@ -244,7 +243,7 @@ func (cq *ChiiQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (cq *ChiiQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = newQueryContext(ctx, TypeChii, "Exist")
+	ctx = setContextOp(ctx, cq.ctx, "Exist")
 	switch _, err := cq.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
@@ -272,16 +271,14 @@ func (cq *ChiiQuery) Clone() *ChiiQuery {
 	}
 	return &ChiiQuery{
 		config:     cq.config,
-		limit:      cq.limit,
-		offset:     cq.offset,
+		ctx:        cq.ctx.Clone(),
 		order:      append([]OrderFunc{}, cq.order...),
 		inters:     append([]Interceptor{}, cq.inters...),
 		predicates: append([]predicate.Chii{}, cq.predicates...),
 		withCall:   cq.withCall.Clone(),
 		// clone intermediate query.
-		sql:    cq.sql.Clone(),
-		path:   cq.path,
-		unique: cq.unique,
+		sql:  cq.sql.Clone(),
+		path: cq.path,
 	}
 }
 
@@ -299,9 +296,9 @@ func (cq *ChiiQuery) WithCall(opts ...func(*CallQuery)) *ChiiQuery {
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
 func (cq *ChiiQuery) GroupBy(field string, fields ...string) *ChiiGroupBy {
-	cq.fields = append([]string{field}, fields...)
+	cq.ctx.Fields = append([]string{field}, fields...)
 	grbuild := &ChiiGroupBy{build: cq}
-	grbuild.flds = &cq.fields
+	grbuild.flds = &cq.ctx.Fields
 	grbuild.label = chii.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -310,10 +307,10 @@ func (cq *ChiiQuery) GroupBy(field string, fields ...string) *ChiiGroupBy {
 // Select allows the selection one or more fields/columns for the given query,
 // instead of selecting all fields in the entity.
 func (cq *ChiiQuery) Select(fields ...string) *ChiiSelect {
-	cq.fields = append(cq.fields, fields...)
+	cq.ctx.Fields = append(cq.ctx.Fields, fields...)
 	sbuild := &ChiiSelect{ChiiQuery: cq}
 	sbuild.label = chii.Label
-	sbuild.flds, sbuild.scan = &cq.fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &cq.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
@@ -333,7 +330,7 @@ func (cq *ChiiQuery) prepareQuery(ctx context.Context) error {
 			}
 		}
 	}
-	for _, f := range cq.fields {
+	for _, f := range cq.ctx.Fields {
 		if !chii.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -414,30 +411,22 @@ func (cq *ChiiQuery) loadCall(ctx context.Context, query *CallQuery, nodes []*Ch
 
 func (cq *ChiiQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := cq.querySpec()
-	_spec.Node.Columns = cq.fields
-	if len(cq.fields) > 0 {
-		_spec.Unique = cq.unique != nil && *cq.unique
+	_spec.Node.Columns = cq.ctx.Fields
+	if len(cq.ctx.Fields) > 0 {
+		_spec.Unique = cq.ctx.Unique != nil && *cq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, cq.driver, _spec)
 }
 
 func (cq *ChiiQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   chii.Table,
-			Columns: chii.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: chii.FieldID,
-			},
-		},
-		From:   cq.sql,
-		Unique: true,
-	}
-	if unique := cq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(chii.Table, chii.Columns, sqlgraph.NewFieldSpec(chii.FieldID, field.TypeUUID))
+	_spec.From = cq.sql
+	if unique := cq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if cq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := cq.fields; len(fields) > 0 {
+	if fields := cq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, chii.FieldID)
 		for i := range fields {
@@ -453,10 +442,10 @@ func (cq *ChiiQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := cq.limit; limit != nil {
+	if limit := cq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := cq.offset; offset != nil {
+	if offset := cq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := cq.order; len(ps) > 0 {
@@ -472,7 +461,7 @@ func (cq *ChiiQuery) querySpec() *sqlgraph.QuerySpec {
 func (cq *ChiiQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(cq.driver.Dialect())
 	t1 := builder.Table(chii.Table)
-	columns := cq.fields
+	columns := cq.ctx.Fields
 	if len(columns) == 0 {
 		columns = chii.Columns
 	}
@@ -481,7 +470,7 @@ func (cq *ChiiQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = cq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if cq.unique != nil && *cq.unique {
+	if cq.ctx.Unique != nil && *cq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range cq.predicates {
@@ -490,12 +479,12 @@ func (cq *ChiiQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range cq.order {
 		p(selector)
 	}
-	if offset := cq.offset; offset != nil {
+	if offset := cq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := cq.limit; limit != nil {
+	if limit := cq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -515,7 +504,7 @@ func (cgb *ChiiGroupBy) Aggregate(fns ...AggregateFunc) *ChiiGroupBy {
 
 // Scan applies the selector query and scans the result into the given value.
 func (cgb *ChiiGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeChii, "GroupBy")
+	ctx = setContextOp(ctx, cgb.build.ctx, "GroupBy")
 	if err := cgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
@@ -563,7 +552,7 @@ func (cs *ChiiSelect) Aggregate(fns ...AggregateFunc) *ChiiSelect {
 
 // Scan applies the selector query and scans the result into the given value.
 func (cs *ChiiSelect) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeChii, "Select")
+	ctx = setContextOp(ctx, cs.ctx, "Select")
 	if err := cs.prepareQuery(ctx); err != nil {
 		return err
 	}

@@ -78,14 +78,14 @@ func (c *Chakan) assignValues(columns []string, values []any) error {
 
 // QueryCall queries the "call" edge of the Chakan entity.
 func (c *Chakan) QueryCall() *CallQuery {
-	return (&ChakanClient{config: c.config}).QueryCall(c)
+	return NewChakanClient(c.config).QueryCall(c)
 }
 
 // Update returns a builder for updating this Chakan.
 // Note that you need to call Chakan.Unwrap() before calling this method if this Chakan
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (c *Chakan) Update() *ChakanUpdateOne {
-	return (&ChakanClient{config: c.config}).UpdateOne(c)
+	return NewChakanClient(c.config).UpdateOne(c)
 }
 
 // Unwrap unwraps the Chakan entity that was returned from a transaction after it was closed,
@@ -110,9 +110,3 @@ func (c *Chakan) String() string {
 
 // Chakans is a parsable slice of Chakan.
 type Chakans []*Chakan
-
-func (c Chakans) config(cfg config) {
-	for _i := range c {
-		c[_i].config = cfg
-	}
-}

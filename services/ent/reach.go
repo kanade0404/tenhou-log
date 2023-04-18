@@ -115,19 +115,19 @@ func (r *Reach) assignValues(columns []string, values []any) error {
 
 // QueryEvent queries the "event" edge of the Reach entity.
 func (r *Reach) QueryEvent() *EventQuery {
-	return (&ReachClient{config: r.config}).QueryEvent(r)
+	return NewReachClient(r.config).QueryEvent(r)
 }
 
 // QueryDiscard queries the "discard" edge of the Reach entity.
 func (r *Reach) QueryDiscard() *DiscardQuery {
-	return (&ReachClient{config: r.config}).QueryDiscard(r)
+	return NewReachClient(r.config).QueryDiscard(r)
 }
 
 // Update returns a builder for updating this Reach.
 // Note that you need to call Reach.Unwrap() before calling this method if this Reach
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (r *Reach) Update() *ReachUpdateOne {
-	return (&ReachClient{config: r.config}).UpdateOne(r)
+	return NewReachClient(r.config).UpdateOne(r)
 }
 
 // Unwrap unwraps the Reach entity that was returned from a transaction after it was closed,
@@ -152,9 +152,3 @@ func (r *Reach) String() string {
 
 // Reaches is a parsable slice of Reach.
 type Reaches []*Reach
-
-func (r Reaches) config(cfg config) {
-	for _i := range r {
-		r[_i].config = cfg
-	}
-}

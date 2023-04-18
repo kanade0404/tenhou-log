@@ -110,19 +110,19 @@ func (r *Round) assignValues(columns []string, values []any) error {
 
 // QueryGames queries the "games" edge of the Round entity.
 func (r *Round) QueryGames() *GameQuery {
-	return (&RoundClient{config: r.config}).QueryGames(r)
+	return NewRoundClient(r.config).QueryGames(r)
 }
 
 // QueryHands queries the "hands" edge of the Round entity.
 func (r *Round) QueryHands() *HandQuery {
-	return (&RoundClient{config: r.config}).QueryHands(r)
+	return NewRoundClient(r.config).QueryHands(r)
 }
 
 // Update returns a builder for updating this Round.
 // Note that you need to call Round.Unwrap() before calling this method if this Round
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (r *Round) Update() *RoundUpdateOne {
-	return (&RoundClient{config: r.config}).UpdateOne(r)
+	return NewRoundClient(r.config).UpdateOne(r)
 }
 
 // Unwrap unwraps the Round entity that was returned from a transaction after it was closed,
@@ -149,9 +149,3 @@ func (r *Round) String() string {
 
 // Rounds is a parsable slice of Round.
 type Rounds []*Round
-
-func (r Rounds) config(cfg config) {
-	for _i := range r {
-		r[_i].config = cfg
-	}
-}

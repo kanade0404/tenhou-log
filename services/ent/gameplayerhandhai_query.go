@@ -19,11 +19,8 @@ import (
 // GamePlayerHandHaiQuery is the builder for querying GamePlayerHandHai entities.
 type GamePlayerHandHaiQuery struct {
 	config
-	limit      *int
-	offset     *int
-	unique     *bool
+	ctx        *QueryContext
 	order      []OrderFunc
-	fields     []string
 	inters     []Interceptor
 	predicates []predicate.GamePlayerHandHai
 	withTurn   *TurnQuery
@@ -41,20 +38,20 @@ func (gphhq *GamePlayerHandHaiQuery) Where(ps ...predicate.GamePlayerHandHai) *G
 
 // Limit the number of records to be returned by this query.
 func (gphhq *GamePlayerHandHaiQuery) Limit(limit int) *GamePlayerHandHaiQuery {
-	gphhq.limit = &limit
+	gphhq.ctx.Limit = &limit
 	return gphhq
 }
 
 // Offset to start from.
 func (gphhq *GamePlayerHandHaiQuery) Offset(offset int) *GamePlayerHandHaiQuery {
-	gphhq.offset = &offset
+	gphhq.ctx.Offset = &offset
 	return gphhq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (gphhq *GamePlayerHandHaiQuery) Unique(unique bool) *GamePlayerHandHaiQuery {
-	gphhq.unique = &unique
+	gphhq.ctx.Unique = &unique
 	return gphhq
 }
 
@@ -89,7 +86,7 @@ func (gphhq *GamePlayerHandHaiQuery) QueryTurn() *TurnQuery {
 // First returns the first GamePlayerHandHai entity from the query.
 // Returns a *NotFoundError when no GamePlayerHandHai was found.
 func (gphhq *GamePlayerHandHaiQuery) First(ctx context.Context) (*GamePlayerHandHai, error) {
-	nodes, err := gphhq.Limit(1).All(newQueryContext(ctx, TypeGamePlayerHandHai, "First"))
+	nodes, err := gphhq.Limit(1).All(setContextOp(ctx, gphhq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +109,7 @@ func (gphhq *GamePlayerHandHaiQuery) FirstX(ctx context.Context) *GamePlayerHand
 // Returns a *NotFoundError when no GamePlayerHandHai ID was found.
 func (gphhq *GamePlayerHandHaiQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = gphhq.Limit(1).IDs(newQueryContext(ctx, TypeGamePlayerHandHai, "FirstID")); err != nil {
+	if ids, err = gphhq.Limit(1).IDs(setContextOp(ctx, gphhq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -135,7 +132,7 @@ func (gphhq *GamePlayerHandHaiQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one GamePlayerHandHai entity is found.
 // Returns a *NotFoundError when no GamePlayerHandHai entities are found.
 func (gphhq *GamePlayerHandHaiQuery) Only(ctx context.Context) (*GamePlayerHandHai, error) {
-	nodes, err := gphhq.Limit(2).All(newQueryContext(ctx, TypeGamePlayerHandHai, "Only"))
+	nodes, err := gphhq.Limit(2).All(setContextOp(ctx, gphhq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +160,7 @@ func (gphhq *GamePlayerHandHaiQuery) OnlyX(ctx context.Context) *GamePlayerHandH
 // Returns a *NotFoundError when no entities are found.
 func (gphhq *GamePlayerHandHaiQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = gphhq.Limit(2).IDs(newQueryContext(ctx, TypeGamePlayerHandHai, "OnlyID")); err != nil {
+	if ids, err = gphhq.Limit(2).IDs(setContextOp(ctx, gphhq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -188,7 +185,7 @@ func (gphhq *GamePlayerHandHaiQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of GamePlayerHandHais.
 func (gphhq *GamePlayerHandHaiQuery) All(ctx context.Context) ([]*GamePlayerHandHai, error) {
-	ctx = newQueryContext(ctx, TypeGamePlayerHandHai, "All")
+	ctx = setContextOp(ctx, gphhq.ctx, "All")
 	if err := gphhq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
@@ -206,10 +203,12 @@ func (gphhq *GamePlayerHandHaiQuery) AllX(ctx context.Context) []*GamePlayerHand
 }
 
 // IDs executes the query and returns a list of GamePlayerHandHai IDs.
-func (gphhq *GamePlayerHandHaiQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	ctx = newQueryContext(ctx, TypeGamePlayerHandHai, "IDs")
-	if err := gphhq.Select(gameplayerhandhai.FieldID).Scan(ctx, &ids); err != nil {
+func (gphhq *GamePlayerHandHaiQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if gphhq.ctx.Unique == nil && gphhq.path != nil {
+		gphhq.Unique(true)
+	}
+	ctx = setContextOp(ctx, gphhq.ctx, "IDs")
+	if err = gphhq.Select(gameplayerhandhai.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -226,7 +225,7 @@ func (gphhq *GamePlayerHandHaiQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (gphhq *GamePlayerHandHaiQuery) Count(ctx context.Context) (int, error) {
-	ctx = newQueryContext(ctx, TypeGamePlayerHandHai, "Count")
+	ctx = setContextOp(ctx, gphhq.ctx, "Count")
 	if err := gphhq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
@@ -244,7 +243,7 @@ func (gphhq *GamePlayerHandHaiQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (gphhq *GamePlayerHandHaiQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = newQueryContext(ctx, TypeGamePlayerHandHai, "Exist")
+	ctx = setContextOp(ctx, gphhq.ctx, "Exist")
 	switch _, err := gphhq.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
@@ -272,16 +271,14 @@ func (gphhq *GamePlayerHandHaiQuery) Clone() *GamePlayerHandHaiQuery {
 	}
 	return &GamePlayerHandHaiQuery{
 		config:     gphhq.config,
-		limit:      gphhq.limit,
-		offset:     gphhq.offset,
+		ctx:        gphhq.ctx.Clone(),
 		order:      append([]OrderFunc{}, gphhq.order...),
 		inters:     append([]Interceptor{}, gphhq.inters...),
 		predicates: append([]predicate.GamePlayerHandHai{}, gphhq.predicates...),
 		withTurn:   gphhq.withTurn.Clone(),
 		// clone intermediate query.
-		sql:    gphhq.sql.Clone(),
-		path:   gphhq.path,
-		unique: gphhq.unique,
+		sql:  gphhq.sql.Clone(),
+		path: gphhq.path,
 	}
 }
 
@@ -311,9 +308,9 @@ func (gphhq *GamePlayerHandHaiQuery) WithTurn(opts ...func(*TurnQuery)) *GamePla
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (gphhq *GamePlayerHandHaiQuery) GroupBy(field string, fields ...string) *GamePlayerHandHaiGroupBy {
-	gphhq.fields = append([]string{field}, fields...)
+	gphhq.ctx.Fields = append([]string{field}, fields...)
 	grbuild := &GamePlayerHandHaiGroupBy{build: gphhq}
-	grbuild.flds = &gphhq.fields
+	grbuild.flds = &gphhq.ctx.Fields
 	grbuild.label = gameplayerhandhai.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -332,10 +329,10 @@ func (gphhq *GamePlayerHandHaiQuery) GroupBy(field string, fields ...string) *Ga
 //		Select(gameplayerhandhai.FieldHais).
 //		Scan(ctx, &v)
 func (gphhq *GamePlayerHandHaiQuery) Select(fields ...string) *GamePlayerHandHaiSelect {
-	gphhq.fields = append(gphhq.fields, fields...)
+	gphhq.ctx.Fields = append(gphhq.ctx.Fields, fields...)
 	sbuild := &GamePlayerHandHaiSelect{GamePlayerHandHaiQuery: gphhq}
 	sbuild.label = gameplayerhandhai.Label
-	sbuild.flds, sbuild.scan = &gphhq.fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &gphhq.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
@@ -355,7 +352,7 @@ func (gphhq *GamePlayerHandHaiQuery) prepareQuery(ctx context.Context) error {
 			}
 		}
 	}
-	for _, f := range gphhq.fields {
+	for _, f := range gphhq.ctx.Fields {
 		if !gameplayerhandhai.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -425,6 +422,9 @@ func (gphhq *GamePlayerHandHaiQuery) loadTurn(ctx context.Context, query *TurnQu
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
+	if len(ids) == 0 {
+		return nil
+	}
 	query.Where(turn.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -444,30 +444,22 @@ func (gphhq *GamePlayerHandHaiQuery) loadTurn(ctx context.Context, query *TurnQu
 
 func (gphhq *GamePlayerHandHaiQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := gphhq.querySpec()
-	_spec.Node.Columns = gphhq.fields
-	if len(gphhq.fields) > 0 {
-		_spec.Unique = gphhq.unique != nil && *gphhq.unique
+	_spec.Node.Columns = gphhq.ctx.Fields
+	if len(gphhq.ctx.Fields) > 0 {
+		_spec.Unique = gphhq.ctx.Unique != nil && *gphhq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, gphhq.driver, _spec)
 }
 
 func (gphhq *GamePlayerHandHaiQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   gameplayerhandhai.Table,
-			Columns: gameplayerhandhai.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: gameplayerhandhai.FieldID,
-			},
-		},
-		From:   gphhq.sql,
-		Unique: true,
-	}
-	if unique := gphhq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(gameplayerhandhai.Table, gameplayerhandhai.Columns, sqlgraph.NewFieldSpec(gameplayerhandhai.FieldID, field.TypeUUID))
+	_spec.From = gphhq.sql
+	if unique := gphhq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if gphhq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := gphhq.fields; len(fields) > 0 {
+	if fields := gphhq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, gameplayerhandhai.FieldID)
 		for i := range fields {
@@ -483,10 +475,10 @@ func (gphhq *GamePlayerHandHaiQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := gphhq.limit; limit != nil {
+	if limit := gphhq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := gphhq.offset; offset != nil {
+	if offset := gphhq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := gphhq.order; len(ps) > 0 {
@@ -502,7 +494,7 @@ func (gphhq *GamePlayerHandHaiQuery) querySpec() *sqlgraph.QuerySpec {
 func (gphhq *GamePlayerHandHaiQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(gphhq.driver.Dialect())
 	t1 := builder.Table(gameplayerhandhai.Table)
-	columns := gphhq.fields
+	columns := gphhq.ctx.Fields
 	if len(columns) == 0 {
 		columns = gameplayerhandhai.Columns
 	}
@@ -511,7 +503,7 @@ func (gphhq *GamePlayerHandHaiQuery) sqlQuery(ctx context.Context) *sql.Selector
 		selector = gphhq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if gphhq.unique != nil && *gphhq.unique {
+	if gphhq.ctx.Unique != nil && *gphhq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range gphhq.predicates {
@@ -520,12 +512,12 @@ func (gphhq *GamePlayerHandHaiQuery) sqlQuery(ctx context.Context) *sql.Selector
 	for _, p := range gphhq.order {
 		p(selector)
 	}
-	if offset := gphhq.offset; offset != nil {
+	if offset := gphhq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := gphhq.limit; limit != nil {
+	if limit := gphhq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -545,7 +537,7 @@ func (gphhgb *GamePlayerHandHaiGroupBy) Aggregate(fns ...AggregateFunc) *GamePla
 
 // Scan applies the selector query and scans the result into the given value.
 func (gphhgb *GamePlayerHandHaiGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeGamePlayerHandHai, "GroupBy")
+	ctx = setContextOp(ctx, gphhgb.build.ctx, "GroupBy")
 	if err := gphhgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
@@ -593,7 +585,7 @@ func (gphhs *GamePlayerHandHaiSelect) Aggregate(fns ...AggregateFunc) *GamePlaye
 
 // Scan applies the selector query and scans the result into the given value.
 func (gphhs *GamePlayerHandHaiSelect) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeGamePlayerHandHai, "Select")
+	ctx = setContextOp(ctx, gphhs.ctx, "Select")
 	if err := gphhs.prepareQuery(ctx); err != nil {
 		return err
 	}

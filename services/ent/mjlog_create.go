@@ -193,13 +193,7 @@ func (mlc *MJLogCreate) sqlSave(ctx context.Context) (*MJLog, error) {
 func (mlc *MJLogCreate) createSpec() (*MJLog, *sqlgraph.CreateSpec) {
 	var (
 		_node = &MJLog{config: mlc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: mjlog.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: mjlog.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(mjlog.Table, sqlgraph.NewFieldSpec(mjlog.FieldID, field.TypeUUID))
 	)
 	_spec.OnConflict = mlc.conflict
 	if id, ok := mlc.mutation.ID(); ok {
@@ -230,10 +224,7 @@ func (mlc *MJLogCreate) createSpec() (*MJLog, *sqlgraph.CreateSpec) {
 			Columns: []string{mjlog.MjlogFilesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: mjlogfile.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(mjlogfile.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -250,10 +241,7 @@ func (mlc *MJLogCreate) createSpec() (*MJLog, *sqlgraph.CreateSpec) {
 			Columns: []string{mjlog.GamesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: game.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(game.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

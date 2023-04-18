@@ -134,13 +134,7 @@ func (dc *DanCreate) sqlSave(ctx context.Context) (*Dan, error) {
 func (dc *DanCreate) createSpec() (*Dan, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Dan{config: dc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: dan.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: dan.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(dan.Table, sqlgraph.NewFieldSpec(dan.FieldID, field.TypeUUID))
 	)
 	_spec.OnConflict = dc.conflict
 	if id, ok := dc.mutation.ID(); ok {
@@ -159,10 +153,7 @@ func (dc *DanCreate) createSpec() (*Dan, *sqlgraph.CreateSpec) {
 			Columns: []string{dan.GamePlayersColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: gameplayer.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(gameplayer.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

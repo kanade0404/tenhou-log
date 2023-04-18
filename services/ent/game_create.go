@@ -200,13 +200,7 @@ func (gc *GameCreate) sqlSave(ctx context.Context) (*Game, error) {
 func (gc *GameCreate) createSpec() (*Game, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Game{config: gc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: game.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: game.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(game.Table, sqlgraph.NewFieldSpec(game.FieldID, field.TypeUUID))
 	)
 	_spec.OnConflict = gc.conflict
 	if id, ok := gc.mutation.ID(); ok {
@@ -229,10 +223,7 @@ func (gc *GameCreate) createSpec() (*Game, *sqlgraph.CreateSpec) {
 			Columns: []string{game.MjlogsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: mjlog.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(mjlog.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -248,10 +239,7 @@ func (gc *GameCreate) createSpec() (*Game, *sqlgraph.CreateSpec) {
 			Columns: game.GamePlayersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: gameplayer.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(gameplayer.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -267,10 +255,7 @@ func (gc *GameCreate) createSpec() (*Game, *sqlgraph.CreateSpec) {
 			Columns: []string{game.RoomsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: room.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(room.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -287,10 +272,7 @@ func (gc *GameCreate) createSpec() (*Game, *sqlgraph.CreateSpec) {
 			Columns: []string{game.RoundsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: round.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(round.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

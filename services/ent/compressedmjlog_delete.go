@@ -40,15 +40,7 @@ func (cmld *CompressedMJLogDelete) ExecX(ctx context.Context) int {
 }
 
 func (cmld *CompressedMJLogDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: compressedmjlog.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: compressedmjlog.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(compressedmjlog.Table, sqlgraph.NewFieldSpec(compressedmjlog.FieldID, field.TypeUUID))
 	if ps := cmld.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -69,6 +61,12 @@ type CompressedMJLogDeleteOne struct {
 	cmld *CompressedMJLogDelete
 }
 
+// Where appends a list predicates to the CompressedMJLogDelete builder.
+func (cmldo *CompressedMJLogDeleteOne) Where(ps ...predicate.CompressedMJLog) *CompressedMJLogDeleteOne {
+	cmldo.cmld.mutation.Where(ps...)
+	return cmldo
+}
+
 // Exec executes the deletion query.
 func (cmldo *CompressedMJLogDeleteOne) Exec(ctx context.Context) error {
 	n, err := cmldo.cmld.Exec(ctx)
@@ -84,5 +82,7 @@ func (cmldo *CompressedMJLogDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (cmldo *CompressedMJLogDeleteOne) ExecX(ctx context.Context) {
-	cmldo.cmld.ExecX(ctx)
+	if err := cmldo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

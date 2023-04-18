@@ -2,9 +2,12 @@ package usecases
 
 import (
 	"context"
+	"entgo.io/ent/dialect/sql"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/pkg/http_handler"
 	"github.com/kanade0404/tenhou-log/services/ent"
+	"github.com/kanade0404/tenhou-log/services/ent/compressedmjlog"
 	"github.com/kanade0404/tenhou-log/services/scraper/entities"
 	"github.com/kanade0404/tenhou-log/services/scraper/internal"
 	"io"
@@ -23,16 +26,13 @@ func ScrapingCompressedLog(count int) ([]*entities.CompressedLogFile, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Println("text: ", doc.Text())
 
 	logFiles := internal.UnmarshalFileListText(doc.Text())
-	log.Printf("logs: \n%v", logFiles)
 	var fetchLogs []*entities.CompressedLogFile
 	for i, str := range logFiles {
 		if count != 0 && i == count {
 			break
 		}
-		log.Println("str: ", str)
 		l, err := entities.Unmarshal(str)
 		if err != nil {
 			log.Println("error unmarshal entity: ", err)
@@ -41,6 +41,35 @@ func ScrapingCompressedLog(count int) ([]*entities.CompressedLogFile, error) {
 		fetchLogs = append(fetchLogs, l)
 	}
 	return fetchLogs, nil
+}
+func FetchUpdatedLogFiles(ctx context.Context, db *ent.Client, logs []*entities.CompressedLogFile) ([]*ent.CompressedMJLog, error) {
+	var logNames []string
+	for i := range logs {
+		logNames = append(logNames, logs[i].File)
+	}
+
+	currentLogFiles, err := db.CompressedMJLog.Query().Where(func(selector *sql.Selector) {
+		selector.Where(sql.In(compressedmjlog.FieldName, logNames))
+	}).All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	resultLogMap := make(map[uuid.UUID]*ent.CompressedMJLog)
+	for i := range currentLogFiles {
+		for li := range logs {
+			if currentLogFiles[i].Name == logs[li].File {
+				if currentLogFiles[i].Size != logs[li].Size {
+					resultLogMap[currentLogFiles[i].ID] = currentLogFiles[i]
+				}
+				break
+			}
+		}
+	}
+	var resultLogs []*ent.CompressedMJLog
+	for k := range resultLogMap {
+		resultLogs = append(resultLogs, resultLogMap[k])
+	}
+	return resultLogs, err
 }
 func StoreCompressedLogFile(ctx context.Context, db *ent.Client, fetchLogFiles []*entities.CompressedLogFile) ([]*entities.CompressedLogFile, error) {
 	var (
@@ -77,7 +106,7 @@ func StoreCompressedLogFile(ctx context.Context, db *ent.Client, fetchLogFiles [
 		targetFiles = append(targetFiles, fetchLog)
 		queries = append(queries, db.CompressedMJLog.Create().SetSize(fetchLog.Size).SetName(fetchLog.File))
 	}
-	if err := db.Debug().CompressedMJLog.CreateBulk(queries...).Exec(ctx); err != nil {
+	if err := db.CompressedMJLog.CreateBulk(queries...).Exec(ctx); err != nil {
 		return nil, err
 	}
 	return targetFiles, nil

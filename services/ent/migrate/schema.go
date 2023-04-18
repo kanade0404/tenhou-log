@@ -92,7 +92,7 @@ var (
 	// CompressedMjLogsColumns holds the columns for the "compressed_mj_logs" table.
 	CompressedMjLogsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
-		{Name: "name", Type: field.TypeString},
+		{Name: "name", Type: field.TypeString, Unique: true},
 		{Name: "size", Type: field.TypeUint},
 		{Name: "inserted_at", Type: field.TypeTime},
 	}

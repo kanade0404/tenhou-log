@@ -129,13 +129,7 @@ func (cc *ChiiCreate) sqlSave(ctx context.Context) (*Chii, error) {
 func (cc *ChiiCreate) createSpec() (*Chii, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Chii{config: cc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: chii.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: chii.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(chii.Table, sqlgraph.NewFieldSpec(chii.FieldID, field.TypeUUID))
 	)
 	_spec.OnConflict = cc.conflict
 	if id, ok := cc.mutation.ID(); ok {
@@ -150,10 +144,7 @@ func (cc *ChiiCreate) createSpec() (*Chii, *sqlgraph.CreateSpec) {
 			Columns: []string{chii.CallColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: call.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(call.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

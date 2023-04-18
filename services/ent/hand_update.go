@@ -124,16 +124,7 @@ func (hu *HandUpdate) ExecX(ctx context.Context) {
 }
 
 func (hu *HandUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   hand.Table,
-			Columns: hand.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: hand.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(hand.Table, hand.Columns, sqlgraph.NewFieldSpec(hand.FieldID, field.TypeUUID))
 	if ps := hu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -149,10 +140,7 @@ func (hu *HandUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{hand.RoundsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: round.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(round.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -165,10 +153,7 @@ func (hu *HandUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{hand.RoundsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: round.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(round.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -184,10 +169,7 @@ func (hu *HandUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: hand.TurnsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: turn.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(turn.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -200,10 +182,7 @@ func (hu *HandUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: hand.TurnsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: turn.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(turn.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -219,10 +198,7 @@ func (hu *HandUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: hand.TurnsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: turn.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(turn.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -316,6 +292,12 @@ func (huo *HandUpdateOne) RemoveTurns(t ...*Turn) *HandUpdateOne {
 	return huo.RemoveTurnIDs(ids...)
 }
 
+// Where appends a list predicates to the HandUpdate builder.
+func (huo *HandUpdateOne) Where(ps ...predicate.Hand) *HandUpdateOne {
+	huo.mutation.Where(ps...)
+	return huo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (huo *HandUpdateOne) Select(field string, fields ...string) *HandUpdateOne {
@@ -351,16 +333,7 @@ func (huo *HandUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (huo *HandUpdateOne) sqlSave(ctx context.Context) (_node *Hand, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   hand.Table,
-			Columns: hand.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: hand.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(hand.Table, hand.Columns, sqlgraph.NewFieldSpec(hand.FieldID, field.TypeUUID))
 	id, ok := huo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Hand.id" for update`)}
@@ -393,10 +366,7 @@ func (huo *HandUpdateOne) sqlSave(ctx context.Context) (_node *Hand, err error) 
 			Columns: []string{hand.RoundsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: round.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(round.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -409,10 +379,7 @@ func (huo *HandUpdateOne) sqlSave(ctx context.Context) (_node *Hand, err error) 
 			Columns: []string{hand.RoundsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: round.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(round.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -428,10 +395,7 @@ func (huo *HandUpdateOne) sqlSave(ctx context.Context) (_node *Hand, err error) 
 			Columns: hand.TurnsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: turn.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(turn.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -444,10 +408,7 @@ func (huo *HandUpdateOne) sqlSave(ctx context.Context) (_node *Hand, err error) 
 			Columns: hand.TurnsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: turn.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(turn.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -463,10 +424,7 @@ func (huo *HandUpdateOne) sqlSave(ctx context.Context) (_node *Hand, err error) 
 			Columns: hand.TurnsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: turn.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(turn.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

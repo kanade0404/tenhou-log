@@ -87,16 +87,7 @@ func (pu *PonUpdate) ExecX(ctx context.Context) {
 }
 
 func (pu *PonUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   pon.Table,
-			Columns: pon.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: pon.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(pon.Table, pon.Columns, sqlgraph.NewFieldSpec(pon.FieldID, field.TypeUUID))
 	if ps := pu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -112,10 +103,7 @@ func (pu *PonUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{pon.CallColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: call.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(call.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -128,10 +116,7 @@ func (pu *PonUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{pon.CallColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: call.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(call.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -189,6 +174,12 @@ func (puo *PonUpdateOne) ClearCall() *PonUpdateOne {
 	return puo
 }
 
+// Where appends a list predicates to the PonUpdate builder.
+func (puo *PonUpdateOne) Where(ps ...predicate.Pon) *PonUpdateOne {
+	puo.mutation.Where(ps...)
+	return puo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (puo *PonUpdateOne) Select(field string, fields ...string) *PonUpdateOne {
@@ -224,16 +215,7 @@ func (puo *PonUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (puo *PonUpdateOne) sqlSave(ctx context.Context) (_node *Pon, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   pon.Table,
-			Columns: pon.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: pon.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(pon.Table, pon.Columns, sqlgraph.NewFieldSpec(pon.FieldID, field.TypeUUID))
 	id, ok := puo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Pon.id" for update`)}
@@ -266,10 +248,7 @@ func (puo *PonUpdateOne) sqlSave(ctx context.Context) (_node *Pon, err error) {
 			Columns: []string{pon.CallColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: call.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(call.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -282,10 +261,7 @@ func (puo *PonUpdateOne) sqlSave(ctx context.Context) (_node *Pon, err error) {
 			Columns: []string{pon.CallColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: call.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(call.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

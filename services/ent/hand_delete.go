@@ -40,15 +40,7 @@ func (hd *HandDelete) ExecX(ctx context.Context) int {
 }
 
 func (hd *HandDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: hand.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: hand.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(hand.Table, sqlgraph.NewFieldSpec(hand.FieldID, field.TypeUUID))
 	if ps := hd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -69,6 +61,12 @@ type HandDeleteOne struct {
 	hd *HandDelete
 }
 
+// Where appends a list predicates to the HandDelete builder.
+func (hdo *HandDeleteOne) Where(ps ...predicate.Hand) *HandDeleteOne {
+	hdo.hd.mutation.Where(ps...)
+	return hdo
+}
+
 // Exec executes the deletion query.
 func (hdo *HandDeleteOne) Exec(ctx context.Context) error {
 	n, err := hdo.hd.Exec(ctx)
@@ -84,5 +82,7 @@ func (hdo *HandDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (hdo *HandDeleteOne) ExecX(ctx context.Context) {
-	hdo.hd.ExecX(ctx)
+	if err := hdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

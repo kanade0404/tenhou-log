@@ -126,19 +126,19 @@ func (h *Hand) assignValues(columns []string, values []any) error {
 
 // QueryRounds queries the "rounds" edge of the Hand entity.
 func (h *Hand) QueryRounds() *RoundQuery {
-	return (&HandClient{config: h.config}).QueryRounds(h)
+	return NewHandClient(h.config).QueryRounds(h)
 }
 
 // QueryTurns queries the "turns" edge of the Hand entity.
 func (h *Hand) QueryTurns() *TurnQuery {
-	return (&HandClient{config: h.config}).QueryTurns(h)
+	return NewHandClient(h.config).QueryTurns(h)
 }
 
 // Update returns a builder for updating this Hand.
 // Note that you need to call Hand.Unwrap() before calling this method if this Hand
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (h *Hand) Update() *HandUpdateOne {
-	return (&HandClient{config: h.config}).UpdateOne(h)
+	return NewHandClient(h.config).UpdateOne(h)
 }
 
 // Unwrap unwraps the Hand entity that was returned from a transaction after it was closed,
@@ -171,9 +171,3 @@ func (h *Hand) String() string {
 
 // Hands is a parsable slice of Hand.
 type Hands []*Hand
-
-func (h Hands) config(cfg config) {
-	for _i := range h {
-		h[_i].config = cfg
-	}
-}

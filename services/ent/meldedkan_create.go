@@ -129,13 +129,7 @@ func (mkc *MeldedKanCreate) sqlSave(ctx context.Context) (*MeldedKan, error) {
 func (mkc *MeldedKanCreate) createSpec() (*MeldedKan, *sqlgraph.CreateSpec) {
 	var (
 		_node = &MeldedKan{config: mkc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: meldedkan.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: meldedkan.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(meldedkan.Table, sqlgraph.NewFieldSpec(meldedkan.FieldID, field.TypeUUID))
 	)
 	_spec.OnConflict = mkc.conflict
 	if id, ok := mkc.mutation.ID(); ok {
@@ -150,10 +144,7 @@ func (mkc *MeldedKanCreate) createSpec() (*MeldedKan, *sqlgraph.CreateSpec) {
 			Columns: []string{meldedkan.CallColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: call.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(call.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

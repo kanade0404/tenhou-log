@@ -40,15 +40,7 @@ func (gd *GameDelete) ExecX(ctx context.Context) int {
 }
 
 func (gd *GameDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: game.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: game.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(game.Table, sqlgraph.NewFieldSpec(game.FieldID, field.TypeUUID))
 	if ps := gd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -69,6 +61,12 @@ type GameDeleteOne struct {
 	gd *GameDelete
 }
 
+// Where appends a list predicates to the GameDelete builder.
+func (gdo *GameDeleteOne) Where(ps ...predicate.Game) *GameDeleteOne {
+	gdo.gd.mutation.Where(ps...)
+	return gdo
+}
+
 // Exec executes the deletion query.
 func (gdo *GameDeleteOne) Exec(ctx context.Context) error {
 	n, err := gdo.gd.Exec(ctx)
@@ -84,5 +82,7 @@ func (gdo *GameDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (gdo *GameDeleteOne) ExecX(ctx context.Context) {
-	gdo.gd.ExecX(ctx)
+	if err := gdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

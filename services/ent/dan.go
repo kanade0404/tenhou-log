@@ -84,14 +84,14 @@ func (d *Dan) assignValues(columns []string, values []any) error {
 
 // QueryGamePlayers queries the "game_players" edge of the Dan entity.
 func (d *Dan) QueryGamePlayers() *GamePlayerQuery {
-	return (&DanClient{config: d.config}).QueryGamePlayers(d)
+	return NewDanClient(d.config).QueryGamePlayers(d)
 }
 
 // Update returns a builder for updating this Dan.
 // Note that you need to call Dan.Unwrap() before calling this method if this Dan
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (d *Dan) Update() *DanUpdateOne {
-	return (&DanClient{config: d.config}).UpdateOne(d)
+	return NewDanClient(d.config).UpdateOne(d)
 }
 
 // Unwrap unwraps the Dan entity that was returned from a transaction after it was closed,
@@ -118,9 +118,3 @@ func (d *Dan) String() string {
 
 // Dans is a parsable slice of Dan.
 type Dans []*Dan
-
-func (d Dans) config(cfg config) {
-	for _i := range d {
-		d[_i].config = cfg
-	}
-}

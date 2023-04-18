@@ -20,11 +20,8 @@ import (
 // DanQuery is the builder for querying Dan entities.
 type DanQuery struct {
 	config
-	limit           *int
-	offset          *int
-	unique          *bool
+	ctx             *QueryContext
 	order           []OrderFunc
-	fields          []string
 	inters          []Interceptor
 	predicates      []predicate.Dan
 	withGamePlayers *GamePlayerQuery
@@ -41,20 +38,20 @@ func (dq *DanQuery) Where(ps ...predicate.Dan) *DanQuery {
 
 // Limit the number of records to be returned by this query.
 func (dq *DanQuery) Limit(limit int) *DanQuery {
-	dq.limit = &limit
+	dq.ctx.Limit = &limit
 	return dq
 }
 
 // Offset to start from.
 func (dq *DanQuery) Offset(offset int) *DanQuery {
-	dq.offset = &offset
+	dq.ctx.Offset = &offset
 	return dq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (dq *DanQuery) Unique(unique bool) *DanQuery {
-	dq.unique = &unique
+	dq.ctx.Unique = &unique
 	return dq
 }
 
@@ -89,7 +86,7 @@ func (dq *DanQuery) QueryGamePlayers() *GamePlayerQuery {
 // First returns the first Dan entity from the query.
 // Returns a *NotFoundError when no Dan was found.
 func (dq *DanQuery) First(ctx context.Context) (*Dan, error) {
-	nodes, err := dq.Limit(1).All(newQueryContext(ctx, TypeDan, "First"))
+	nodes, err := dq.Limit(1).All(setContextOp(ctx, dq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +109,7 @@ func (dq *DanQuery) FirstX(ctx context.Context) *Dan {
 // Returns a *NotFoundError when no Dan ID was found.
 func (dq *DanQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = dq.Limit(1).IDs(newQueryContext(ctx, TypeDan, "FirstID")); err != nil {
+	if ids, err = dq.Limit(1).IDs(setContextOp(ctx, dq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -135,7 +132,7 @@ func (dq *DanQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one Dan entity is found.
 // Returns a *NotFoundError when no Dan entities are found.
 func (dq *DanQuery) Only(ctx context.Context) (*Dan, error) {
-	nodes, err := dq.Limit(2).All(newQueryContext(ctx, TypeDan, "Only"))
+	nodes, err := dq.Limit(2).All(setContextOp(ctx, dq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +160,7 @@ func (dq *DanQuery) OnlyX(ctx context.Context) *Dan {
 // Returns a *NotFoundError when no entities are found.
 func (dq *DanQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = dq.Limit(2).IDs(newQueryContext(ctx, TypeDan, "OnlyID")); err != nil {
+	if ids, err = dq.Limit(2).IDs(setContextOp(ctx, dq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -188,7 +185,7 @@ func (dq *DanQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of Dans.
 func (dq *DanQuery) All(ctx context.Context) ([]*Dan, error) {
-	ctx = newQueryContext(ctx, TypeDan, "All")
+	ctx = setContextOp(ctx, dq.ctx, "All")
 	if err := dq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
@@ -206,10 +203,12 @@ func (dq *DanQuery) AllX(ctx context.Context) []*Dan {
 }
 
 // IDs executes the query and returns a list of Dan IDs.
-func (dq *DanQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	ctx = newQueryContext(ctx, TypeDan, "IDs")
-	if err := dq.Select(dan.FieldID).Scan(ctx, &ids); err != nil {
+func (dq *DanQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if dq.ctx.Unique == nil && dq.path != nil {
+		dq.Unique(true)
+	}
+	ctx = setContextOp(ctx, dq.ctx, "IDs")
+	if err = dq.Select(dan.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -226,7 +225,7 @@ func (dq *DanQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (dq *DanQuery) Count(ctx context.Context) (int, error) {
-	ctx = newQueryContext(ctx, TypeDan, "Count")
+	ctx = setContextOp(ctx, dq.ctx, "Count")
 	if err := dq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
@@ -244,7 +243,7 @@ func (dq *DanQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (dq *DanQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = newQueryContext(ctx, TypeDan, "Exist")
+	ctx = setContextOp(ctx, dq.ctx, "Exist")
 	switch _, err := dq.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
@@ -272,16 +271,14 @@ func (dq *DanQuery) Clone() *DanQuery {
 	}
 	return &DanQuery{
 		config:          dq.config,
-		limit:           dq.limit,
-		offset:          dq.offset,
+		ctx:             dq.ctx.Clone(),
 		order:           append([]OrderFunc{}, dq.order...),
 		inters:          append([]Interceptor{}, dq.inters...),
 		predicates:      append([]predicate.Dan{}, dq.predicates...),
 		withGamePlayers: dq.withGamePlayers.Clone(),
 		// clone intermediate query.
-		sql:    dq.sql.Clone(),
-		path:   dq.path,
-		unique: dq.unique,
+		sql:  dq.sql.Clone(),
+		path: dq.path,
 	}
 }
 
@@ -311,9 +308,9 @@ func (dq *DanQuery) WithGamePlayers(opts ...func(*GamePlayerQuery)) *DanQuery {
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (dq *DanQuery) GroupBy(field string, fields ...string) *DanGroupBy {
-	dq.fields = append([]string{field}, fields...)
+	dq.ctx.Fields = append([]string{field}, fields...)
 	grbuild := &DanGroupBy{build: dq}
-	grbuild.flds = &dq.fields
+	grbuild.flds = &dq.ctx.Fields
 	grbuild.label = dan.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -332,10 +329,10 @@ func (dq *DanQuery) GroupBy(field string, fields ...string) *DanGroupBy {
 //		Select(dan.FieldName).
 //		Scan(ctx, &v)
 func (dq *DanQuery) Select(fields ...string) *DanSelect {
-	dq.fields = append(dq.fields, fields...)
+	dq.ctx.Fields = append(dq.ctx.Fields, fields...)
 	sbuild := &DanSelect{DanQuery: dq}
 	sbuild.label = dan.Label
-	sbuild.flds, sbuild.scan = &dq.fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &dq.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
@@ -355,7 +352,7 @@ func (dq *DanQuery) prepareQuery(ctx context.Context) error {
 			}
 		}
 	}
-	for _, f := range dq.fields {
+	for _, f := range dq.ctx.Fields {
 		if !dan.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -440,30 +437,22 @@ func (dq *DanQuery) loadGamePlayers(ctx context.Context, query *GamePlayerQuery,
 
 func (dq *DanQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := dq.querySpec()
-	_spec.Node.Columns = dq.fields
-	if len(dq.fields) > 0 {
-		_spec.Unique = dq.unique != nil && *dq.unique
+	_spec.Node.Columns = dq.ctx.Fields
+	if len(dq.ctx.Fields) > 0 {
+		_spec.Unique = dq.ctx.Unique != nil && *dq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, dq.driver, _spec)
 }
 
 func (dq *DanQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   dan.Table,
-			Columns: dan.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: dan.FieldID,
-			},
-		},
-		From:   dq.sql,
-		Unique: true,
-	}
-	if unique := dq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(dan.Table, dan.Columns, sqlgraph.NewFieldSpec(dan.FieldID, field.TypeUUID))
+	_spec.From = dq.sql
+	if unique := dq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if dq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := dq.fields; len(fields) > 0 {
+	if fields := dq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, dan.FieldID)
 		for i := range fields {
@@ -479,10 +468,10 @@ func (dq *DanQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := dq.limit; limit != nil {
+	if limit := dq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := dq.offset; offset != nil {
+	if offset := dq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := dq.order; len(ps) > 0 {
@@ -498,7 +487,7 @@ func (dq *DanQuery) querySpec() *sqlgraph.QuerySpec {
 func (dq *DanQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(dq.driver.Dialect())
 	t1 := builder.Table(dan.Table)
-	columns := dq.fields
+	columns := dq.ctx.Fields
 	if len(columns) == 0 {
 		columns = dan.Columns
 	}
@@ -507,7 +496,7 @@ func (dq *DanQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = dq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if dq.unique != nil && *dq.unique {
+	if dq.ctx.Unique != nil && *dq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range dq.predicates {
@@ -516,12 +505,12 @@ func (dq *DanQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range dq.order {
 		p(selector)
 	}
-	if offset := dq.offset; offset != nil {
+	if offset := dq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := dq.limit; limit != nil {
+	if limit := dq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -541,7 +530,7 @@ func (dgb *DanGroupBy) Aggregate(fns ...AggregateFunc) *DanGroupBy {
 
 // Scan applies the selector query and scans the result into the given value.
 func (dgb *DanGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeDan, "GroupBy")
+	ctx = setContextOp(ctx, dgb.build.ctx, "GroupBy")
 	if err := dgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
@@ -589,7 +578,7 @@ func (ds *DanSelect) Aggregate(fns ...AggregateFunc) *DanSelect {
 
 // Scan applies the selector query and scans the result into the given value.
 func (ds *DanSelect) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeDan, "Select")
+	ctx = setContextOp(ctx, ds.ctx, "Select")
 	if err := ds.prepareQuery(ctx); err != nil {
 		return err
 	}

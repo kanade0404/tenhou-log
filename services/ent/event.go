@@ -133,34 +133,34 @@ func (e *Event) assignValues(columns []string, values []any) error {
 
 // QueryTurn queries the "turn" edge of the Event entity.
 func (e *Event) QueryTurn() *TurnQuery {
-	return (&EventClient{config: e.config}).QueryTurn(e)
+	return NewEventClient(e.config).QueryTurn(e)
 }
 
 // QueryWin queries the "win" edge of the Event entity.
 func (e *Event) QueryWin() *WinQuery {
-	return (&EventClient{config: e.config}).QueryWin(e)
+	return NewEventClient(e.config).QueryWin(e)
 }
 
 // QueryCall queries the "call" edge of the Event entity.
 func (e *Event) QueryCall() *CallQuery {
-	return (&EventClient{config: e.config}).QueryCall(e)
+	return NewEventClient(e.config).QueryCall(e)
 }
 
 // QueryDraw queries the "draw" edge of the Event entity.
 func (e *Event) QueryDraw() *DrawnQuery {
-	return (&EventClient{config: e.config}).QueryDraw(e)
+	return NewEventClient(e.config).QueryDraw(e)
 }
 
 // QueryReach queries the "reach" edge of the Event entity.
 func (e *Event) QueryReach() *ReachQuery {
-	return (&EventClient{config: e.config}).QueryReach(e)
+	return NewEventClient(e.config).QueryReach(e)
 }
 
 // Update returns a builder for updating this Event.
 // Note that you need to call Event.Unwrap() before calling this method if this Event
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (e *Event) Update() *EventUpdateOne {
-	return (&EventClient{config: e.config}).UpdateOne(e)
+	return NewEventClient(e.config).UpdateOne(e)
 }
 
 // Unwrap unwraps the Event entity that was returned from a transaction after it was closed,
@@ -185,9 +185,3 @@ func (e *Event) String() string {
 
 // Events is a parsable slice of Event.
 type Events []*Event
-
-func (e Events) config(cfg config) {
-	for _i := range e {
-		e[_i].config = cfg
-	}
-}

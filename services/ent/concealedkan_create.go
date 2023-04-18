@@ -129,13 +129,7 @@ func (ckc *ConcealedKanCreate) sqlSave(ctx context.Context) (*ConcealedKan, erro
 func (ckc *ConcealedKanCreate) createSpec() (*ConcealedKan, *sqlgraph.CreateSpec) {
 	var (
 		_node = &ConcealedKan{config: ckc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: concealedkan.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: concealedkan.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(concealedkan.Table, sqlgraph.NewFieldSpec(concealedkan.FieldID, field.TypeUUID))
 	)
 	_spec.OnConflict = ckc.conflict
 	if id, ok := ckc.mutation.ID(); ok {
@@ -150,10 +144,7 @@ func (ckc *ConcealedKanCreate) createSpec() (*ConcealedKan, *sqlgraph.CreateSpec
 			Columns: []string{concealedkan.CallColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: call.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(call.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

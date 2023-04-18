@@ -40,15 +40,7 @@ func (cd *ChakanDelete) ExecX(ctx context.Context) int {
 }
 
 func (cd *ChakanDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: chakan.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: chakan.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(chakan.Table, sqlgraph.NewFieldSpec(chakan.FieldID, field.TypeUUID))
 	if ps := cd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -69,6 +61,12 @@ type ChakanDeleteOne struct {
 	cd *ChakanDelete
 }
 
+// Where appends a list predicates to the ChakanDelete builder.
+func (cdo *ChakanDeleteOne) Where(ps ...predicate.Chakan) *ChakanDeleteOne {
+	cdo.cd.mutation.Where(ps...)
+	return cdo
+}
+
 // Exec executes the deletion query.
 func (cdo *ChakanDeleteOne) Exec(ctx context.Context) error {
 	n, err := cdo.cd.Exec(ctx)
@@ -84,5 +82,7 @@ func (cdo *ChakanDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (cdo *ChakanDeleteOne) ExecX(ctx context.Context) {
-	cdo.cd.ExecX(ctx)
+	if err := cdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

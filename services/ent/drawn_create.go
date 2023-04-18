@@ -139,13 +139,7 @@ func (dc *DrawnCreate) sqlSave(ctx context.Context) (*Drawn, error) {
 func (dc *DrawnCreate) createSpec() (*Drawn, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Drawn{config: dc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: drawn.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: drawn.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(drawn.Table, sqlgraph.NewFieldSpec(drawn.FieldID, field.TypeUUID))
 	)
 	_spec.OnConflict = dc.conflict
 	if id, ok := dc.mutation.ID(); ok {
@@ -160,10 +154,7 @@ func (dc *DrawnCreate) createSpec() (*Drawn, *sqlgraph.CreateSpec) {
 			Columns: []string{drawn.EventColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: event.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -180,10 +171,7 @@ func (dc *DrawnCreate) createSpec() (*Drawn, *sqlgraph.CreateSpec) {
 			Columns: []string{drawn.DiscardColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: discard.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(discard.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

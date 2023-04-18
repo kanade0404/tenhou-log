@@ -78,14 +78,14 @@ func (po *Pon) assignValues(columns []string, values []any) error {
 
 // QueryCall queries the "call" edge of the Pon entity.
 func (po *Pon) QueryCall() *CallQuery {
-	return (&PonClient{config: po.config}).QueryCall(po)
+	return NewPonClient(po.config).QueryCall(po)
 }
 
 // Update returns a builder for updating this Pon.
 // Note that you need to call Pon.Unwrap() before calling this method if this Pon
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (po *Pon) Update() *PonUpdateOne {
-	return (&PonClient{config: po.config}).UpdateOne(po)
+	return NewPonClient(po.config).UpdateOne(po)
 }
 
 // Unwrap unwraps the Pon entity that was returned from a transaction after it was closed,
@@ -110,9 +110,3 @@ func (po *Pon) String() string {
 
 // Pons is a parsable slice of Pon.
 type Pons []*Pon
-
-func (po Pons) config(cfg config) {
-	for _i := range po {
-		po[_i].config = cfg
-	}
-}

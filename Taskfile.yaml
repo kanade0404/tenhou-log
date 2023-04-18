@@ -23,6 +23,9 @@ tasks:
   loadenv:
     cmds:
       - direnv allow .
+  generate:
+    cmds:
+      - GOWORK=off go generate ./...
   check:
     cmds:
       - go fmt ./...

@@ -115,19 +115,19 @@ func (d *Drawn) assignValues(columns []string, values []any) error {
 
 // QueryEvent queries the "event" edge of the Drawn entity.
 func (d *Drawn) QueryEvent() *EventQuery {
-	return (&DrawnClient{config: d.config}).QueryEvent(d)
+	return NewDrawnClient(d.config).QueryEvent(d)
 }
 
 // QueryDiscard queries the "discard" edge of the Drawn entity.
 func (d *Drawn) QueryDiscard() *DiscardQuery {
-	return (&DrawnClient{config: d.config}).QueryDiscard(d)
+	return NewDrawnClient(d.config).QueryDiscard(d)
 }
 
 // Update returns a builder for updating this Drawn.
 // Note that you need to call Drawn.Unwrap() before calling this method if this Drawn
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (d *Drawn) Update() *DrawnUpdateOne {
-	return (&DrawnClient{config: d.config}).UpdateOne(d)
+	return NewDrawnClient(d.config).UpdateOne(d)
 }
 
 // Unwrap unwraps the Drawn entity that was returned from a transaction after it was closed,
@@ -152,9 +152,3 @@ func (d *Drawn) String() string {
 
 // Drawns is a parsable slice of Drawn.
 type Drawns []*Drawn
-
-func (d Drawns) config(cfg config) {
-	for _i := range d {
-		d[_i].config = cfg
-	}
-}

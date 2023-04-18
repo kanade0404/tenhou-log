@@ -20,11 +20,8 @@ import (
 // ConcealedKanQuery is the builder for querying ConcealedKan entities.
 type ConcealedKanQuery struct {
 	config
-	limit      *int
-	offset     *int
-	unique     *bool
+	ctx        *QueryContext
 	order      []OrderFunc
-	fields     []string
 	inters     []Interceptor
 	predicates []predicate.ConcealedKan
 	withCall   *CallQuery
@@ -41,20 +38,20 @@ func (ckq *ConcealedKanQuery) Where(ps ...predicate.ConcealedKan) *ConcealedKanQ
 
 // Limit the number of records to be returned by this query.
 func (ckq *ConcealedKanQuery) Limit(limit int) *ConcealedKanQuery {
-	ckq.limit = &limit
+	ckq.ctx.Limit = &limit
 	return ckq
 }
 
 // Offset to start from.
 func (ckq *ConcealedKanQuery) Offset(offset int) *ConcealedKanQuery {
-	ckq.offset = &offset
+	ckq.ctx.Offset = &offset
 	return ckq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (ckq *ConcealedKanQuery) Unique(unique bool) *ConcealedKanQuery {
-	ckq.unique = &unique
+	ckq.ctx.Unique = &unique
 	return ckq
 }
 
@@ -89,7 +86,7 @@ func (ckq *ConcealedKanQuery) QueryCall() *CallQuery {
 // First returns the first ConcealedKan entity from the query.
 // Returns a *NotFoundError when no ConcealedKan was found.
 func (ckq *ConcealedKanQuery) First(ctx context.Context) (*ConcealedKan, error) {
-	nodes, err := ckq.Limit(1).All(newQueryContext(ctx, TypeConcealedKan, "First"))
+	nodes, err := ckq.Limit(1).All(setContextOp(ctx, ckq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +109,7 @@ func (ckq *ConcealedKanQuery) FirstX(ctx context.Context) *ConcealedKan {
 // Returns a *NotFoundError when no ConcealedKan ID was found.
 func (ckq *ConcealedKanQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = ckq.Limit(1).IDs(newQueryContext(ctx, TypeConcealedKan, "FirstID")); err != nil {
+	if ids, err = ckq.Limit(1).IDs(setContextOp(ctx, ckq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -135,7 +132,7 @@ func (ckq *ConcealedKanQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one ConcealedKan entity is found.
 // Returns a *NotFoundError when no ConcealedKan entities are found.
 func (ckq *ConcealedKanQuery) Only(ctx context.Context) (*ConcealedKan, error) {
-	nodes, err := ckq.Limit(2).All(newQueryContext(ctx, TypeConcealedKan, "Only"))
+	nodes, err := ckq.Limit(2).All(setContextOp(ctx, ckq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +160,7 @@ func (ckq *ConcealedKanQuery) OnlyX(ctx context.Context) *ConcealedKan {
 // Returns a *NotFoundError when no entities are found.
 func (ckq *ConcealedKanQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = ckq.Limit(2).IDs(newQueryContext(ctx, TypeConcealedKan, "OnlyID")); err != nil {
+	if ids, err = ckq.Limit(2).IDs(setContextOp(ctx, ckq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -188,7 +185,7 @@ func (ckq *ConcealedKanQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of ConcealedKans.
 func (ckq *ConcealedKanQuery) All(ctx context.Context) ([]*ConcealedKan, error) {
-	ctx = newQueryContext(ctx, TypeConcealedKan, "All")
+	ctx = setContextOp(ctx, ckq.ctx, "All")
 	if err := ckq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
@@ -206,10 +203,12 @@ func (ckq *ConcealedKanQuery) AllX(ctx context.Context) []*ConcealedKan {
 }
 
 // IDs executes the query and returns a list of ConcealedKan IDs.
-func (ckq *ConcealedKanQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	ctx = newQueryContext(ctx, TypeConcealedKan, "IDs")
-	if err := ckq.Select(concealedkan.FieldID).Scan(ctx, &ids); err != nil {
+func (ckq *ConcealedKanQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if ckq.ctx.Unique == nil && ckq.path != nil {
+		ckq.Unique(true)
+	}
+	ctx = setContextOp(ctx, ckq.ctx, "IDs")
+	if err = ckq.Select(concealedkan.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -226,7 +225,7 @@ func (ckq *ConcealedKanQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (ckq *ConcealedKanQuery) Count(ctx context.Context) (int, error) {
-	ctx = newQueryContext(ctx, TypeConcealedKan, "Count")
+	ctx = setContextOp(ctx, ckq.ctx, "Count")
 	if err := ckq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
@@ -244,7 +243,7 @@ func (ckq *ConcealedKanQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (ckq *ConcealedKanQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = newQueryContext(ctx, TypeConcealedKan, "Exist")
+	ctx = setContextOp(ctx, ckq.ctx, "Exist")
 	switch _, err := ckq.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
@@ -272,16 +271,14 @@ func (ckq *ConcealedKanQuery) Clone() *ConcealedKanQuery {
 	}
 	return &ConcealedKanQuery{
 		config:     ckq.config,
-		limit:      ckq.limit,
-		offset:     ckq.offset,
+		ctx:        ckq.ctx.Clone(),
 		order:      append([]OrderFunc{}, ckq.order...),
 		inters:     append([]Interceptor{}, ckq.inters...),
 		predicates: append([]predicate.ConcealedKan{}, ckq.predicates...),
 		withCall:   ckq.withCall.Clone(),
 		// clone intermediate query.
-		sql:    ckq.sql.Clone(),
-		path:   ckq.path,
-		unique: ckq.unique,
+		sql:  ckq.sql.Clone(),
+		path: ckq.path,
 	}
 }
 
@@ -299,9 +296,9 @@ func (ckq *ConcealedKanQuery) WithCall(opts ...func(*CallQuery)) *ConcealedKanQu
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
 func (ckq *ConcealedKanQuery) GroupBy(field string, fields ...string) *ConcealedKanGroupBy {
-	ckq.fields = append([]string{field}, fields...)
+	ckq.ctx.Fields = append([]string{field}, fields...)
 	grbuild := &ConcealedKanGroupBy{build: ckq}
-	grbuild.flds = &ckq.fields
+	grbuild.flds = &ckq.ctx.Fields
 	grbuild.label = concealedkan.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -310,10 +307,10 @@ func (ckq *ConcealedKanQuery) GroupBy(field string, fields ...string) *Concealed
 // Select allows the selection one or more fields/columns for the given query,
 // instead of selecting all fields in the entity.
 func (ckq *ConcealedKanQuery) Select(fields ...string) *ConcealedKanSelect {
-	ckq.fields = append(ckq.fields, fields...)
+	ckq.ctx.Fields = append(ckq.ctx.Fields, fields...)
 	sbuild := &ConcealedKanSelect{ConcealedKanQuery: ckq}
 	sbuild.label = concealedkan.Label
-	sbuild.flds, sbuild.scan = &ckq.fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &ckq.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
@@ -333,7 +330,7 @@ func (ckq *ConcealedKanQuery) prepareQuery(ctx context.Context) error {
 			}
 		}
 	}
-	for _, f := range ckq.fields {
+	for _, f := range ckq.ctx.Fields {
 		if !concealedkan.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -414,30 +411,22 @@ func (ckq *ConcealedKanQuery) loadCall(ctx context.Context, query *CallQuery, no
 
 func (ckq *ConcealedKanQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := ckq.querySpec()
-	_spec.Node.Columns = ckq.fields
-	if len(ckq.fields) > 0 {
-		_spec.Unique = ckq.unique != nil && *ckq.unique
+	_spec.Node.Columns = ckq.ctx.Fields
+	if len(ckq.ctx.Fields) > 0 {
+		_spec.Unique = ckq.ctx.Unique != nil && *ckq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, ckq.driver, _spec)
 }
 
 func (ckq *ConcealedKanQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   concealedkan.Table,
-			Columns: concealedkan.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: concealedkan.FieldID,
-			},
-		},
-		From:   ckq.sql,
-		Unique: true,
-	}
-	if unique := ckq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(concealedkan.Table, concealedkan.Columns, sqlgraph.NewFieldSpec(concealedkan.FieldID, field.TypeUUID))
+	_spec.From = ckq.sql
+	if unique := ckq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if ckq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := ckq.fields; len(fields) > 0 {
+	if fields := ckq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, concealedkan.FieldID)
 		for i := range fields {
@@ -453,10 +442,10 @@ func (ckq *ConcealedKanQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := ckq.limit; limit != nil {
+	if limit := ckq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := ckq.offset; offset != nil {
+	if offset := ckq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := ckq.order; len(ps) > 0 {
@@ -472,7 +461,7 @@ func (ckq *ConcealedKanQuery) querySpec() *sqlgraph.QuerySpec {
 func (ckq *ConcealedKanQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(ckq.driver.Dialect())
 	t1 := builder.Table(concealedkan.Table)
-	columns := ckq.fields
+	columns := ckq.ctx.Fields
 	if len(columns) == 0 {
 		columns = concealedkan.Columns
 	}
@@ -481,7 +470,7 @@ func (ckq *ConcealedKanQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = ckq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if ckq.unique != nil && *ckq.unique {
+	if ckq.ctx.Unique != nil && *ckq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range ckq.predicates {
@@ -490,12 +479,12 @@ func (ckq *ConcealedKanQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range ckq.order {
 		p(selector)
 	}
-	if offset := ckq.offset; offset != nil {
+	if offset := ckq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := ckq.limit; limit != nil {
+	if limit := ckq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -515,7 +504,7 @@ func (ckgb *ConcealedKanGroupBy) Aggregate(fns ...AggregateFunc) *ConcealedKanGr
 
 // Scan applies the selector query and scans the result into the given value.
 func (ckgb *ConcealedKanGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeConcealedKan, "GroupBy")
+	ctx = setContextOp(ctx, ckgb.build.ctx, "GroupBy")
 	if err := ckgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
@@ -563,7 +552,7 @@ func (cks *ConcealedKanSelect) Aggregate(fns ...AggregateFunc) *ConcealedKanSele
 
 // Scan applies the selector query and scans the result into the given value.
 func (cks *ConcealedKanSelect) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeConcealedKan, "Select")
+	ctx = setContextOp(ctx, cks.ctx, "Select")
 	if err := cks.prepareQuery(ctx); err != nil {
 		return err
 	}

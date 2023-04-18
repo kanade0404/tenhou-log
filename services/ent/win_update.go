@@ -90,16 +90,7 @@ func (wu *WinUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if err := wu.check(); err != nil {
 		return n, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   win.Table,
-			Columns: win.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: win.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(win.Table, win.Columns, sqlgraph.NewFieldSpec(win.FieldID, field.TypeUUID))
 	if ps := wu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -115,10 +106,7 @@ func (wu *WinUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{win.EventColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: event.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -131,10 +119,7 @@ func (wu *WinUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{win.EventColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: event.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -184,6 +169,12 @@ func (wuo *WinUpdateOne) ClearEvent() *WinUpdateOne {
 	return wuo
 }
 
+// Where appends a list predicates to the WinUpdate builder.
+func (wuo *WinUpdateOne) Where(ps ...predicate.Win) *WinUpdateOne {
+	wuo.mutation.Where(ps...)
+	return wuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (wuo *WinUpdateOne) Select(field string, fields ...string) *WinUpdateOne {
@@ -230,16 +221,7 @@ func (wuo *WinUpdateOne) sqlSave(ctx context.Context) (_node *Win, err error) {
 	if err := wuo.check(); err != nil {
 		return _node, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   win.Table,
-			Columns: win.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: win.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(win.Table, win.Columns, sqlgraph.NewFieldSpec(win.FieldID, field.TypeUUID))
 	id, ok := wuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Win.id" for update`)}
@@ -272,10 +254,7 @@ func (wuo *WinUpdateOne) sqlSave(ctx context.Context) (_node *Win, err error) {
 			Columns: []string{win.EventColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: event.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -288,10 +267,7 @@ func (wuo *WinUpdateOne) sqlSave(ctx context.Context) (_node *Win, err error) {
 			Columns: []string{win.EventColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: event.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

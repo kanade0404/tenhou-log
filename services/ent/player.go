@@ -92,14 +92,14 @@ func (pl *Player) assignValues(columns []string, values []any) error {
 
 // QueryGamePlayers queries the "game_players" edge of the Player entity.
 func (pl *Player) QueryGamePlayers() *GamePlayerQuery {
-	return (&PlayerClient{config: pl.config}).QueryGamePlayers(pl)
+	return NewPlayerClient(pl.config).QueryGamePlayers(pl)
 }
 
 // Update returns a builder for updating this Player.
 // Note that you need to call Player.Unwrap() before calling this method if this Player
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (pl *Player) Update() *PlayerUpdateOne {
-	return (&PlayerClient{config: pl.config}).UpdateOne(pl)
+	return NewPlayerClient(pl.config).UpdateOne(pl)
 }
 
 // Unwrap unwraps the Player entity that was returned from a transaction after it was closed,
@@ -129,9 +129,3 @@ func (pl *Player) String() string {
 
 // Players is a parsable slice of Player.
 type Players []*Player
-
-func (pl Players) config(cfg config) {
-	for _i := range pl {
-		pl[_i].config = cfg
-	}
-}
