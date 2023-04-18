@@ -1,0 +1,195 @@
+main:
+  params: [authToken]
+  steps:
+    - initialize_variables:
+        assign:
+          - success_logs: []
+          - failure_logs: []
+
+    - post_request_to_scraper:
+        call: http.post
+        args:
+          url: ${source_content_vars.scraper_url}
+          auth:
+            type: OIDC
+            audience: ${source_content_vars.scraper_url}
+            token: $${authToken}
+        result: scraper_response
+
+    - handle_scraper_response:
+        switch:
+          - condition: $${scraper_response.status_code == 200}
+            next: process_scraper_success_logs
+          - condition: $${scraper_response.status_code != 200}
+            call: handle_error
+            args:
+              error_response: $${scraper_response}
+              auth_token: $${authToken}
+
+    - process_scraper_success_logs:
+        assign:
+          - success_logs: $${scraper_response.body.success_logs}
+          - failure_logs: $${scraper_response.body.failure_logs}
+        next: send_failure_logs_to_cloud_logging
+
+    - send_failure_logs_to_cloud_logging:
+        call: send_logs_to_cloud_logging
+        args:
+          logs: $${failure_logs}
+          authToken: $${authToken}
+
+    - post_request_to_log_converter:
+        call: http.post
+        args:
+          url: ${source_content_vars.log_converter_url}
+          auth:
+            type: OIDC
+            audience: ${source_content_vars.log_converter_url}
+            token: $${authToken}
+          body:
+            success_logs: $${success_logs}
+        result: log_converter_response
+
+    - handle_log_converter_response:
+        switch:
+          - condition: $${log_converter_response.status_code == 200}
+            next: process_log_converter_success_logs
+          - condition: $${log_converter_response.status_code != 200}
+            call: handle_error
+            args:
+              error_response: $${log_converter_response}
+              auth_token: $${authToken}
+
+    - process_log_converter_success_logs:
+        assign:
+          - success_logs: $${log_converter_response.body.success_logs}
+          - failure_logs: $${log_converter_response.body.failure_logs}
+        next: send_log_converter_failure_logs_to_cloud_logging
+
+    - send_log_converter_failure_logs_to_cloud_logging:
+        call: send_logs_to_cloud_logging
+        args:
+          logs: $${failure_logs}
+          authToken: $${authToken}
+
+    - post_request_to_log_decompressor:
+        call: http.post
+        args:
+          url: ${source_content_vars.log_decompressor_url}
+          auth:
+            type: OIDC
+            audience: ${source_content_vars.log_decompressor_url}
+            token: $${authToken}
+          body:
+            success_logs: $${success_logs}
+        result: log_decompressor_response
+
+    - handle_log_decompressor_response:
+        switch:
+          - condition: $${log_decompressor_response.status_code == 200}
+            next: process_log_decompressor_success_logs
+          - condition: $${log_decompressor_response.status_code != 200}
+            call: handle_error
+            args:
+              error_response: $${log_decompressor_response}
+              auth_token: $${authToken}
+
+    - process_log_decompressor_success_logs:
+        assign:
+          - success_logs: $${log_decompressor_response.body.success_logs}
+          - failure_logs: $${log_decompressor_response.body.failure_logs}
+        next: send_log_decompressor_failure_logs_to_cloud_logging
+
+    - send_log_decompressor_failure_logs_to_cloud_logging:
+        call: send_logs_to_cloud_logging
+        args:
+          logs: $${failure_logs}
+          authToken: $${authToken}
+
+    - post_request_to_log_downloader:
+        call: http.post
+        args:
+          url: ${source_content_vars.log_downloader_url}
+          auth:
+            type: OIDC
+            audience: ${source_content_vars.log_downloader_url}
+            token: $${authToken}
+          body:
+            success_logs: $${success_logs}
+        result: log_downloader_response
+
+    - handle_log_downloader_response:
+        switch:
+          - condition: $${log_downloader_response.status_code == 200}
+            next: process_log_downloader_success_logs
+          - condition: $${log_downloader_response.status_code != 200}
+            call: handle_error
+            args:
+              error_response: $${log_downloader_response}
+              auth_token: $${authToken}
+
+    - process_log_downloader_success_logs:
+        assign:
+          - success_logs: $${log_downloader_response.body.success_logs}
+          - failure_logs: $${log_downloader_response.body.failure_logs}
+        next: send_log_downloader_failure_logs_to_cloud_logging
+
+    - send_log_downloader_failure_logs_to_cloud_logging:
+        call: send_logs_to_cloud_logging
+        args:
+          logs: $${failure_logs}
+          authToken: $${authToken}
+
+    - return_success_logs:
+        return: $${success_logs}
+
+send_logs_to_cloud_logging:
+  params: [logs, authToken]
+  steps:
+    - iterate:
+        for:
+          value: log
+          index: index
+          in: $${logs}
+          steps:
+            - do:
+                call: cloud_logging_write_log
+                args:
+                  log_name: "error_logs"
+                  text_payload: $${log}
+                  auth_token: $${authToken}
+
+handle_error:
+  params: [error_response, auth_token]
+  steps:
+    - do:
+        call: cloud_logging_write_log
+        args:
+          log_name: "error_logs"
+          text_payload: $${error_response.body}
+          auth_token: $${auth_token}
+    - return:
+        return: $${error_response}
+
+cloud_logging_write_log:
+  params: [log_name, text_payload, auth_token]
+  steps:
+    - do:
+        call: http.post
+        args:
+          url: "https://logging.googleapis.com/v2/entries:write"
+          auth:
+            type: Bearer
+            token: $${auth_token}
+          headers:
+            Content-Type: "application/json"
+          body:
+            entries:
+              - textPayload: $${text_payload}
+                logName: "projects/${project_id}/logs/$${log_name}"
+                resource:
+                  type: "global"
+        result: write_log_response
+    - return:
+        return: $${write_log_response}
+
