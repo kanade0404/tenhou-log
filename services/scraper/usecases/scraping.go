@@ -10,11 +10,16 @@ import (
 	"github.com/kanade0404/tenhou-log/services/ent/compressedmjlog"
 	"github.com/kanade0404/tenhou-log/services/scraper/entities"
 	"github.com/kanade0404/tenhou-log/services/scraper/internal"
+	"go.opentelemetry.io/otel"
 	"io"
 	"log"
 )
 
-func ScrapingCompressedLog(count int) ([]*entities.CompressedLogFile, error) {
+var scrapingTracer = otel.Tracer("scraper/trace")
+
+func ScrapingCompressedLog(ctx context.Context, count int) ([]*entities.CompressedLogFile, error) {
+	_, span := scrapingTracer.Start(ctx, "ScrapingCompressedLog")
+	defer span.End()
 	body, err := http_handler.RequestHTTP("https://tenhou.net/sc/raw/list.cgi")
 	defer func(body io.ReadCloser) {
 		err := body.Close()
@@ -42,7 +47,9 @@ func ScrapingCompressedLog(count int) ([]*entities.CompressedLogFile, error) {
 	}
 	return fetchLogs, nil
 }
-func FetchUpdatedLogFiles(ctx context.Context, db *ent.Client, logs []*entities.CompressedLogFile) ([]*ent.CompressedMJLog, error) {
+func FetchUpdatedLogFiles(c context.Context, db *ent.Client, logs []*entities.CompressedLogFile) ([]*ent.CompressedMJLog, error) {
+	ctx, span := scrapingTracer.Start(c, "FetchUpdatedLogFiles")
+	defer span.End()
 	var logNames []string
 	for i := range logs {
 		logNames = append(logNames, logs[i].File)
@@ -72,6 +79,8 @@ func FetchUpdatedLogFiles(ctx context.Context, db *ent.Client, logs []*entities.
 	return resultLogs, err
 }
 func StoreCompressedLogFile(ctx context.Context, db *ent.Client, fetchLogFiles []*entities.CompressedLogFile) ([]*entities.CompressedLogFile, error) {
+	ctx, span := scrapingTracer.Start(ctx, "StoreCompressedLogFile")
+	defer span.End()
 	var (
 		targetFiles []*entities.CompressedLogFile
 		queries     []*ent.CompressedMJLogCreate

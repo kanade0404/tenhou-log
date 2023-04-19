@@ -6,6 +6,7 @@ import (
 	"github.com/kanade0404/tenhou-log/pkg/driver/storage"
 	"github.com/kanade0404/tenhou-log/pkg/http_handler"
 	"github.com/kanade0404/tenhou-log/services/scraper/entities"
+	"go.opentelemetry.io/otel"
 	"log"
 	"math/rand"
 	"time"
@@ -16,8 +17,12 @@ type Result struct {
 	Error    error
 }
 
+var storageTracer = otel.Tracer("scraper/trace")
+
 func StoreCompressedLogFiles(c context.Context, bucketName string, compressedLogFile []*entities.CompressedLogFile) ([]string, error) {
-	ctx, cancel := context.WithTimeout(c, time.Minute*10)
+	ctx, span := storageTracer.Start(c, "StoreCompressedLogFiles")
+	defer span.End()
+	ctx, cancel := context.WithTimeout(ctx, time.Minute*10)
 	defer cancel()
 	client, storageClose, err := storage.NewStorage(ctx)
 	if err != nil {
