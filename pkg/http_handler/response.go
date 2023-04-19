@@ -12,9 +12,13 @@ func ErrorResponse(w http.ResponseWriter, code int, message string) {
 func Response(w http.ResponseWriter, code int, payload interface{}) {
 	res, err := json.Marshal(payload)
 	if err != nil {
-		log.Println(err)
+		log.Fatalln(err)
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	w.Write(res)
+	_, err = w.Write(res)
+	if err != nil {
+		log.Fatalln(err)
+		return
+	}
 }
