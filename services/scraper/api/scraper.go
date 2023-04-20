@@ -17,10 +17,10 @@ type request struct {
 	After  time.Time `json:"after"`
 }
 
-var tracer = otel.Tracer("scraper/trace")
+var scraperTracer = otel.GetTracerProvider().Tracer("github.com/kanade0404/tenhou-log/services/scraper/api/scraper")
 
 func (a *Api) Scraper(w http.ResponseWriter, r *http.Request) {
-	ctx, span := tracer.Start(a.Context, "Scraper")
+	ctx, span := scraperTracer.Start(a.Context, "Scraper")
 	defer span.End()
 	a.Context = ctx
 	var req request
@@ -35,7 +35,7 @@ func (a *Api) Scraper(w http.ResponseWriter, r *http.Request) {
 }
 
 func ScrapingAndStore(ctx context.Context, db *ent.Client, bucketName string, req request) ([]string, error) {
-	ctx, span := tracer.Start(ctx, "ScrapingAndStore")
+	ctx, span := scraperTracer.Start(ctx, "ScrapingAndStore")
 	defer span.End()
 	logFiles, err := usecases.ScrapingCompressedLog(ctx, req.Count)
 	if err != nil {

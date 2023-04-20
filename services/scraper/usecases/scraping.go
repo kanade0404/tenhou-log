@@ -15,10 +15,10 @@ import (
 	"log"
 )
 
-var scrapingTracer = otel.Tracer("scraper/trace")
+var scrapingTracer = otel.GetTracerProvider().Tracer("github.com/kanade0404/tenhou-log/services/scraper/usecases/scraping")
 
-func ScrapingCompressedLog(ctx context.Context, count int) ([]*entities.CompressedLogFile, error) {
-	_, span := scrapingTracer.Start(ctx, "ScrapingCompressedLog")
+func ScrapingCompressedLog(c context.Context, count int) ([]*entities.CompressedLogFile, error) {
+	ctx, span := scrapingTracer.Start(c, "ScrapingCompressedLog")
 	defer span.End()
 	body, err := http_handler.RequestHTTP("https://tenhou.net/sc/raw/list.cgi")
 	defer func(body io.ReadCloser) {
@@ -32,13 +32,13 @@ func ScrapingCompressedLog(ctx context.Context, count int) ([]*entities.Compress
 		return nil, err
 	}
 
-	logFiles := internal.UnmarshalFileListText(doc.Text())
+	logFiles := internal.UnmarshalFileListText(ctx, doc.Text())
 	var fetchLogs []*entities.CompressedLogFile
 	for i, str := range logFiles {
 		if count != 0 && i == count {
 			break
 		}
-		l, err := entities.Unmarshal(str)
+		l, err := entities.Unmarshal(ctx, str)
 		if err != nil {
 			log.Println("error unmarshal entity: ", err)
 			return nil, err

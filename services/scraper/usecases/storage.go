@@ -17,7 +17,7 @@ type Result struct {
 	Error    error
 }
 
-var storageTracer = otel.Tracer("scraper/trace")
+var storageTracer = otel.GetTracerProvider().Tracer("github.com/kanade0404/tenhou-log/services/scraper/usecases/storage")
 
 func StoreCompressedLogFiles(c context.Context, bucketName string, compressedLogFile []*entities.CompressedLogFile) ([]string, error) {
 	ctx, span := storageTracer.Start(c, "StoreCompressedLogFiles")

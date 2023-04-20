@@ -53,7 +53,7 @@ func main() {
 	}(tp, ctx)
 	otel.SetTracerProvider(tp)
 
-	tracer := otel.GetTracerProvider().Tracer("scraper/trace")
+	tracer := otel.GetTracerProvider().Tracer("github.com/kanade0404/tenhou-log/services/scraper")
 	ctx, span := tracer.Start(ctx, "main")
 	defer span.End()
 	client, err := database.CreateClient(ctx, env.Dialect(), env.ConnectionString())
