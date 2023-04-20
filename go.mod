@@ -6,7 +6,7 @@ require (
 	ariga.io/atlas v0.10.1
 	cloud.google.com/go/secretmanager v1.10.0
 	cloud.google.com/go/storage v1.30.1
-	entgo.io/ent v0.12.1
+	entgo.io/ent v0.12.2
 	github.com/PuerkitoBio/goquery v1.8.1
 	github.com/google/go-cmp v0.5.9
 	github.com/google/uuid v1.3.0
