@@ -6,7 +6,7 @@ resource "google_cloud_scheduler_job" "job" {
   http_target {
     http_method = "POST"
     uri         = var.http_target_uri
-    oidc_token {
+    oauth_token {
       service_account_email = var.service_account_email
     }
   }

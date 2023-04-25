@@ -1,5 +1,5 @@
 main:
-  params: [authToken]
+  params: []
   steps:
     - initialize_variables:
         assign:
@@ -13,7 +13,6 @@ main:
           auth:
             type: OIDC
             audience: ${source_content_vars.scraper_url}
-            token: $${authToken}
         result: scraper_response
 
     - handle_scraper_response:
@@ -24,7 +23,6 @@ main:
             call: handle_error
             args:
               error_response: $${scraper_response}
-              auth_token: $${authToken}
 
     - process_scraper_success_logs:
         assign:
@@ -36,7 +34,6 @@ main:
         call: send_logs_to_cloud_logging
         args:
           logs: $${failure_logs}
-          authToken: $${authToken}
 
     - post_request_to_log_converter:
         call: http.post
@@ -45,7 +42,6 @@ main:
           auth:
             type: OIDC
             audience: ${source_content_vars.log_converter_url}
-            token: $${authToken}
           body:
             success_logs: $${success_logs}
         result: log_converter_response
@@ -58,7 +54,6 @@ main:
             call: handle_error
             args:
               error_response: $${log_converter_response}
-              auth_token: $${authToken}
 
     - process_log_converter_success_logs:
         assign:
@@ -70,7 +65,6 @@ main:
         call: send_logs_to_cloud_logging
         args:
           logs: $${failure_logs}
-          authToken: $${authToken}
 
     - post_request_to_log_decompressor:
         call: http.post
@@ -79,7 +73,6 @@ main:
           auth:
             type: OIDC
             audience: ${source_content_vars.log_decompressor_url}
-            token: $${authToken}
           body:
             success_logs: $${success_logs}
         result: log_decompressor_response
@@ -92,7 +85,6 @@ main:
             call: handle_error
             args:
               error_response: $${log_decompressor_response}
-              auth_token: $${authToken}
 
     - process_log_decompressor_success_logs:
         assign:
@@ -104,7 +96,6 @@ main:
         call: send_logs_to_cloud_logging
         args:
           logs: $${failure_logs}
-          authToken: $${authToken}
 
     - post_request_to_log_downloader:
         call: http.post
@@ -113,7 +104,6 @@ main:
           auth:
             type: OIDC
             audience: ${source_content_vars.log_downloader_url}
-            token: $${authToken}
           body:
             success_logs: $${success_logs}
         result: log_downloader_response
@@ -126,7 +116,6 @@ main:
             call: handle_error
             args:
               error_response: $${log_downloader_response}
-              auth_token: $${authToken}
 
     - process_log_downloader_success_logs:
         assign:
@@ -138,13 +127,12 @@ main:
         call: send_logs_to_cloud_logging
         args:
           logs: $${failure_logs}
-          authToken: $${authToken}
 
     - return_success_logs:
         return: $${success_logs}
 
 send_logs_to_cloud_logging:
-  params: [logs, authToken]
+  params: [logs]
   steps:
     - iterate:
         for:
@@ -155,41 +143,26 @@ send_logs_to_cloud_logging:
             - do:
                 call: cloud_logging_write_log
                 args:
-                  log_name: "error_logs"
                   text_payload: $${log}
-                  auth_token: $${authToken}
+                  severity: "ERROR"
 
 handle_error:
-  params: [error_response, auth_token]
+  params: [error_response]
   steps:
     - do:
         call: cloud_logging_write_log
         args:
-          log_name: "error_logs"
           text_payload: $${error_response.body}
-          auth_token: $${auth_token}
+          severity: "ERROR"
     - return:
         return: $${error_response}
 
 cloud_logging_write_log:
-  params: [log_name, text_payload, auth_token]
+  params: [text_payload, severity]
   steps:
     - do:
-        call: http.post
+        call: sys.log
         args:
-          url: "https://logging.googleapis.com/v2/entries:write"
-          auth:
-            type: Bearer
-            token: $${auth_token}
-          headers:
-            Content-Type: "application/json"
-          body:
-            entries:
-              - textPayload: $${text_payload}
-                logName: "projects/${project_id}/logs/$${log_name}"
-                resource:
-                  type: "global"
-        result: write_log_response
-    - return:
-        return: $${write_log_response}
+          text: $${json.encode_to_string(text_payload)}
+          severity: $${severity}
 

@@ -6,7 +6,7 @@ module "workflow" {
   region             = var.location
   service_account_id = module.service_account["workflow-runner"].id
   source_content_vars = {
-    scraper_url          = module.scraper_app_container.url
+    scraper_url          = "${module.scraper_app_container.url}/scraping"
     log_converter_url    = module.log_converter.uri
     log_decompressor_url = module.log_decompressor.uri
     log_downloader_url   = module.log_downloader.uri

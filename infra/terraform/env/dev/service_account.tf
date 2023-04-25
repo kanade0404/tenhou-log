@@ -144,7 +144,7 @@ module "workflow_invoker" {
   source     = "../../modules/iam"
   PROJECT_ID = var.PROJECT_ID
   name       = each.value
-  role       = "roles/logging.logWriter"
+  role       = "roles/workflows.invoker"
 }
 module "log_writer" {
   for_each = toset([
