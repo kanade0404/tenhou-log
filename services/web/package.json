@@ -2,7 +2,7 @@
   "name": "web",
   "version": "0.1.0",
   "dependencies": {
-    "@chakra-ui/react": "2.5.5",
+    "@chakra-ui/react": "2.6.0",
     "@emotion/react": "11.10.6",
     "@emotion/styled": "11.10.6",
     "next": "13.3.1",
