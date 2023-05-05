@@ -1,0 +1,20 @@
+name: Log Decompressor CD
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - services/log_decompressor/**
+      - pkg/**
+      - .github/workflows/log-decompressor-cd.yaml
+      - go.*
+      - '!pkg/parser/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    uses: kanade0404/tenhou-log/.github/workflows/function-cd.yaml@master
+    with:
+      service_name: log_decompressor
+      entry_point: Decompress
+      function_name: log-decompressor

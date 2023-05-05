@@ -1,0 +1,33 @@
+name: Terraform CD
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - infra/**
+  workflow_dispatch:
+
+env:
+  ENV: dev
+jobs:
+  plan:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Authentication Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: "projects/${{ secrets.GCP_PROJECT_NUMBER_DEV }}/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider"
+          service_account: "github-actions@${{ secrets.GCP_PROJECT_ID_DEV }}.iam.gserviceaccount.com"
+          project_id: ${{ secrets.GCP_PROJECT_ID_DEV }}
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v1'
+      - name: Decrypt tfvars
+        run: terraform gcloud kms decrypt --location asia-northeast1 --keyring ${{ env.ENV }} --key keyring-${{ env.ENV }} --plaintext-file /terraform/env/${{ env.ENV }}/terraform.tfvars --ciphertext-file /terraform/env/${{ env.ENV }}/terraform.tfvars.enc
+      - uses: hashicorp/setup-terraform@v2
+      - name: Terraform Plan
+        run: terraform plan -var-file=infra/terraform.tfvars -out=tfplan
+      - name: Terraform Show
+        run: terraform show tfplan
+      - name: Terraform Apply
+        run: terraform apply -var-file=infra/terraform.tfvars -auto-approve

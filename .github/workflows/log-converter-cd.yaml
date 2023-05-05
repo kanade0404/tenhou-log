@@ -1,0 +1,20 @@
+name: Log Converter CD
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - services/log_converter/**
+      - pkg/**
+      - .github/workflows/log-converter-cd.yaml
+      - go.*
+      - '!pkg/parser/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    uses: kanade0404/tenhou-log/.github/workflows/function-cd.yaml@master
+    with:
+      service_name: log_converter
+      entry_point: Convert
+      function_name: log-converter

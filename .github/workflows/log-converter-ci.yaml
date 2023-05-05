@@ -1,0 +1,15 @@
+name: Log Converter CI
+on:
+  pull_request:
+    paths:
+      - services/log_converter/**
+      - pkg/**
+      - .github/workflows/log-converter-ci.yaml
+      - go.*
+      - '!pkg/parser/**'
+
+jobs:
+  services:
+    uses: kanade0404/tenhou-log/.github/workflows/function-ci.yaml@master
+    with:
+      service_name: log_converter
