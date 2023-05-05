@@ -1,0 +1,34 @@
+name: Function CI
+on:
+  workflow_call:
+    inputs:
+      service_name:
+        required: true
+        type: string
+env:
+  WORKDIR: services/${{ inputs.service_name }}
+jobs:
+  services:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        continue-on-error: true
+      - name: Format
+        run: go fmt ./...
+        working-directory: ${{ env.WORKDIR }}
+      - name: Test
+        run: go test ./...
+        working-directory: ${{ env.WORKDIR }}
+      - name: go lint
+        run: go vet ./...
+        working-directory: ${{ env.WORKDIR }}
+      - name: Build
+        run: go build main.go
+        working-directory: ${{ env.WORKDIR }}
