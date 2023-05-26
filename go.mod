@@ -12,7 +12,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
 	github.com/lib/pq v1.10.9
-	google.golang.org/genproto v0.0.0-20230525154841-bd750badd5c6
+	google.golang.org/genproto v0.0.0-20230526015343-6ee61e4f9d5f
 )
 
 require (
@@ -43,6 +43,8 @@ require (
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/api v0.118.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20230525234020-1aefcd67740a // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20230525234015-3fc162c6f38a // indirect
 	google.golang.org/grpc v1.55.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 )
