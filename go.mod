@@ -12,7 +12,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
 	github.com/lib/pq v1.10.9
-	google.golang.org/genproto v0.0.0-20230628200519-e449d1ea0e82
+	google.golang.org/genproto v0.0.0-20230629202037-9506855d4529
 )
 
 require (
