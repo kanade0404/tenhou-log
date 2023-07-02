@@ -5,7 +5,7 @@ go 1.20
 require (
 	ariga.io/atlas v0.12.0
 	cloud.google.com/go/secretmanager v1.11.1
-	cloud.google.com/go/storage v1.30.1
+	cloud.google.com/go/storage v1.31.0
 	entgo.io/ent v0.12.3
 	github.com/PuerkitoBio/goquery v1.8.1
 	github.com/google/go-cmp v0.5.9
