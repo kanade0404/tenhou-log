@@ -10,6 +10,6 @@ on:
 
 jobs:
   services:
-    uses: kanade0404/tenhou-log/.github/workflows/function-ci.yaml@master
+    uses: ./.github/workflows/function-ci.yaml
     with:
       service_name: log_decompressor
