@@ -115,7 +115,8 @@ module "github_actions_role" {
     "artifactregistry.repositories.uploadArtifacts",
     "cloudkms.cryptoKeyVersions.useToDecrypt",
     "storage.objects.create",
-    "storage.objects.list"
+    "storage.objects.list",
+    "storage.objects.get"
   ]
   title = "GitHub Actions Role"
 }
