@@ -38,7 +38,11 @@ jobs:
         run: terraform init -var-file terraform.tfvars
         working-directory: infra/terraform/env/${{ matrix.envs }}
       - name: Decrypt tfvars
-        run: gcloud kms decrypt --location asia-northeast1 --keyring keyring-${{ matrix.envs }} --key terraform --plaintext-file terraform.tfvars --ciphertext-file terraform.tfvars.enc
+        run: |
+          gcloud kms decrypt --location asia-northeast1 --keyring keyring-${{ matrix.envs }} --key terraform --plaintext-file terraform.tfvars --ciphertext-file terraform.tfvars.enc
+          gcloud kms decrypt --location asia-northeast1 --keyring keyring-${{ matrix.envs }} --key terraform --plaintext-file credentials/database.json --ciphertext-file credentials/database.json.enc
+          gcloud kms decrypt --location asia-northeast1 --keyring keyring-${{ matrix.envs }} --key terraform --plaintext-file credentials/api.json --ciphertext-file credentials/api.json.enc
+          gcloud kms decrypt --location asia-northeast1 --keyring keyring-${{ matrix.envs }} --key terraform --plaintext-file credentials/secret.json --ciphertext-file credentials/secret.json.enc
         working-directory: infra/terraform/env/${{ matrix.envs }}
       - name: 'Terraform fmt'
         run: terraform fmt ./...

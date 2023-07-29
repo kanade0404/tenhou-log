@@ -23,3 +23,10 @@ module "list_object" {
   role       = "roles/storage.objectViewer"
   depends_on = [module.enabled_services.services]
 }
+module "encrypter_decrypter" {
+  source     = "../../modules/iam"
+  PROJECT_ID = var.PROJECT_ID
+  name       = module.workload-identity-service-account.email
+  role       = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+  depends_on = [module.enabled_services.services]
+}
