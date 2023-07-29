@@ -2,121 +2,123 @@ package usecases
 
 import (
 	"context"
-	"entgo.io/ent/dialect/sql"
+	"fmt"
+	"io"
+
 	"github.com/PuerkitoBio/goquery"
-	"github.com/google/uuid"
+
+	"github.com/kanade0404/tenhou-log/pkg/driver/tracer"
 	"github.com/kanade0404/tenhou-log/pkg/http_handler"
-	"github.com/kanade0404/tenhou-log/services/ent"
-	"github.com/kanade0404/tenhou-log/services/ent/compressedmjlog"
+	"github.com/kanade0404/tenhou-log/pkg/logger"
 	"github.com/kanade0404/tenhou-log/services/scraper/entities"
 	"github.com/kanade0404/tenhou-log/services/scraper/internal"
-	"go.opentelemetry.io/otel"
-	"io"
-	"log"
 )
 
-var scrapingTracer = otel.GetTracerProvider().Tracer("github.com/kanade0404/tenhou-log/services/scraper/usecases/scraping")
+var scrapingTracer = tracer.NewTracer("services/scraper/usecases/scraping")
 
-func ScrapingCompressedLog(c context.Context, count int) ([]*entities.CompressedLogFile, error) {
-	ctx, span := scrapingTracer.Start(c, "ScrapingCompressedLog")
+type CompressedLog struct {
+	Name string
+	Body []byte
+	Size uint
+}
+type ScrapingCompressedLogListResponse struct {
+	SuccessLogs []*CompressedLog
+	FailureLogs []FailureFileName
+}
+
+// ScrapingCompressedLogList は圧縮されたログのリストを取得する
+/*
+  - @param c: context
+  - @param count: nilの場合は全てのログを取得する
+  - @return ScrapingCompressedLogListResponse: 成功したログと失敗したログのリスト
+  - @return err: エラー
+*/
+func ScrapingCompressedLogList(c context.Context, count *int) (*ScrapingCompressedLogListResponse, error) {
+	logger.Info("ScrapingCompressedLogList start")
+	defer logger.Info("ScrapingCompressedLogList end")
+	ctx, span := scrapingTracer.Start(c, "ScrapingCompressedLogList")
 	defer span.End()
 	body, err := http_handler.RequestHTTP("https://tenhou.net/sc/raw/list.cgi")
+	if err != nil {
+		return nil, fmt.Errorf("ScrapingCompressedLogList failed. %w", err)
+	}
 	defer func(body io.ReadCloser) {
 		err := body.Close()
 		if err != nil {
-			log.Fatal(err)
+			go logger.Error(err.Error())
 		}
 	}(body)
 	doc, err := goquery.NewDocumentFromReader(body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ScrapingCompressedLogList failed. %w", err)
 	}
-
 	logFiles := internal.UnmarshalFileListText(ctx, doc.Text())
-	var fetchLogs []*entities.CompressedLogFile
-	for i, str := range logFiles {
-		if count != 0 && i == count {
-			break
-		}
-		l, err := entities.Unmarshal(ctx, str)
-		if err != nil {
-			log.Println("error unmarshal entity: ", err)
-			return nil, err
-		}
-		fetchLogs = append(fetchLogs, l)
+	type result struct {
+		Body  []byte
+		Log   *entities.CompressedLogFile
+		Error error
 	}
-	return fetchLogs, nil
-}
-func FetchUpdatedLogFiles(c context.Context, db *ent.Client, logs []*entities.CompressedLogFile) ([]*ent.CompressedMJLog, error) {
-	ctx, span := scrapingTracer.Start(c, "FetchUpdatedLogFiles")
-	defer span.End()
-	var logNames []string
-	for i := range logs {
-		logNames = append(logNames, logs[i].File)
-	}
-
-	currentLogFiles, err := db.CompressedMJLog.Query().Where(func(selector *sql.Selector) {
-		selector.Where(sql.In(compressedmjlog.FieldName, logNames))
-	}).All(ctx)
-	if err != nil {
-		return nil, err
-	}
-	resultLogMap := make(map[uuid.UUID]*ent.CompressedMJLog)
-	for i := range currentLogFiles {
-		for li := range logs {
-			if currentLogFiles[i].Name == logs[li].File {
-				if currentLogFiles[i].Size != logs[li].Size {
-					resultLogMap[currentLogFiles[i].ID] = currentLogFiles[i]
+	checkFetchStatus := func(logFiles []string) <-chan result {
+		resultChan := make(chan result)
+		go func(files []string) {
+			logger.InfoF("ScrapingCompressedLogList start fetch. total: %d", len(logFiles))
+			for i := range files {
+				if count != nil && i == *count {
+					break
 				}
-				break
+				logger.InfoF("ScrapingCompressedLogList start fetch. %d/%d", i+1, len(files))
+				l, err := entities.Unmarshal(ctx, files[i])
+				if err != nil {
+					err = fmt.Errorf("ScrapingCompressedLogList error unmarshal entity: %v", err)
+					resultChan <- result{
+						Log:   l,
+						Error: err,
+					}
+					logger.ErrorF("ScrapingCompressedLogList end fetch. %d/%d\n%s", i+1, len(files), err.Error())
+					continue
+				}
+				url := fmt.Sprintf("https://tenhou.net/sc/raw/dat/%s", l.File)
+				g, err := http_handler.RequestGZip(url, "GET", nil)
+				logger.InfoF("ScrapingCompressedLogList fetch target: %s. %d/%d", url, i+1, len(files))
+				if err != nil {
+					err = fmt.Errorf("ScrapingCompressedLogList error get gzip logs. URL: %s", url)
+					resultChan <- result{
+						Log:   l,
+						Error: err,
+					}
+					logger.ErrorF("ScrapingCompressedLogList end fetch. %d/%d\n%s", i+1, len(files), err.Error())
+					continue
+				}
+				resultChan <- result{
+					Body: g,
+					Log:  l,
+				}
+				logger.InfoF("ScrapingCompressedLogList end fetch. %d/%d", i+1, len(files))
 			}
-		}
+			logger.Info("ScrapingCompressedLogList end fetch")
+		}(logFiles)
+		return resultChan
 	}
-	var resultLogs []*ent.CompressedMJLog
-	for k := range resultLogMap {
-		resultLogs = append(resultLogs, resultLogMap[k])
-	}
-	return resultLogs, err
-}
-func StoreCompressedLogFile(ctx context.Context, db *ent.Client, fetchLogFiles []*entities.CompressedLogFile) ([]*entities.CompressedLogFile, error) {
-	ctx, span := scrapingTracer.Start(ctx, "StoreCompressedLogFile")
-	defer span.End()
 	var (
-		targetFiles []*entities.CompressedLogFile
-		queries     []*ent.CompressedMJLogCreate
+		successLogs []*CompressedLog
+		failureLogs []FailureFileName
 	)
-	// DBから圧縮されたファイルレコード取ってくる
-	var latestFileMap = make(map[string]*ent.CompressedMJLog)
-	currentLogFiles, err := db.CompressedMJLog.Query().All(ctx)
-	for _, file := range currentLogFiles {
-		if _, ok := latestFileMap[file.Name]; ok {
-			if file.InsertedAt.After(latestFileMap[file.Name].InsertedAt) {
-				latestFileMap[file.Name] = file
-			}
+	for status := range checkFetchStatus(logFiles) {
+		if status.Error != nil {
+			failureLogs = append(failureLogs, FailureFileName{
+				Name:  status.Log.File,
+				Error: status.Error,
+			})
 		} else {
-			latestFileMap[file.Name] = file
+			successLogs = append(successLogs, &CompressedLog{
+				Name: status.Log.File,
+				Body: status.Body,
+				Size: status.Log.Size,
+			})
 		}
 	}
-	if err != nil {
-		return nil, err
-	}
-	for _, fetchLog := range fetchLogFiles {
-		for _, current := range latestFileMap {
-			// ファイル名が一致してサイズが違うなら
-			if fetchLog.File == current.Name {
-				if fetchLog.Size != current.Size {
-					targetFiles = append(targetFiles, fetchLog)
-					queries = append(queries, db.CompressedMJLog.Create().SetSize(fetchLog.Size).SetName(fetchLog.File))
-				}
-				break
-			}
-		}
-		// いずれにもヒットしなかった = 新規
-		targetFiles = append(targetFiles, fetchLog)
-		queries = append(queries, db.CompressedMJLog.Create().SetSize(fetchLog.Size).SetName(fetchLog.File))
-	}
-	if err := db.CompressedMJLog.CreateBulk(queries...).Exec(ctx); err != nil {
-		return nil, err
-	}
-	return targetFiles, nil
+	return &ScrapingCompressedLogListResponse{
+		SuccessLogs: successLogs,
+		FailureLogs: failureLogs,
+	}, nil
 }

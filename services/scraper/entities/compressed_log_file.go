@@ -3,8 +3,9 @@ package entities
 import (
 	"context"
 	"encoding/json"
-	"go.opentelemetry.io/otel"
 	"strings"
+
+	tracer2 "github.com/kanade0404/tenhou-log/pkg/driver/tracer"
 )
 
 type CompressedLogFile struct {
@@ -12,7 +13,7 @@ type CompressedLogFile struct {
 	Size uint   `json:"size"`
 }
 
-var tracer = otel.GetTracerProvider().Tracer("github.com/kanade0404/tenhou-log/services/scraper/entities/compressed_log_file")
+var tracer = tracer2.NewTracer("services/scraper/entities/compressed_log_file")
 
 func Unmarshal(ctx context.Context, logText string) (*CompressedLogFile, error) {
 	_, span := tracer.Start(ctx, "Unmarshal")

@@ -68,6 +68,7 @@ resource "google_cloud_run_service" "run" {
       template[0].metadata[0].annotations["run.googleapis.com/client-name"],
       template[0].metadata[0].annotations["run.googleapis.com/client-version"],
       template[0].metadata[0].annotations["run.googleapis.com/sandbox"],
+      template[0].metadata[0].labels["cloud.googleapis.com/startupProbeType"],
     ]
   }
 }

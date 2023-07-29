@@ -1,32 +1,39 @@
 version: '3'
 includes:
-  docker: ./DockerTasks.yaml
-  terraform: ./TerraformTasks.yaml
+  docker: ./config/task/docker/Taskfile.yaml
+  terraform: ./config/task/terraform/Taskfile.yaml
 
 tasks:
   setup:
+    desc: Setup project
     cmds:
       - task: docker:build
       - task: docker:up
       - task: terraform:setup
       - go mod download
   test:
+    desc: Run test
     cmds:
       - go test ./... -cover -coverprofile=cover.out
       - go tool cover -html=cover.out -o cover.html
   create-migration-file:
+    desc: Create migration file
     cmds:
       - go run -mod=mod pkg/database/cmd/create_migration_files/main.go {{ .VERSION }}
   exec-versioned-migration:
+    desc: Execute versioned migration
     cmds:
       - go run -mod=mod pkg/database/cmd/exec_versioned_migration/main.go {{ .VERSION }}
   loadenv:
+    desc: Load env
     cmds:
       - direnv allow .
   generate:
+    desc: Generate
     cmds:
       - GOWORK=off go generate ./...
   check:
+    desc: Check
     cmds:
       - go fmt ./...
       - go vet ./...

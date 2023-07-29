@@ -2,9 +2,14 @@ package storage
 
 import (
 	"bytes"
-	"cloud.google.com/go/storage"
 	"context"
 	"io"
+	"sync"
+
+	"github.com/kanade0404/tenhou-log/services/scraper/entities"
+
+	"cloud.google.com/go/storage"
+	"google.golang.org/api/iterator"
 )
 
 type Storage struct {
@@ -58,4 +63,98 @@ func (s *Storage) GetObject(bucketName string, objectName string) ([]byte, error
 		return nil, err
 	}
 	return b, nil
+}
+
+type FailureListFile struct {
+}
+type FailureLog struct {
+	Log   *entities.CompressedLogFile
+	Error error
+}
+
+/*
+ListObjects
+bucketNameにあるfileNamesにmatchするファイルを探し、
+existLogsには存在するファイル、notExistLogsには存在しないファイル、failureLogsにはエラー終了したファイルを格納する。
+*/
+func (s *Storage) ListObjects(bucketName string, fileNames []string) (existLogs []*entities.CompressedLogFile, notExistLogs []*entities.CompressedLogFile, failureLogs []*FailureLog, err error) {
+	// 並列処理でfileNameにmatchするファイルはexistLogsに、matchしないファイルはnotExistLogsに、エラー終了したファイルはfailureLogsに格納する
+	// 並列処理の数はfileNamesの数とする
+	// 並列処理の終了を待つために、fileNamesの数分のchannelを用意する
+	type result struct {
+		file struct {
+			name string
+			size int64
+		}
+		found bool
+		err   error
+	}
+	wg := sync.WaitGroup{}
+	ch := make(chan result, len(fileNames))
+	for _, fileName := range fileNames {
+		wg.Add(1)
+		go func(fileName string) {
+			defer wg.Done()
+			query := &storage.Query{
+				Prefix: fileName,
+			}
+			it := s.client.Bucket(bucketName).Objects(s.ctx, query)
+			for {
+				attrs, err := it.Next()
+				if err == iterator.Done {
+					ch <- result{
+						file: struct {
+							name string
+							size int64
+						}{name: fileName},
+						found: false,
+					}
+					return
+				}
+				if err != nil {
+					ch <- result{
+						file: struct {
+							name string
+							size int64
+						}{
+							name: fileName,
+						},
+						err: err,
+					}
+					return
+				}
+				ch <- result{
+					file: struct {
+						name string
+						size int64
+					}{name: fileName, size: attrs.Size},
+					found: true,
+				}
+				return
+			}
+		}(fileName)
+	}
+	wg.Wait()
+	close(ch)
+	for r := range ch {
+		if r.err != nil {
+			failureLogs = append(failureLogs, &FailureLog{
+				Log: &entities.CompressedLogFile{
+					File: r.file.name,
+				},
+				Error: err,
+			})
+		} else if r.found {
+			existLogs = append(existLogs, &entities.CompressedLogFile{
+				File: r.file.name,
+				Size: uint(r.file.size),
+			})
+		} else if !r.found {
+			notExistLogs = append(notExistLogs, &entities.CompressedLogFile{
+				File: r.file.name,
+			})
+		}
+	}
+	return existLogs, notExistLogs, failureLogs, nil
+
 }

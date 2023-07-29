@@ -2,12 +2,13 @@ package internal
 
 import (
 	"context"
-	"go.opentelemetry.io/otel"
 	"regexp"
 	"strings"
+
+	tracer2 "github.com/kanade0404/tenhou-log/pkg/driver/tracer"
 )
 
-var tracer = otel.GetTracerProvider().Tracer("github.com/kanade0404/tenhou-log/services/scraper/internal/unmarshal_file_list_text")
+var tracer = tracer2.NewTracer("services/scraper/internal/unmarshal_file_list_text")
 
 func UnmarshalFileListText(ctx context.Context, text string) []string {
 	_, span := tracer.Start(ctx, "UnmarshalFileListText")
