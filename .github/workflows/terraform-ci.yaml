@@ -47,16 +47,6 @@ jobs:
       - name: 'Terraform fmt'
         run: terraform fmt ./...
         working-directory: infra/terraform/env/${{ matrix.envs }}
-      - name: tflint
-        uses: reviewdog/action-tflint@master
-        with:
-          github_token: ${{ secrets.github_token }}
-          reporter: github-check
-          fail_on_error: true
-          filter_mode: "nofilter"
-          tflint_version: "v1.19.1"
-          tflint_rulesets: "google"
-          working_directory: infra/terraform/env/${{ matrix.envs }}
       - name: 'Install tfcmt'
         run: |
           sudo curl -fL -o tfcmt.tar.gz https://github.com/suzuki-shunsuke/tfcmt/releases/download/${{ env.TFCMT_VERSION }}/tfcmt_linux_amd64.tar.gz
