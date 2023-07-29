@@ -30,7 +30,7 @@ jobs:
         run: terraform init -var-file terraform.tfvars
         working-directory: infra/terraform/env/${{ env.ENV }}
       - name: Decrypt tfvars
-        run: terraform gcloud kms decrypt --location asia-northeast1 --keyring keyring-${{ env.ENV }} --key terraform --plaintext-file terraform.tfvars --ciphertext-file terraform.tfvars.enc
+        run: gcloud kms decrypt --location asia-northeast1 --keyring keyring-${{ env.ENV }} --key terraform --plaintext-file terraform.tfvars --ciphertext-file terraform.tfvars.enc
         working-directory: infra/terraform/env/${{ env.ENV }}
       - name: Terraform Plan
         run: terraform plan -var-file terraform.tfvars --no-color
