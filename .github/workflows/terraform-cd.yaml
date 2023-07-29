@@ -33,7 +33,7 @@ jobs:
         run: gcloud kms decrypt --location asia-northeast1 --keyring keyring-${{ env.ENV }} --key terraform --plaintext-file terraform.tfvars --ciphertext-file terraform.tfvars.enc
         working-directory: infra/terraform/env/${{ env.ENV }}
       - name: Terraform Plan
-        run: terraform plan -var-file terraform.tfvars --no-color
+        run: terraform plan -var-file terraform.tfvars -no-color
         working-directory: infra/terraform/env/${{ env.ENV }}
       - name: Terraform Apply
         run: terraform apply -var-file=infra/terraform/env/${{ env.ENV }}/terraform.tfvars -auto-approve

@@ -54,7 +54,7 @@ jobs:
         env:
           TFCMT_VERSION: v4.3.0
       - name: Terraform Plan
-        run: tfcmt plan -- terraform plan -var-file=terraform.tfvars --no-color
+        run: tfcmt plan -- terraform plan -var-file terraform.tfvars -no-color
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
