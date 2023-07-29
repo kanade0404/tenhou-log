@@ -12,4 +12,4 @@ jobs:
   services:
     uses: ./.github/workflows/function-ci.yaml
     with:
-      service_name: log_converter
+      service_name: log_converter/cmd
