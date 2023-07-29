@@ -13,8 +13,11 @@ jobs:
     strategy:
       matrix:
         envs: [dev]
+    permissions:
+      id-token: write
+      contents: read
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Authentication Google Cloud
         uses: google-github-actions/auth@v1
         with:
@@ -26,7 +29,24 @@ jobs:
       - name: Decrypt tfvars
         run: terraform gcloud kms decrypt --location asia-northeast1 --keyring ${{ matrix.envs }} --key keyring-${{ matrix.envs }} --plaintext-file /terraform/env/${{ matrix.envs }}/terraform.tfvars --ciphertext-file /terraform/env/${{ matrix.envs }}/terraform.tfvars.enc
       - uses: hashicorp/setup-terraform@v2
-      - name: Terraform Plan
-        run: terraform plan -var-file=infra/terraform.tfvars -out=tfplan
-      - name: Terraform Show
-        run: terraform show tfplan
+      - name: tflint
+        uses: reviewdog/action-tflint@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          reporter: github-check
+          fail_on_error: true
+          filter_mode: "nofilter"
+          tflint_version: "v0.47.0"
+          tflint_rulesets: "google"
+#      - name: Install tfcmt
+#        env:
+#          TFCMT_VERSION: "v3.2.1"
+#        run: |
+#          sudo curl -fL -o tfcmt.tar.gz https://github.com/suzuki-shunsuke/tfcmt/releases/download/$TFCMT_VERSION/tfcmt_linux_amd64.tar.gz
+#          sudo tar -C /usr/bin -xzf ./tfcmt.tar.gz
+#      - name: Terraform Show
+#        run: tfcmt plan -- terraform plan -var-file=infra/terraform/env/${{ matrix.envs }}/terraform.tfvars
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+#          PR_NUMBER: ${{ github.event.number }}

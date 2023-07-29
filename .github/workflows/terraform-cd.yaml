@@ -12,8 +12,11 @@ env:
 jobs:
   plan:
     runs-on: ubuntu-22.04
+    permissions:
+      id-token: write
+      contents: read
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Authentication Google Cloud
         uses: google-github-actions/auth@v1
         with:
@@ -26,8 +29,8 @@ jobs:
         run: terraform gcloud kms decrypt --location asia-northeast1 --keyring ${{ env.ENV }} --key keyring-${{ env.ENV }} --plaintext-file /terraform/env/${{ env.ENV }}/terraform.tfvars --ciphertext-file /terraform/env/${{ env.ENV }}/terraform.tfvars.enc
       - uses: hashicorp/setup-terraform@v2
       - name: Terraform Plan
-        run: terraform plan -var-file=infra/terraform.tfvars -out=tfplan
+        run: terraform plan -var-file=infra/terraform/env/${{ env.ENV }}/terraform.tfvars
       - name: Terraform Show
         run: terraform show tfplan
       - name: Terraform Apply
-        run: terraform apply -var-file=infra/terraform.tfvars -auto-approve
+        run: terraform apply -var-file=infra/terraform/env/${{ env.ENV }}/terraform.tfvars -auto-approve

@@ -2,9 +2,10 @@ package log_converter
 
 import (
 	"encoding/json"
+	"net/http"
+
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
 	"github.com/kanade0404/tenhou-log/pkg/http_handler"
-	"net/http"
 )
 
 type request struct {
