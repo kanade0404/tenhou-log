@@ -16,17 +16,3 @@ module "github-actions-workload-identity" {
   service_account_id    = module.workload-identity-service-account.name
   depends_on            = [module.enabled_services.services]
 }
-module "list_object" {
-  source     = "../../modules/iam"
-  PROJECT_ID = var.PROJECT_ID
-  name       = module.workload-identity-service-account.email
-  role       = "roles/storage.objectViewer"
-  depends_on = [module.enabled_services.services]
-}
-module "encrypter_decrypter" {
-  source     = "../../modules/iam"
-  PROJECT_ID = var.PROJECT_ID
-  name       = module.workload-identity-service-account.email
-  role       = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
-  depends_on = [module.enabled_services.services]
-}
