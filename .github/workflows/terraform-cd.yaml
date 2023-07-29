@@ -25,12 +25,16 @@ jobs:
           project_id: ${{ secrets.GCP_PROJECT_ID_DEV }}
       - name: 'Set up Cloud SDK'
         uses: 'google-github-actions/setup-gcloud@v1'
-      - name: Decrypt tfvars
-        run: terraform gcloud kms decrypt --location asia-northeast1 --keyring ${{ env.ENV }} --key keyring-${{ env.ENV }} --plaintext-file /terraform/env/${{ env.ENV }}/terraform.tfvars --ciphertext-file /terraform/env/${{ env.ENV }}/terraform.tfvars.enc
       - uses: hashicorp/setup-terraform@v2
+      - name: 'Set up Terraform'
+        run: terraform init -ver-file terraform.tfvars
+        working-directory: infra/terraform/env/${{ env.ENV }}
+      - name: Decrypt tfvars
+        run: terraform gcloud kms decrypt --location asia-northeast1 --keyring keyring-${{ env.ENV }} --key terraform --plaintext-file terraform.tfvars --ciphertext-file terraform.tfvars.enc
+        working-directory: infra/terraform/env/${{ env.ENV }}
       - name: Terraform Plan
-        run: terraform plan -var-file=infra/terraform/env/${{ env.ENV }}/terraform.tfvars
-      - name: Terraform Show
-        run: terraform show tfplan
+        run: terraform plan -var-file terraform.tfvars --no-color
+        working-directory: infra/terraform/env/${{ env.ENV }}
       - name: Terraform Apply
         run: terraform apply -var-file=infra/terraform/env/${{ env.ENV }}/terraform.tfvars -auto-approve
+        working-directory: infra/terraform/env/${{ env.ENV }}

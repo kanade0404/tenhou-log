@@ -34,10 +34,15 @@ jobs:
       - uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.5.4
+      - name: 'Set up Terraform'
+        run: terraform init -ver-file terraform.tfvars
+        working-directory: infra/terraform/env/${{ matrix.envs }}
       - name: Decrypt tfvars
-        run: task terraform:decrypt:${{ matrix.envs }}
+        run: terraform gcloud kms decrypt --location asia-northeast1 --keyring keyring-${{ matrix.envs }} --key terraform --plaintext-file terraform.tfvars --ciphertext-file terraform.tfvars.enc
+        working-directory: infra/terraform/env/${{ matrix.envs }}
       - name: 'Terraform fmt'
-        run: task terraform:fmt
+        run: terraform fmt ./...
+        working-directory: infra/terraform/env/${{ matrix.envs }}
       - name: tflint
         uses: reviewdog/action-tflint@master
         with:
@@ -55,8 +60,9 @@ jobs:
         env:
           TFCMT_VERSION: v4.3.0
       - name: Terraform Plan
-        run: tfcmt plan -- task terraform:plan
+        run: tfcmt plan -- terraform plan -var-file=terraform.tfvars --no-color
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_NUMBER: ${{ github.event.number }}
+        working-directory: infra/terraform/env/${{ matrix.envs }}
