@@ -44,9 +44,9 @@ jobs:
 #        run: |
 #          sudo curl -fL -o tfcmt.tar.gz https://github.com/suzuki-shunsuke/tfcmt/releases/download/$TFCMT_VERSION/tfcmt_linux_amd64.tar.gz
 #          sudo tar -C /usr/bin -xzf ./tfcmt.tar.gz
-#      - name: Terraform Show
-#        run: tfcmt plan -- terraform plan -var-file=infra/terraform/env/${{ matrix.envs }}/terraform.tfvars
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-#          PR_NUMBER: ${{ github.event.number }}
+      - name: Terraform Plan
+        run: tfcmt plan -- terraform plan -var-file=infra/terraform/env/${{ matrix.envs }}/terraform.tfvars
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.number }}
