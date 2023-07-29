@@ -35,7 +35,7 @@ jobs:
         with:
           terraform_version: 1.5.4
       - name: 'Set up Terraform'
-        run: terraform init -ver-file terraform.tfvars
+        run: terraform init -var-file terraform.tfvars
         working-directory: infra/terraform/env/${{ matrix.envs }}
       - name: Decrypt tfvars
         run: terraform gcloud kms decrypt --location asia-northeast1 --keyring keyring-${{ matrix.envs }} --key terraform --plaintext-file terraform.tfvars --ciphertext-file terraform.tfvars.enc
