@@ -116,7 +116,8 @@ module "github_actions_role" {
     "cloudkms.cryptoKeyVersions.useToDecrypt",
     "storage.objects.create",
     "storage.objects.list",
-    "storage.objects.get"
+    "storage.objects.get",
+    "storage.objects.delete"
   ]
   title = "GitHub Actions Role"
 }
