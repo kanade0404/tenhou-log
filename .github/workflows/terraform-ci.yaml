@@ -50,7 +50,7 @@ jobs:
       - name: tflint
         uses: reviewdog/action-tflint@master
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.github_token }}
           reporter: github-check
           fail_on_error: true
           filter_mode: "nofilter"
