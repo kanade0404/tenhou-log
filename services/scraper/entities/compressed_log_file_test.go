@@ -1,6 +1,7 @@
 package entities
 
 import (
+	"context"
 	"fmt"
 	"github.com/google/go-cmp/cmp"
 	"testing"
@@ -35,9 +36,10 @@ func TestUnmarshal(t *testing.T) {
 			wantErr: true,
 		},
 	}
+	ctx := context.Background()
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("%s Unmarshal(%s) = %+v", tt.name, tt.logText, tt.want), func(t *testing.T) {
-			got, err := Unmarshal(tt.logText)
+			got, err := Unmarshal(ctx, tt.logText)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Unmarshal() error = %v, wantErr %v", err, tt.wantErr)
 				return
