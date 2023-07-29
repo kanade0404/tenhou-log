@@ -26,9 +26,18 @@ jobs:
           project_id: ${{ secrets.GCP_PROJECT_ID_DEV }}
       - name: 'Set up Cloud SDK'
         uses: 'google-github-actions/setup-gcloud@v1'
-      - name: Decrypt tfvars
-        run: terraform gcloud kms decrypt --location asia-northeast1 --keyring ${{ matrix.envs }} --key keyring-${{ matrix.envs }} --plaintext-file /terraform/env/${{ matrix.envs }}/terraform.tfvars --ciphertext-file /terraform/env/${{ matrix.envs }}/terraform.tfvars.enc
+      - name: Install Task
+        uses: arduino/setup-task@v1
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.4
+      - name: Decrypt tfvars
+        run: task terraform:decrypt:${{ matrix.envs }}
+      - name: 'Terraform fmt'
+        run: task terraform:fmt
       - name: tflint
         uses: reviewdog/action-tflint@master
         with:
@@ -36,16 +45,17 @@ jobs:
           reporter: github-check
           fail_on_error: true
           filter_mode: "nofilter"
-          tflint_version: "v0.47.0"
+          tflint_version: "v1.19.1"
           tflint_rulesets: "google"
-      - name: Install tfcmt
-        run: echo "Install tfcmt"
-#        run: sudo curl -fL -o tfcmt.tar.gz https://github.com/suzuki-shunsuke/tfcmt/releases/download/$TFCMT_VERSION/tfcmt_linux_amd64.tar.gz
-#          sudo tar -C /usr/bin -xzf ./tfcmt.tar.gz
+          working_directory: infra/terraform/env/${{ matrix.envs }}
+      - name: 'Install tfcmt'
+        run: |
+          sudo curl -fL -o tfcmt.tar.gz https://github.com/suzuki-shunsuke/tfcmt/releases/download/${{ env.TFCMT_VERSION }}/tfcmt_linux_amd64.tar.gz
+          sudo tar -C /usr/bin -xzf ./tfcmt.tar.gz
         env:
-          TFCMT_VERSION: "v3.2.1"
+          TFCMT_VERSION: v4.3.0
       - name: Terraform Plan
-        run: tfcmt plan -- terraform plan -var-file=infra/terraform/env/${{ matrix.envs }}/terraform.tfvars
+        run: tfcmt plan -- task terraform:plan
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
