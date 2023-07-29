@@ -87,16 +87,7 @@ func (cu *ChakanUpdate) ExecX(ctx context.Context) {
 }
 
 func (cu *ChakanUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   chakan.Table,
-			Columns: chakan.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: chakan.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(chakan.Table, chakan.Columns, sqlgraph.NewFieldSpec(chakan.FieldID, field.TypeUUID))
 	if ps := cu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -112,10 +103,7 @@ func (cu *ChakanUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{chakan.CallColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: call.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(call.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -128,10 +116,7 @@ func (cu *ChakanUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{chakan.CallColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: call.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(call.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -189,6 +174,12 @@ func (cuo *ChakanUpdateOne) ClearCall() *ChakanUpdateOne {
 	return cuo
 }
 
+// Where appends a list predicates to the ChakanUpdate builder.
+func (cuo *ChakanUpdateOne) Where(ps ...predicate.Chakan) *ChakanUpdateOne {
+	cuo.mutation.Where(ps...)
+	return cuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (cuo *ChakanUpdateOne) Select(field string, fields ...string) *ChakanUpdateOne {
@@ -224,16 +215,7 @@ func (cuo *ChakanUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (cuo *ChakanUpdateOne) sqlSave(ctx context.Context) (_node *Chakan, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   chakan.Table,
-			Columns: chakan.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: chakan.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(chakan.Table, chakan.Columns, sqlgraph.NewFieldSpec(chakan.FieldID, field.TypeUUID))
 	id, ok := cuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Chakan.id" for update`)}
@@ -266,10 +248,7 @@ func (cuo *ChakanUpdateOne) sqlSave(ctx context.Context) (_node *Chakan, err err
 			Columns: []string{chakan.CallColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: call.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(call.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -282,10 +261,7 @@ func (cuo *ChakanUpdateOne) sqlSave(ctx context.Context) (_node *Chakan, err err
 			Columns: []string{chakan.CallColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: call.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(call.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

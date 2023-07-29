@@ -21,11 +21,8 @@ import (
 // RoundQuery is the builder for querying Round entities.
 type RoundQuery struct {
 	config
-	limit      *int
-	offset     *int
-	unique     *bool
+	ctx        *QueryContext
 	order      []OrderFunc
-	fields     []string
 	inters     []Interceptor
 	predicates []predicate.Round
 	withGames  *GameQuery
@@ -44,20 +41,20 @@ func (rq *RoundQuery) Where(ps ...predicate.Round) *RoundQuery {
 
 // Limit the number of records to be returned by this query.
 func (rq *RoundQuery) Limit(limit int) *RoundQuery {
-	rq.limit = &limit
+	rq.ctx.Limit = &limit
 	return rq
 }
 
 // Offset to start from.
 func (rq *RoundQuery) Offset(offset int) *RoundQuery {
-	rq.offset = &offset
+	rq.ctx.Offset = &offset
 	return rq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (rq *RoundQuery) Unique(unique bool) *RoundQuery {
-	rq.unique = &unique
+	rq.ctx.Unique = &unique
 	return rq
 }
 
@@ -114,7 +111,7 @@ func (rq *RoundQuery) QueryHands() *HandQuery {
 // First returns the first Round entity from the query.
 // Returns a *NotFoundError when no Round was found.
 func (rq *RoundQuery) First(ctx context.Context) (*Round, error) {
-	nodes, err := rq.Limit(1).All(newQueryContext(ctx, TypeRound, "First"))
+	nodes, err := rq.Limit(1).All(setContextOp(ctx, rq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +134,7 @@ func (rq *RoundQuery) FirstX(ctx context.Context) *Round {
 // Returns a *NotFoundError when no Round ID was found.
 func (rq *RoundQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = rq.Limit(1).IDs(newQueryContext(ctx, TypeRound, "FirstID")); err != nil {
+	if ids, err = rq.Limit(1).IDs(setContextOp(ctx, rq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -160,7 +157,7 @@ func (rq *RoundQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one Round entity is found.
 // Returns a *NotFoundError when no Round entities are found.
 func (rq *RoundQuery) Only(ctx context.Context) (*Round, error) {
-	nodes, err := rq.Limit(2).All(newQueryContext(ctx, TypeRound, "Only"))
+	nodes, err := rq.Limit(2).All(setContextOp(ctx, rq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +185,7 @@ func (rq *RoundQuery) OnlyX(ctx context.Context) *Round {
 // Returns a *NotFoundError when no entities are found.
 func (rq *RoundQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = rq.Limit(2).IDs(newQueryContext(ctx, TypeRound, "OnlyID")); err != nil {
+	if ids, err = rq.Limit(2).IDs(setContextOp(ctx, rq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -213,7 +210,7 @@ func (rq *RoundQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of Rounds.
 func (rq *RoundQuery) All(ctx context.Context) ([]*Round, error) {
-	ctx = newQueryContext(ctx, TypeRound, "All")
+	ctx = setContextOp(ctx, rq.ctx, "All")
 	if err := rq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
@@ -231,10 +228,12 @@ func (rq *RoundQuery) AllX(ctx context.Context) []*Round {
 }
 
 // IDs executes the query and returns a list of Round IDs.
-func (rq *RoundQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	ctx = newQueryContext(ctx, TypeRound, "IDs")
-	if err := rq.Select(round.FieldID).Scan(ctx, &ids); err != nil {
+func (rq *RoundQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if rq.ctx.Unique == nil && rq.path != nil {
+		rq.Unique(true)
+	}
+	ctx = setContextOp(ctx, rq.ctx, "IDs")
+	if err = rq.Select(round.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -251,7 +250,7 @@ func (rq *RoundQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (rq *RoundQuery) Count(ctx context.Context) (int, error) {
-	ctx = newQueryContext(ctx, TypeRound, "Count")
+	ctx = setContextOp(ctx, rq.ctx, "Count")
 	if err := rq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
@@ -269,7 +268,7 @@ func (rq *RoundQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (rq *RoundQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = newQueryContext(ctx, TypeRound, "Exist")
+	ctx = setContextOp(ctx, rq.ctx, "Exist")
 	switch _, err := rq.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
@@ -297,17 +296,15 @@ func (rq *RoundQuery) Clone() *RoundQuery {
 	}
 	return &RoundQuery{
 		config:     rq.config,
-		limit:      rq.limit,
-		offset:     rq.offset,
+		ctx:        rq.ctx.Clone(),
 		order:      append([]OrderFunc{}, rq.order...),
 		inters:     append([]Interceptor{}, rq.inters...),
 		predicates: append([]predicate.Round{}, rq.predicates...),
 		withGames:  rq.withGames.Clone(),
 		withHands:  rq.withHands.Clone(),
 		// clone intermediate query.
-		sql:    rq.sql.Clone(),
-		path:   rq.path,
-		unique: rq.unique,
+		sql:  rq.sql.Clone(),
+		path: rq.path,
 	}
 }
 
@@ -348,9 +345,9 @@ func (rq *RoundQuery) WithHands(opts ...func(*HandQuery)) *RoundQuery {
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (rq *RoundQuery) GroupBy(field string, fields ...string) *RoundGroupBy {
-	rq.fields = append([]string{field}, fields...)
+	rq.ctx.Fields = append([]string{field}, fields...)
 	grbuild := &RoundGroupBy{build: rq}
-	grbuild.flds = &rq.fields
+	grbuild.flds = &rq.ctx.Fields
 	grbuild.label = round.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -369,10 +366,10 @@ func (rq *RoundQuery) GroupBy(field string, fields ...string) *RoundGroupBy {
 //		Select(round.FieldWind).
 //		Scan(ctx, &v)
 func (rq *RoundQuery) Select(fields ...string) *RoundSelect {
-	rq.fields = append(rq.fields, fields...)
+	rq.ctx.Fields = append(rq.ctx.Fields, fields...)
 	sbuild := &RoundSelect{RoundQuery: rq}
 	sbuild.label = round.Label
-	sbuild.flds, sbuild.scan = &rq.fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &rq.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
@@ -392,7 +389,7 @@ func (rq *RoundQuery) prepareQuery(ctx context.Context) error {
 			}
 		}
 	}
-	for _, f := range rq.fields {
+	for _, f := range rq.ctx.Fields {
 		if !round.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -470,6 +467,9 @@ func (rq *RoundQuery) loadGames(ctx context.Context, query *GameQuery, nodes []*
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
+	if len(ids) == 0 {
+		return nil
+	}
 	query.Where(game.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -520,30 +520,22 @@ func (rq *RoundQuery) loadHands(ctx context.Context, query *HandQuery, nodes []*
 
 func (rq *RoundQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := rq.querySpec()
-	_spec.Node.Columns = rq.fields
-	if len(rq.fields) > 0 {
-		_spec.Unique = rq.unique != nil && *rq.unique
+	_spec.Node.Columns = rq.ctx.Fields
+	if len(rq.ctx.Fields) > 0 {
+		_spec.Unique = rq.ctx.Unique != nil && *rq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, rq.driver, _spec)
 }
 
 func (rq *RoundQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   round.Table,
-			Columns: round.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: round.FieldID,
-			},
-		},
-		From:   rq.sql,
-		Unique: true,
-	}
-	if unique := rq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(round.Table, round.Columns, sqlgraph.NewFieldSpec(round.FieldID, field.TypeUUID))
+	_spec.From = rq.sql
+	if unique := rq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if rq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := rq.fields; len(fields) > 0 {
+	if fields := rq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, round.FieldID)
 		for i := range fields {
@@ -559,10 +551,10 @@ func (rq *RoundQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := rq.limit; limit != nil {
+	if limit := rq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := rq.offset; offset != nil {
+	if offset := rq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := rq.order; len(ps) > 0 {
@@ -578,7 +570,7 @@ func (rq *RoundQuery) querySpec() *sqlgraph.QuerySpec {
 func (rq *RoundQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(rq.driver.Dialect())
 	t1 := builder.Table(round.Table)
-	columns := rq.fields
+	columns := rq.ctx.Fields
 	if len(columns) == 0 {
 		columns = round.Columns
 	}
@@ -587,7 +579,7 @@ func (rq *RoundQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = rq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if rq.unique != nil && *rq.unique {
+	if rq.ctx.Unique != nil && *rq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range rq.predicates {
@@ -596,12 +588,12 @@ func (rq *RoundQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range rq.order {
 		p(selector)
 	}
-	if offset := rq.offset; offset != nil {
+	if offset := rq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := rq.limit; limit != nil {
+	if limit := rq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -621,7 +613,7 @@ func (rgb *RoundGroupBy) Aggregate(fns ...AggregateFunc) *RoundGroupBy {
 
 // Scan applies the selector query and scans the result into the given value.
 func (rgb *RoundGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeRound, "GroupBy")
+	ctx = setContextOp(ctx, rgb.build.ctx, "GroupBy")
 	if err := rgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
@@ -669,7 +661,7 @@ func (rs *RoundSelect) Aggregate(fns ...AggregateFunc) *RoundSelect {
 
 // Scan applies the selector query and scans the result into the given value.
 func (rs *RoundSelect) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeRound, "Select")
+	ctx = setContextOp(ctx, rs.ctx, "Select")
 	if err := rs.prepareQuery(ctx); err != nil {
 		return err
 	}

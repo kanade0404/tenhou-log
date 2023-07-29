@@ -1,0 +1,105 @@
+version: '3'
+
+tasks:
+  setup:
+    cmds:
+      - docker compose exec terraform gcloud auth application-default login --no-launch-browser
+      - docker compose exec terraform gcloud auth login --no-launch-browser
+      - docker compose exec terraform gcloud config set project mj-log-dev
+      - task: init
+        vars: {ENV: "dev"}
+  init:
+    desc: Initialize terraform
+    vars:
+      ENV: "dev"
+    cmds:
+      - docker compose exec terraform terraform -chdir=/terraform/env/{{.ENV}} init {{.CLI_ARGS}}
+  plan:
+    desc: Plan terraform
+    vars:
+      ENV: "dev"
+    cmds:
+      - docker compose exec terraform terraform -chdir=/terraform/env/{{.ENV}} plan {{.CLI_ARGS}}
+  apply:
+    desc: Apply terraform
+    vars:
+      ENV: "dev"
+    cmds:
+      - docker compose exec terraform terraform -chdir=/terraform/env/{{.ENV}} apply {{.CLI_ARGS}}
+  check:
+    desc: Check terraform
+    cmds:
+      - task: fmt
+      - task: validate
+  fmt:
+    desc: Format terraform
+    cmds:
+      - docker compose exec terraform terraform fmt -recursive
+  validate:
+    desc: Validate terraform
+    cmds:
+      - docker compose exec terraform terraform validate
+  pull:
+    desc: Pull terraform state
+    vars:
+      ENV: "dev"
+    cmds:
+      - docker compose exec terraform terraform -chdir=/terraform/env/{{.ENV}} state pull
+  modgen:
+    desc: Generate terraform module
+    cmds:
+      - docker compose exec terraform mkdir /terraform/modules/{{.MOD}}
+      - docker compose exec terraform touch /terraform/modules/{{.MOD}}/main.tf /terraform/modules/{{.MOD}}/outputs.tf /terraform/modules/{{.MOD}}/variables.tf
+  import:
+    desc: Import terraform resource
+    vars:
+      ENV: "dev"
+    cmds:
+      - docker compose exec terraform terraform  -chdir=/terraform/env/{{.ENV}} import '{{.TO}}' "{{.FROM}}"
+  mv:
+    desc: Move terraform resource
+    vars:
+      ENV: "dev"
+    cmds:
+      - docker compose exec terraform terraform  -chdir=/terraform/env/{{.ENV}} state mv '{{.FROM}}' '{{.TO}}'
+  exec:
+    desc: Execute terraform command
+    cmds:
+      - docker compose exec terraform bash
+  encrypt:dev:
+    desc: Encrypt dev env terraform credentials
+    cmds:
+      - task:credential:database
+      - task:credential:api
+      - task:credential:secret
+      - task:credential:tfvars
+    vars:
+      ENV: dev
+      KEYRING: keyring-dev
+      KEY: terraform
+      ENC_OR_DEC: encrypt
+  decrypt:dev:
+    desc: Decrypt dev env terraform credentials
+    cmds:
+      - task:credential:database
+      - task:credential:api
+      - task:credential:secret
+      - task:credential:tfvars
+    vars:
+      ENV: dev
+      KEYRING: keyring-dev
+      KEY: terraform
+      ENC_OR_DEC: decrypt
+  credential:database:
+    cmds:
+      - docker compose exec terraform gcloud kms {{.ENC_OR_DEC}} --location asia-northeast1 --keyring {{.KEYRING}} --key {{.KEY}} --plaintext-file /terraform/env/{{.ENV}}/credentials/database.json --ciphertext-file /terraform/env/{{.ENV}}/credentials/database.json.enc
+  credential:api:
+    cmds:
+      - docker compose exec terraform gcloud kms {{.ENC_OR_DEC}} --location asia-northeast1 --keyring {{.KEYRING}} --key {{.KEY}} --plaintext-file /terraform/env/{{.ENV}}/credentials/api.json --ciphertext-file /terraform/env/{{.ENV}}/credentials/api.json.enc
+  credential:secret:
+    cmds:
+      - docker compose exec terraform gcloud kms {{.ENC_OR_DEC}} --location asia-northeast1 --keyring {{.KEYRING}} --key {{.KEY}} --plaintext-file /terraform/env/{{.ENV}}/credentials/secret.json --ciphertext-file /terraform/env/{{.ENV}}/credentials/secret.json.enc
+  credential:tfvars:
+    cmds:
+      - docker compose exec terraform gcloud kms {{.ENC_OR_DEC}} --location asia-northeast1 --keyring {{.KEYRING}} --key {{.KEY}} --plaintext-file /terraform/env/{{.ENV}}/terraform.tfvars --ciphertext-file /terraform/env/{{.ENV}}/terraform.tfvars.enc
+

@@ -127,29 +127,29 @@ func (t *Turn) assignValues(columns []string, values []any) error {
 
 // QueryHands queries the "hands" edge of the Turn entity.
 func (t *Turn) QueryHands() *HandQuery {
-	return (&TurnClient{config: t.config}).QueryHands(t)
+	return NewTurnClient(t.config).QueryHands(t)
 }
 
 // QueryGamePlayerPoints queries the "game_player_points" edge of the Turn entity.
 func (t *Turn) QueryGamePlayerPoints() *GamePlayerPointQuery {
-	return (&TurnClient{config: t.config}).QueryGamePlayerPoints(t)
+	return NewTurnClient(t.config).QueryGamePlayerPoints(t)
 }
 
 // QueryEvent queries the "event" edge of the Turn entity.
 func (t *Turn) QueryEvent() *EventQuery {
-	return (&TurnClient{config: t.config}).QueryEvent(t)
+	return NewTurnClient(t.config).QueryEvent(t)
 }
 
 // QueryGameplayerhandhai queries the "gameplayerhandhai" edge of the Turn entity.
 func (t *Turn) QueryGameplayerhandhai() *GamePlayerHandHaiQuery {
-	return (&TurnClient{config: t.config}).QueryGameplayerhandhai(t)
+	return NewTurnClient(t.config).QueryGameplayerhandhai(t)
 }
 
 // Update returns a builder for updating this Turn.
 // Note that you need to call Turn.Unwrap() before calling this method if this Turn
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (t *Turn) Update() *TurnUpdateOne {
-	return (&TurnClient{config: t.config}).UpdateOne(t)
+	return NewTurnClient(t.config).UpdateOne(t)
 }
 
 // Unwrap unwraps the Turn entity that was returned from a transaction after it was closed,
@@ -176,9 +176,3 @@ func (t *Turn) String() string {
 
 // Turns is a parsable slice of Turn.
 type Turns []*Turn
-
-func (t Turns) config(cfg config) {
-	for _i := range t {
-		t[_i].config = cfg
-	}
-}

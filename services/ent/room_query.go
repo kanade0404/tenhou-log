@@ -20,11 +20,8 @@ import (
 // RoomQuery is the builder for querying Room entities.
 type RoomQuery struct {
 	config
-	limit      *int
-	offset     *int
-	unique     *bool
+	ctx        *QueryContext
 	order      []OrderFunc
-	fields     []string
 	inters     []Interceptor
 	predicates []predicate.Room
 	withGames  *GameQuery
@@ -41,20 +38,20 @@ func (rq *RoomQuery) Where(ps ...predicate.Room) *RoomQuery {
 
 // Limit the number of records to be returned by this query.
 func (rq *RoomQuery) Limit(limit int) *RoomQuery {
-	rq.limit = &limit
+	rq.ctx.Limit = &limit
 	return rq
 }
 
 // Offset to start from.
 func (rq *RoomQuery) Offset(offset int) *RoomQuery {
-	rq.offset = &offset
+	rq.ctx.Offset = &offset
 	return rq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (rq *RoomQuery) Unique(unique bool) *RoomQuery {
-	rq.unique = &unique
+	rq.ctx.Unique = &unique
 	return rq
 }
 
@@ -89,7 +86,7 @@ func (rq *RoomQuery) QueryGames() *GameQuery {
 // First returns the first Room entity from the query.
 // Returns a *NotFoundError when no Room was found.
 func (rq *RoomQuery) First(ctx context.Context) (*Room, error) {
-	nodes, err := rq.Limit(1).All(newQueryContext(ctx, TypeRoom, "First"))
+	nodes, err := rq.Limit(1).All(setContextOp(ctx, rq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +109,7 @@ func (rq *RoomQuery) FirstX(ctx context.Context) *Room {
 // Returns a *NotFoundError when no Room ID was found.
 func (rq *RoomQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = rq.Limit(1).IDs(newQueryContext(ctx, TypeRoom, "FirstID")); err != nil {
+	if ids, err = rq.Limit(1).IDs(setContextOp(ctx, rq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -135,7 +132,7 @@ func (rq *RoomQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one Room entity is found.
 // Returns a *NotFoundError when no Room entities are found.
 func (rq *RoomQuery) Only(ctx context.Context) (*Room, error) {
-	nodes, err := rq.Limit(2).All(newQueryContext(ctx, TypeRoom, "Only"))
+	nodes, err := rq.Limit(2).All(setContextOp(ctx, rq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +160,7 @@ func (rq *RoomQuery) OnlyX(ctx context.Context) *Room {
 // Returns a *NotFoundError when no entities are found.
 func (rq *RoomQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = rq.Limit(2).IDs(newQueryContext(ctx, TypeRoom, "OnlyID")); err != nil {
+	if ids, err = rq.Limit(2).IDs(setContextOp(ctx, rq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -188,7 +185,7 @@ func (rq *RoomQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of Rooms.
 func (rq *RoomQuery) All(ctx context.Context) ([]*Room, error) {
-	ctx = newQueryContext(ctx, TypeRoom, "All")
+	ctx = setContextOp(ctx, rq.ctx, "All")
 	if err := rq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
@@ -206,10 +203,12 @@ func (rq *RoomQuery) AllX(ctx context.Context) []*Room {
 }
 
 // IDs executes the query and returns a list of Room IDs.
-func (rq *RoomQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	ctx = newQueryContext(ctx, TypeRoom, "IDs")
-	if err := rq.Select(room.FieldID).Scan(ctx, &ids); err != nil {
+func (rq *RoomQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if rq.ctx.Unique == nil && rq.path != nil {
+		rq.Unique(true)
+	}
+	ctx = setContextOp(ctx, rq.ctx, "IDs")
+	if err = rq.Select(room.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -226,7 +225,7 @@ func (rq *RoomQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (rq *RoomQuery) Count(ctx context.Context) (int, error) {
-	ctx = newQueryContext(ctx, TypeRoom, "Count")
+	ctx = setContextOp(ctx, rq.ctx, "Count")
 	if err := rq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
@@ -244,7 +243,7 @@ func (rq *RoomQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (rq *RoomQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = newQueryContext(ctx, TypeRoom, "Exist")
+	ctx = setContextOp(ctx, rq.ctx, "Exist")
 	switch _, err := rq.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
@@ -272,16 +271,14 @@ func (rq *RoomQuery) Clone() *RoomQuery {
 	}
 	return &RoomQuery{
 		config:     rq.config,
-		limit:      rq.limit,
-		offset:     rq.offset,
+		ctx:        rq.ctx.Clone(),
 		order:      append([]OrderFunc{}, rq.order...),
 		inters:     append([]Interceptor{}, rq.inters...),
 		predicates: append([]predicate.Room{}, rq.predicates...),
 		withGames:  rq.withGames.Clone(),
 		// clone intermediate query.
-		sql:    rq.sql.Clone(),
-		path:   rq.path,
-		unique: rq.unique,
+		sql:  rq.sql.Clone(),
+		path: rq.path,
 	}
 }
 
@@ -311,9 +308,9 @@ func (rq *RoomQuery) WithGames(opts ...func(*GameQuery)) *RoomQuery {
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (rq *RoomQuery) GroupBy(field string, fields ...string) *RoomGroupBy {
-	rq.fields = append([]string{field}, fields...)
+	rq.ctx.Fields = append([]string{field}, fields...)
 	grbuild := &RoomGroupBy{build: rq}
-	grbuild.flds = &rq.fields
+	grbuild.flds = &rq.ctx.Fields
 	grbuild.label = room.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -332,10 +329,10 @@ func (rq *RoomQuery) GroupBy(field string, fields ...string) *RoomGroupBy {
 //		Select(room.FieldName).
 //		Scan(ctx, &v)
 func (rq *RoomQuery) Select(fields ...string) *RoomSelect {
-	rq.fields = append(rq.fields, fields...)
+	rq.ctx.Fields = append(rq.ctx.Fields, fields...)
 	sbuild := &RoomSelect{RoomQuery: rq}
 	sbuild.label = room.Label
-	sbuild.flds, sbuild.scan = &rq.fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &rq.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
@@ -355,7 +352,7 @@ func (rq *RoomQuery) prepareQuery(ctx context.Context) error {
 			}
 		}
 	}
-	for _, f := range rq.fields {
+	for _, f := range rq.ctx.Fields {
 		if !room.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -440,30 +437,22 @@ func (rq *RoomQuery) loadGames(ctx context.Context, query *GameQuery, nodes []*R
 
 func (rq *RoomQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := rq.querySpec()
-	_spec.Node.Columns = rq.fields
-	if len(rq.fields) > 0 {
-		_spec.Unique = rq.unique != nil && *rq.unique
+	_spec.Node.Columns = rq.ctx.Fields
+	if len(rq.ctx.Fields) > 0 {
+		_spec.Unique = rq.ctx.Unique != nil && *rq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, rq.driver, _spec)
 }
 
 func (rq *RoomQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   room.Table,
-			Columns: room.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: room.FieldID,
-			},
-		},
-		From:   rq.sql,
-		Unique: true,
-	}
-	if unique := rq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(room.Table, room.Columns, sqlgraph.NewFieldSpec(room.FieldID, field.TypeUUID))
+	_spec.From = rq.sql
+	if unique := rq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if rq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := rq.fields; len(fields) > 0 {
+	if fields := rq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, room.FieldID)
 		for i := range fields {
@@ -479,10 +468,10 @@ func (rq *RoomQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := rq.limit; limit != nil {
+	if limit := rq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := rq.offset; offset != nil {
+	if offset := rq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := rq.order; len(ps) > 0 {
@@ -498,7 +487,7 @@ func (rq *RoomQuery) querySpec() *sqlgraph.QuerySpec {
 func (rq *RoomQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(rq.driver.Dialect())
 	t1 := builder.Table(room.Table)
-	columns := rq.fields
+	columns := rq.ctx.Fields
 	if len(columns) == 0 {
 		columns = room.Columns
 	}
@@ -507,7 +496,7 @@ func (rq *RoomQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = rq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if rq.unique != nil && *rq.unique {
+	if rq.ctx.Unique != nil && *rq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range rq.predicates {
@@ -516,12 +505,12 @@ func (rq *RoomQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range rq.order {
 		p(selector)
 	}
-	if offset := rq.offset; offset != nil {
+	if offset := rq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := rq.limit; limit != nil {
+	if limit := rq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -541,7 +530,7 @@ func (rgb *RoomGroupBy) Aggregate(fns ...AggregateFunc) *RoomGroupBy {
 
 // Scan applies the selector query and scans the result into the given value.
 func (rgb *RoomGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeRoom, "GroupBy")
+	ctx = setContextOp(ctx, rgb.build.ctx, "GroupBy")
 	if err := rgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
@@ -589,7 +578,7 @@ func (rs *RoomSelect) Aggregate(fns ...AggregateFunc) *RoomSelect {
 
 // Scan applies the selector query and scans the result into the given value.
 func (rs *RoomSelect) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeRoom, "Select")
+	ctx = setContextOp(ctx, rs.ctx, "Select")
 	if err := rs.prepareQuery(ctx); err != nil {
 		return err
 	}

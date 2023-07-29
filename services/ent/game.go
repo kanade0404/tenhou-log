@@ -148,29 +148,29 @@ func (ga *Game) assignValues(columns []string, values []any) error {
 
 // QueryMjlogs queries the "mjlogs" edge of the Game entity.
 func (ga *Game) QueryMjlogs() *MJLogQuery {
-	return (&GameClient{config: ga.config}).QueryMjlogs(ga)
+	return NewGameClient(ga.config).QueryMjlogs(ga)
 }
 
 // QueryGamePlayers queries the "game_players" edge of the Game entity.
 func (ga *Game) QueryGamePlayers() *GamePlayerQuery {
-	return (&GameClient{config: ga.config}).QueryGamePlayers(ga)
+	return NewGameClient(ga.config).QueryGamePlayers(ga)
 }
 
 // QueryRooms queries the "rooms" edge of the Game entity.
 func (ga *Game) QueryRooms() *RoomQuery {
-	return (&GameClient{config: ga.config}).QueryRooms(ga)
+	return NewGameClient(ga.config).QueryRooms(ga)
 }
 
 // QueryRounds queries the "rounds" edge of the Game entity.
 func (ga *Game) QueryRounds() *RoundQuery {
-	return (&GameClient{config: ga.config}).QueryRounds(ga)
+	return NewGameClient(ga.config).QueryRounds(ga)
 }
 
 // Update returns a builder for updating this Game.
 // Note that you need to call Game.Unwrap() before calling this method if this Game
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (ga *Game) Update() *GameUpdateOne {
-	return (&GameClient{config: ga.config}).UpdateOne(ga)
+	return NewGameClient(ga.config).UpdateOne(ga)
 }
 
 // Unwrap unwraps the Game entity that was returned from a transaction after it was closed,
@@ -200,9 +200,3 @@ func (ga *Game) String() string {
 
 // Games is a parsable slice of Game.
 type Games []*Game
-
-func (ga Games) config(cfg config) {
-	for _i := range ga {
-		ga[_i].config = cfg
-	}
-}

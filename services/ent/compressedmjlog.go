@@ -110,14 +110,14 @@ func (cml *CompressedMJLog) assignValues(columns []string, values []any) error {
 
 // QueryMjlogFiles queries the "mjlog_files" edge of the CompressedMJLog entity.
 func (cml *CompressedMJLog) QueryMjlogFiles() *MJLogFileQuery {
-	return (&CompressedMJLogClient{config: cml.config}).QueryMjlogFiles(cml)
+	return NewCompressedMJLogClient(cml.config).QueryMjlogFiles(cml)
 }
 
 // Update returns a builder for updating this CompressedMJLog.
 // Note that you need to call CompressedMJLog.Unwrap() before calling this method if this CompressedMJLog
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (cml *CompressedMJLog) Update() *CompressedMJLogUpdateOne {
-	return (&CompressedMJLogClient{config: cml.config}).UpdateOne(cml)
+	return NewCompressedMJLogClient(cml.config).UpdateOne(cml)
 }
 
 // Unwrap unwraps the CompressedMJLog entity that was returned from a transaction after it was closed,
@@ -150,9 +150,3 @@ func (cml *CompressedMJLog) String() string {
 
 // CompressedMJLogs is a parsable slice of CompressedMJLog.
 type CompressedMJLogs []*CompressedMJLog
-
-func (cml CompressedMJLogs) config(cfg config) {
-	for _i := range cml {
-		cml[_i].config = cfg
-	}
-}

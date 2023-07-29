@@ -98,16 +98,7 @@ func (gppu *GamePlayerPointUpdate) ExecX(ctx context.Context) {
 }
 
 func (gppu *GamePlayerPointUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   gameplayerpoint.Table,
-			Columns: gameplayerpoint.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: gameplayerpoint.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(gameplayerpoint.Table, gameplayerpoint.Columns, sqlgraph.NewFieldSpec(gameplayerpoint.FieldID, field.TypeUUID))
 	if ps := gppu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -123,10 +114,7 @@ func (gppu *GamePlayerPointUpdate) sqlSave(ctx context.Context) (n int, err erro
 			Columns: gameplayerpoint.TurnsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: turn.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(turn.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -139,10 +127,7 @@ func (gppu *GamePlayerPointUpdate) sqlSave(ctx context.Context) (n int, err erro
 			Columns: gameplayerpoint.TurnsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: turn.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(turn.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -158,10 +143,7 @@ func (gppu *GamePlayerPointUpdate) sqlSave(ctx context.Context) (n int, err erro
 			Columns: gameplayerpoint.TurnsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: turn.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(turn.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -230,6 +212,12 @@ func (gppuo *GamePlayerPointUpdateOne) RemoveTurns(t ...*Turn) *GamePlayerPointU
 	return gppuo.RemoveTurnIDs(ids...)
 }
 
+// Where appends a list predicates to the GamePlayerPointUpdate builder.
+func (gppuo *GamePlayerPointUpdateOne) Where(ps ...predicate.GamePlayerPoint) *GamePlayerPointUpdateOne {
+	gppuo.mutation.Where(ps...)
+	return gppuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (gppuo *GamePlayerPointUpdateOne) Select(field string, fields ...string) *GamePlayerPointUpdateOne {
@@ -265,16 +253,7 @@ func (gppuo *GamePlayerPointUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (gppuo *GamePlayerPointUpdateOne) sqlSave(ctx context.Context) (_node *GamePlayerPoint, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   gameplayerpoint.Table,
-			Columns: gameplayerpoint.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: gameplayerpoint.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(gameplayerpoint.Table, gameplayerpoint.Columns, sqlgraph.NewFieldSpec(gameplayerpoint.FieldID, field.TypeUUID))
 	id, ok := gppuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "GamePlayerPoint.id" for update`)}
@@ -307,10 +286,7 @@ func (gppuo *GamePlayerPointUpdateOne) sqlSave(ctx context.Context) (_node *Game
 			Columns: gameplayerpoint.TurnsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: turn.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(turn.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -323,10 +299,7 @@ func (gppuo *GamePlayerPointUpdateOne) sqlSave(ctx context.Context) (_node *Game
 			Columns: gameplayerpoint.TurnsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: turn.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(turn.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -342,10 +315,7 @@ func (gppuo *GamePlayerPointUpdateOne) sqlSave(ctx context.Context) (_node *Game
 			Columns: gameplayerpoint.TurnsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: turn.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(turn.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

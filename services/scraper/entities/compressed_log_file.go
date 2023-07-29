@@ -1,9 +1,11 @@
 package entities
 
 import (
+	"context"
 	"encoding/json"
-	"log"
 	"strings"
+
+	tracer2 "github.com/kanade0404/tenhou-log/pkg/driver/tracer"
 )
 
 type CompressedLogFile struct {
@@ -11,10 +13,13 @@ type CompressedLogFile struct {
 	Size uint   `json:"size"`
 }
 
-func Unmarshal(logText string) (*CompressedLogFile, error) {
+var tracer = tracer2.NewTracer("services/scraper/entities/compressed_log_file")
+
+func Unmarshal(ctx context.Context, logText string) (*CompressedLogFile, error) {
+	_, span := tracer.Start(ctx, "Unmarshal")
+	defer span.End()
 	var l CompressedLogFile
 	t := strings.ReplaceAll(strings.ReplaceAll(strings.Replace(logText, "},", "}", 1), "\n", ""), "'", `"`)
-	log.Println(t)
 	err := json.Unmarshal([]byte(t), &l)
 	if err != nil {
 		return nil, err

@@ -190,13 +190,7 @@ func (tc *TurnCreate) sqlSave(ctx context.Context) (*Turn, error) {
 func (tc *TurnCreate) createSpec() (*Turn, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Turn{config: tc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: turn.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: turn.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(turn.Table, sqlgraph.NewFieldSpec(turn.FieldID, field.TypeUUID))
 	)
 	_spec.OnConflict = tc.conflict
 	if id, ok := tc.mutation.ID(); ok {
@@ -215,10 +209,7 @@ func (tc *TurnCreate) createSpec() (*Turn, *sqlgraph.CreateSpec) {
 			Columns: turn.HandsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: hand.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(hand.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -234,10 +225,7 @@ func (tc *TurnCreate) createSpec() (*Turn, *sqlgraph.CreateSpec) {
 			Columns: turn.GamePlayerPointsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: gameplayerpoint.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(gameplayerpoint.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -253,10 +241,7 @@ func (tc *TurnCreate) createSpec() (*Turn, *sqlgraph.CreateSpec) {
 			Columns: []string{turn.EventColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: event.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -272,10 +257,7 @@ func (tc *TurnCreate) createSpec() (*Turn, *sqlgraph.CreateSpec) {
 			Columns: []string{turn.GameplayerhandhaiColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: gameplayerhandhai.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(gameplayerhandhai.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

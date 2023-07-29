@@ -87,16 +87,7 @@ func (cu *ChiiUpdate) ExecX(ctx context.Context) {
 }
 
 func (cu *ChiiUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   chii.Table,
-			Columns: chii.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: chii.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(chii.Table, chii.Columns, sqlgraph.NewFieldSpec(chii.FieldID, field.TypeUUID))
 	if ps := cu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -112,10 +103,7 @@ func (cu *ChiiUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{chii.CallColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: call.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(call.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -128,10 +116,7 @@ func (cu *ChiiUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{chii.CallColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: call.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(call.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -189,6 +174,12 @@ func (cuo *ChiiUpdateOne) ClearCall() *ChiiUpdateOne {
 	return cuo
 }
 
+// Where appends a list predicates to the ChiiUpdate builder.
+func (cuo *ChiiUpdateOne) Where(ps ...predicate.Chii) *ChiiUpdateOne {
+	cuo.mutation.Where(ps...)
+	return cuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (cuo *ChiiUpdateOne) Select(field string, fields ...string) *ChiiUpdateOne {
@@ -224,16 +215,7 @@ func (cuo *ChiiUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (cuo *ChiiUpdateOne) sqlSave(ctx context.Context) (_node *Chii, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   chii.Table,
-			Columns: chii.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: chii.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(chii.Table, chii.Columns, sqlgraph.NewFieldSpec(chii.FieldID, field.TypeUUID))
 	id, ok := cuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Chii.id" for update`)}
@@ -266,10 +248,7 @@ func (cuo *ChiiUpdateOne) sqlSave(ctx context.Context) (_node *Chii, err error) 
 			Columns: []string{chii.CallColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: call.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(call.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -282,10 +261,7 @@ func (cuo *ChiiUpdateOne) sqlSave(ctx context.Context) (_node *Chii, err error) 
 			Columns: []string{chii.CallColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: call.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(call.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

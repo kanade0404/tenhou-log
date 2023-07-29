@@ -78,14 +78,14 @@ func (c *Chii) assignValues(columns []string, values []any) error {
 
 // QueryCall queries the "call" edge of the Chii entity.
 func (c *Chii) QueryCall() *CallQuery {
-	return (&ChiiClient{config: c.config}).QueryCall(c)
+	return NewChiiClient(c.config).QueryCall(c)
 }
 
 // Update returns a builder for updating this Chii.
 // Note that you need to call Chii.Unwrap() before calling this method if this Chii
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (c *Chii) Update() *ChiiUpdateOne {
-	return (&ChiiClient{config: c.config}).UpdateOne(c)
+	return NewChiiClient(c.config).UpdateOne(c)
 }
 
 // Unwrap unwraps the Chii entity that was returned from a transaction after it was closed,
@@ -110,9 +110,3 @@ func (c *Chii) String() string {
 
 // Chiis is a parsable slice of Chii.
 type Chiis []*Chii
-
-func (c Chiis) config(cfg config) {
-	for _i := range c {
-		c[_i].config = cfg
-	}
-}

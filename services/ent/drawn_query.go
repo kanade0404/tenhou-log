@@ -20,11 +20,8 @@ import (
 // DrawnQuery is the builder for querying Drawn entities.
 type DrawnQuery struct {
 	config
-	limit       *int
-	offset      *int
-	unique      *bool
+	ctx         *QueryContext
 	order       []OrderFunc
-	fields      []string
 	inters      []Interceptor
 	predicates  []predicate.Drawn
 	withEvent   *EventQuery
@@ -43,20 +40,20 @@ func (dq *DrawnQuery) Where(ps ...predicate.Drawn) *DrawnQuery {
 
 // Limit the number of records to be returned by this query.
 func (dq *DrawnQuery) Limit(limit int) *DrawnQuery {
-	dq.limit = &limit
+	dq.ctx.Limit = &limit
 	return dq
 }
 
 // Offset to start from.
 func (dq *DrawnQuery) Offset(offset int) *DrawnQuery {
-	dq.offset = &offset
+	dq.ctx.Offset = &offset
 	return dq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (dq *DrawnQuery) Unique(unique bool) *DrawnQuery {
-	dq.unique = &unique
+	dq.ctx.Unique = &unique
 	return dq
 }
 
@@ -113,7 +110,7 @@ func (dq *DrawnQuery) QueryDiscard() *DiscardQuery {
 // First returns the first Drawn entity from the query.
 // Returns a *NotFoundError when no Drawn was found.
 func (dq *DrawnQuery) First(ctx context.Context) (*Drawn, error) {
-	nodes, err := dq.Limit(1).All(newQueryContext(ctx, TypeDrawn, "First"))
+	nodes, err := dq.Limit(1).All(setContextOp(ctx, dq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +133,7 @@ func (dq *DrawnQuery) FirstX(ctx context.Context) *Drawn {
 // Returns a *NotFoundError when no Drawn ID was found.
 func (dq *DrawnQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = dq.Limit(1).IDs(newQueryContext(ctx, TypeDrawn, "FirstID")); err != nil {
+	if ids, err = dq.Limit(1).IDs(setContextOp(ctx, dq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -159,7 +156,7 @@ func (dq *DrawnQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one Drawn entity is found.
 // Returns a *NotFoundError when no Drawn entities are found.
 func (dq *DrawnQuery) Only(ctx context.Context) (*Drawn, error) {
-	nodes, err := dq.Limit(2).All(newQueryContext(ctx, TypeDrawn, "Only"))
+	nodes, err := dq.Limit(2).All(setContextOp(ctx, dq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +184,7 @@ func (dq *DrawnQuery) OnlyX(ctx context.Context) *Drawn {
 // Returns a *NotFoundError when no entities are found.
 func (dq *DrawnQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = dq.Limit(2).IDs(newQueryContext(ctx, TypeDrawn, "OnlyID")); err != nil {
+	if ids, err = dq.Limit(2).IDs(setContextOp(ctx, dq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -212,7 +209,7 @@ func (dq *DrawnQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of Drawns.
 func (dq *DrawnQuery) All(ctx context.Context) ([]*Drawn, error) {
-	ctx = newQueryContext(ctx, TypeDrawn, "All")
+	ctx = setContextOp(ctx, dq.ctx, "All")
 	if err := dq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
@@ -230,10 +227,12 @@ func (dq *DrawnQuery) AllX(ctx context.Context) []*Drawn {
 }
 
 // IDs executes the query and returns a list of Drawn IDs.
-func (dq *DrawnQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	ctx = newQueryContext(ctx, TypeDrawn, "IDs")
-	if err := dq.Select(drawn.FieldID).Scan(ctx, &ids); err != nil {
+func (dq *DrawnQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if dq.ctx.Unique == nil && dq.path != nil {
+		dq.Unique(true)
+	}
+	ctx = setContextOp(ctx, dq.ctx, "IDs")
+	if err = dq.Select(drawn.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -250,7 +249,7 @@ func (dq *DrawnQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (dq *DrawnQuery) Count(ctx context.Context) (int, error) {
-	ctx = newQueryContext(ctx, TypeDrawn, "Count")
+	ctx = setContextOp(ctx, dq.ctx, "Count")
 	if err := dq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
@@ -268,7 +267,7 @@ func (dq *DrawnQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (dq *DrawnQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = newQueryContext(ctx, TypeDrawn, "Exist")
+	ctx = setContextOp(ctx, dq.ctx, "Exist")
 	switch _, err := dq.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
@@ -296,17 +295,15 @@ func (dq *DrawnQuery) Clone() *DrawnQuery {
 	}
 	return &DrawnQuery{
 		config:      dq.config,
-		limit:       dq.limit,
-		offset:      dq.offset,
+		ctx:         dq.ctx.Clone(),
 		order:       append([]OrderFunc{}, dq.order...),
 		inters:      append([]Interceptor{}, dq.inters...),
 		predicates:  append([]predicate.Drawn{}, dq.predicates...),
 		withEvent:   dq.withEvent.Clone(),
 		withDiscard: dq.withDiscard.Clone(),
 		// clone intermediate query.
-		sql:    dq.sql.Clone(),
-		path:   dq.path,
-		unique: dq.unique,
+		sql:  dq.sql.Clone(),
+		path: dq.path,
 	}
 }
 
@@ -335,9 +332,9 @@ func (dq *DrawnQuery) WithDiscard(opts ...func(*DiscardQuery)) *DrawnQuery {
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
 func (dq *DrawnQuery) GroupBy(field string, fields ...string) *DrawnGroupBy {
-	dq.fields = append([]string{field}, fields...)
+	dq.ctx.Fields = append([]string{field}, fields...)
 	grbuild := &DrawnGroupBy{build: dq}
-	grbuild.flds = &dq.fields
+	grbuild.flds = &dq.ctx.Fields
 	grbuild.label = drawn.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -346,10 +343,10 @@ func (dq *DrawnQuery) GroupBy(field string, fields ...string) *DrawnGroupBy {
 // Select allows the selection one or more fields/columns for the given query,
 // instead of selecting all fields in the entity.
 func (dq *DrawnQuery) Select(fields ...string) *DrawnSelect {
-	dq.fields = append(dq.fields, fields...)
+	dq.ctx.Fields = append(dq.ctx.Fields, fields...)
 	sbuild := &DrawnSelect{DrawnQuery: dq}
 	sbuild.label = drawn.Label
-	sbuild.flds, sbuild.scan = &dq.fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &dq.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
@@ -369,7 +366,7 @@ func (dq *DrawnQuery) prepareQuery(ctx context.Context) error {
 			}
 		}
 	}
-	for _, f := range dq.fields {
+	for _, f := range dq.ctx.Fields {
 		if !drawn.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -446,6 +443,9 @@ func (dq *DrawnQuery) loadEvent(ctx context.Context, query *EventQuery, nodes []
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
+	if len(ids) == 0 {
+		return nil
+	}
 	query.Where(event.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -475,6 +475,9 @@ func (dq *DrawnQuery) loadDiscard(ctx context.Context, query *DiscardQuery, node
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
+	if len(ids) == 0 {
+		return nil
+	}
 	query.Where(discard.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -494,30 +497,22 @@ func (dq *DrawnQuery) loadDiscard(ctx context.Context, query *DiscardQuery, node
 
 func (dq *DrawnQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := dq.querySpec()
-	_spec.Node.Columns = dq.fields
-	if len(dq.fields) > 0 {
-		_spec.Unique = dq.unique != nil && *dq.unique
+	_spec.Node.Columns = dq.ctx.Fields
+	if len(dq.ctx.Fields) > 0 {
+		_spec.Unique = dq.ctx.Unique != nil && *dq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, dq.driver, _spec)
 }
 
 func (dq *DrawnQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   drawn.Table,
-			Columns: drawn.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: drawn.FieldID,
-			},
-		},
-		From:   dq.sql,
-		Unique: true,
-	}
-	if unique := dq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(drawn.Table, drawn.Columns, sqlgraph.NewFieldSpec(drawn.FieldID, field.TypeUUID))
+	_spec.From = dq.sql
+	if unique := dq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if dq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := dq.fields; len(fields) > 0 {
+	if fields := dq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, drawn.FieldID)
 		for i := range fields {
@@ -533,10 +528,10 @@ func (dq *DrawnQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := dq.limit; limit != nil {
+	if limit := dq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := dq.offset; offset != nil {
+	if offset := dq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := dq.order; len(ps) > 0 {
@@ -552,7 +547,7 @@ func (dq *DrawnQuery) querySpec() *sqlgraph.QuerySpec {
 func (dq *DrawnQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(dq.driver.Dialect())
 	t1 := builder.Table(drawn.Table)
-	columns := dq.fields
+	columns := dq.ctx.Fields
 	if len(columns) == 0 {
 		columns = drawn.Columns
 	}
@@ -561,7 +556,7 @@ func (dq *DrawnQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = dq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if dq.unique != nil && *dq.unique {
+	if dq.ctx.Unique != nil && *dq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range dq.predicates {
@@ -570,12 +565,12 @@ func (dq *DrawnQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range dq.order {
 		p(selector)
 	}
-	if offset := dq.offset; offset != nil {
+	if offset := dq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := dq.limit; limit != nil {
+	if limit := dq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -595,7 +590,7 @@ func (dgb *DrawnGroupBy) Aggregate(fns ...AggregateFunc) *DrawnGroupBy {
 
 // Scan applies the selector query and scans the result into the given value.
 func (dgb *DrawnGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeDrawn, "GroupBy")
+	ctx = setContextOp(ctx, dgb.build.ctx, "GroupBy")
 	if err := dgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
@@ -643,7 +638,7 @@ func (ds *DrawnSelect) Aggregate(fns ...AggregateFunc) *DrawnSelect {
 
 // Scan applies the selector query and scans the result into the given value.
 func (ds *DrawnSelect) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeDrawn, "Select")
+	ctx = setContextOp(ctx, ds.ctx, "Select")
 	if err := ds.prepareQuery(ctx); err != nil {
 		return err
 	}

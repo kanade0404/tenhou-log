@@ -111,16 +111,7 @@ func (ru *ReachUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if err := ru.check(); err != nil {
 		return n, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   reach.Table,
-			Columns: reach.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: reach.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(reach.Table, reach.Columns, sqlgraph.NewFieldSpec(reach.FieldID, field.TypeUUID))
 	if ps := ru.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -136,10 +127,7 @@ func (ru *ReachUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{reach.EventColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: event.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -152,10 +140,7 @@ func (ru *ReachUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{reach.EventColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: event.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -171,10 +156,7 @@ func (ru *ReachUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{reach.DiscardColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: discard.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(discard.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -187,10 +169,7 @@ func (ru *ReachUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{reach.DiscardColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: discard.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(discard.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -257,6 +236,12 @@ func (ruo *ReachUpdateOne) ClearDiscard() *ReachUpdateOne {
 	return ruo
 }
 
+// Where appends a list predicates to the ReachUpdate builder.
+func (ruo *ReachUpdateOne) Where(ps ...predicate.Reach) *ReachUpdateOne {
+	ruo.mutation.Where(ps...)
+	return ruo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (ruo *ReachUpdateOne) Select(field string, fields ...string) *ReachUpdateOne {
@@ -306,16 +291,7 @@ func (ruo *ReachUpdateOne) sqlSave(ctx context.Context) (_node *Reach, err error
 	if err := ruo.check(); err != nil {
 		return _node, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   reach.Table,
-			Columns: reach.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: reach.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(reach.Table, reach.Columns, sqlgraph.NewFieldSpec(reach.FieldID, field.TypeUUID))
 	id, ok := ruo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Reach.id" for update`)}
@@ -348,10 +324,7 @@ func (ruo *ReachUpdateOne) sqlSave(ctx context.Context) (_node *Reach, err error
 			Columns: []string{reach.EventColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: event.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -364,10 +337,7 @@ func (ruo *ReachUpdateOne) sqlSave(ctx context.Context) (_node *Reach, err error
 			Columns: []string{reach.EventColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: event.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -383,10 +353,7 @@ func (ruo *ReachUpdateOne) sqlSave(ctx context.Context) (_node *Reach, err error
 			Columns: []string{reach.DiscardColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: discard.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(discard.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -399,10 +366,7 @@ func (ruo *ReachUpdateOne) sqlSave(ctx context.Context) (_node *Reach, err error
 			Columns: []string{reach.DiscardColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: discard.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(discard.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

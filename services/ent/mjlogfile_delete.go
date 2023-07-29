@@ -40,15 +40,7 @@ func (mlfd *MJLogFileDelete) ExecX(ctx context.Context) int {
 }
 
 func (mlfd *MJLogFileDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: mjlogfile.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: mjlogfile.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(mjlogfile.Table, sqlgraph.NewFieldSpec(mjlogfile.FieldID, field.TypeUUID))
 	if ps := mlfd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -69,6 +61,12 @@ type MJLogFileDeleteOne struct {
 	mlfd *MJLogFileDelete
 }
 
+// Where appends a list predicates to the MJLogFileDelete builder.
+func (mlfdo *MJLogFileDeleteOne) Where(ps ...predicate.MJLogFile) *MJLogFileDeleteOne {
+	mlfdo.mlfd.mutation.Where(ps...)
+	return mlfdo
+}
+
 // Exec executes the deletion query.
 func (mlfdo *MJLogFileDeleteOne) Exec(ctx context.Context) error {
 	n, err := mlfdo.mlfd.Exec(ctx)
@@ -84,5 +82,7 @@ func (mlfdo *MJLogFileDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (mlfdo *MJLogFileDeleteOne) ExecX(ctx context.Context) {
-	mlfdo.mlfd.ExecX(ctx)
+	if err := mlfdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

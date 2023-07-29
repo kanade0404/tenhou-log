@@ -115,19 +115,19 @@ func (mlf *MJLogFile) assignValues(columns []string, values []any) error {
 
 // QueryCompressedMjlogFiles queries the "compressed_mjlog_files" edge of the MJLogFile entity.
 func (mlf *MJLogFile) QueryCompressedMjlogFiles() *CompressedMJLogQuery {
-	return (&MJLogFileClient{config: mlf.config}).QueryCompressedMjlogFiles(mlf)
+	return NewMJLogFileClient(mlf.config).QueryCompressedMjlogFiles(mlf)
 }
 
 // QueryMjlogs queries the "mjlogs" edge of the MJLogFile entity.
 func (mlf *MJLogFile) QueryMjlogs() *MJLogQuery {
-	return (&MJLogFileClient{config: mlf.config}).QueryMjlogs(mlf)
+	return NewMJLogFileClient(mlf.config).QueryMjlogs(mlf)
 }
 
 // Update returns a builder for updating this MJLogFile.
 // Note that you need to call MJLogFile.Unwrap() before calling this method if this MJLogFile
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (mlf *MJLogFile) Update() *MJLogFileUpdateOne {
-	return (&MJLogFileClient{config: mlf.config}).UpdateOne(mlf)
+	return NewMJLogFileClient(mlf.config).UpdateOne(mlf)
 }
 
 // Unwrap unwraps the MJLogFile entity that was returned from a transaction after it was closed,
@@ -154,9 +154,3 @@ func (mlf *MJLogFile) String() string {
 
 // MJLogFiles is a parsable slice of MJLogFile.
 type MJLogFiles []*MJLogFile
-
-func (mlf MJLogFiles) config(cfg config) {
-	for _i := range mlf {
-		mlf[_i].config = cfg
-	}
-}

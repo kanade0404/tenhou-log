@@ -169,13 +169,7 @@ func (dc *DiscardCreate) sqlSave(ctx context.Context) (*Discard, error) {
 func (dc *DiscardCreate) createSpec() (*Discard, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Discard{config: dc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: discard.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: discard.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(discard.Table, sqlgraph.NewFieldSpec(discard.FieldID, field.TypeUUID))
 	)
 	_spec.OnConflict = dc.conflict
 	if id, ok := dc.mutation.ID(); ok {
@@ -190,10 +184,7 @@ func (dc *DiscardCreate) createSpec() (*Discard, *sqlgraph.CreateSpec) {
 			Columns: []string{discard.ReachColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: reach.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(reach.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -209,10 +200,7 @@ func (dc *DiscardCreate) createSpec() (*Discard, *sqlgraph.CreateSpec) {
 			Columns: []string{discard.CallColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: call.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(call.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -228,10 +216,7 @@ func (dc *DiscardCreate) createSpec() (*Discard, *sqlgraph.CreateSpec) {
 			Columns: []string{discard.DrawColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: drawn.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(drawn.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

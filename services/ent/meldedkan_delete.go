@@ -40,15 +40,7 @@ func (mkd *MeldedKanDelete) ExecX(ctx context.Context) int {
 }
 
 func (mkd *MeldedKanDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: meldedkan.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: meldedkan.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(meldedkan.Table, sqlgraph.NewFieldSpec(meldedkan.FieldID, field.TypeUUID))
 	if ps := mkd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -69,6 +61,12 @@ type MeldedKanDeleteOne struct {
 	mkd *MeldedKanDelete
 }
 
+// Where appends a list predicates to the MeldedKanDelete builder.
+func (mkdo *MeldedKanDeleteOne) Where(ps ...predicate.MeldedKan) *MeldedKanDeleteOne {
+	mkdo.mkd.mutation.Where(ps...)
+	return mkdo
+}
+
 // Exec executes the deletion query.
 func (mkdo *MeldedKanDeleteOne) Exec(ctx context.Context) error {
 	n, err := mkdo.mkd.Exec(ctx)
@@ -84,5 +82,7 @@ func (mkdo *MeldedKanDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (mkdo *MeldedKanDeleteOne) ExecX(ctx context.Context) {
-	mkdo.mkd.ExecX(ctx)
+	if err := mkdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

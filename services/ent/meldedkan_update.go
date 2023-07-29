@@ -87,16 +87,7 @@ func (mku *MeldedKanUpdate) ExecX(ctx context.Context) {
 }
 
 func (mku *MeldedKanUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   meldedkan.Table,
-			Columns: meldedkan.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: meldedkan.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(meldedkan.Table, meldedkan.Columns, sqlgraph.NewFieldSpec(meldedkan.FieldID, field.TypeUUID))
 	if ps := mku.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -112,10 +103,7 @@ func (mku *MeldedKanUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{meldedkan.CallColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: call.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(call.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -128,10 +116,7 @@ func (mku *MeldedKanUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{meldedkan.CallColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: call.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(call.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -189,6 +174,12 @@ func (mkuo *MeldedKanUpdateOne) ClearCall() *MeldedKanUpdateOne {
 	return mkuo
 }
 
+// Where appends a list predicates to the MeldedKanUpdate builder.
+func (mkuo *MeldedKanUpdateOne) Where(ps ...predicate.MeldedKan) *MeldedKanUpdateOne {
+	mkuo.mutation.Where(ps...)
+	return mkuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (mkuo *MeldedKanUpdateOne) Select(field string, fields ...string) *MeldedKanUpdateOne {
@@ -224,16 +215,7 @@ func (mkuo *MeldedKanUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (mkuo *MeldedKanUpdateOne) sqlSave(ctx context.Context) (_node *MeldedKan, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   meldedkan.Table,
-			Columns: meldedkan.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: meldedkan.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(meldedkan.Table, meldedkan.Columns, sqlgraph.NewFieldSpec(meldedkan.FieldID, field.TypeUUID))
 	id, ok := mkuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "MeldedKan.id" for update`)}
@@ -266,10 +248,7 @@ func (mkuo *MeldedKanUpdateOne) sqlSave(ctx context.Context) (_node *MeldedKan, 
 			Columns: []string{meldedkan.CallColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: call.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(call.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -282,10 +261,7 @@ func (mkuo *MeldedKanUpdateOne) sqlSave(ctx context.Context) (_node *MeldedKan, 
 			Columns: []string{meldedkan.CallColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: call.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(call.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

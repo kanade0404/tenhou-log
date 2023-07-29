@@ -1,0 +1,20 @@
+name: Log Downloader CD
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - services/log_downloader/**
+      - pkg/**
+      - .github/workflows/log-downloader-cd.yaml
+      - go.*
+      - '!pkg/parser/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/function-cd.yaml
+    with:
+      service_name: log_downloader
+      entry_point: Download
+      function_name: log-downloader

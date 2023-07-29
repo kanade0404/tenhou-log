@@ -134,13 +134,7 @@ func (rc *RoomCreate) sqlSave(ctx context.Context) (*Room, error) {
 func (rc *RoomCreate) createSpec() (*Room, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Room{config: rc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: room.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: room.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(room.Table, sqlgraph.NewFieldSpec(room.FieldID, field.TypeUUID))
 	)
 	_spec.OnConflict = rc.conflict
 	if id, ok := rc.mutation.ID(); ok {
@@ -159,10 +153,7 @@ func (rc *RoomCreate) createSpec() (*Room, *sqlgraph.CreateSpec) {
 			Columns: []string{room.GamesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: game.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(game.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

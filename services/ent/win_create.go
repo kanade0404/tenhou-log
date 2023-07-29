@@ -124,13 +124,7 @@ func (wc *WinCreate) sqlSave(ctx context.Context) (*Win, error) {
 func (wc *WinCreate) createSpec() (*Win, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Win{config: wc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: win.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: win.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(win.Table, sqlgraph.NewFieldSpec(win.FieldID, field.TypeUUID))
 	)
 	_spec.OnConflict = wc.conflict
 	if id, ok := wc.mutation.ID(); ok {
@@ -145,10 +139,7 @@ func (wc *WinCreate) createSpec() (*Win, *sqlgraph.CreateSpec) {
 			Columns: []string{win.EventColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: event.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

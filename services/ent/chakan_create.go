@@ -129,13 +129,7 @@ func (cc *ChakanCreate) sqlSave(ctx context.Context) (*Chakan, error) {
 func (cc *ChakanCreate) createSpec() (*Chakan, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Chakan{config: cc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: chakan.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: chakan.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(chakan.Table, sqlgraph.NewFieldSpec(chakan.FieldID, field.TypeUUID))
 	)
 	_spec.OnConflict = cc.conflict
 	if id, ok := cc.mutation.ID(); ok {
@@ -150,10 +144,7 @@ func (cc *ChakanCreate) createSpec() (*Chakan, *sqlgraph.CreateSpec) {
 			Columns: []string{chakan.CallColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: call.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(call.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

@@ -40,15 +40,7 @@ func (gphhd *GamePlayerHandHaiDelete) ExecX(ctx context.Context) int {
 }
 
 func (gphhd *GamePlayerHandHaiDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: gameplayerhandhai.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: gameplayerhandhai.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(gameplayerhandhai.Table, sqlgraph.NewFieldSpec(gameplayerhandhai.FieldID, field.TypeUUID))
 	if ps := gphhd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -69,6 +61,12 @@ type GamePlayerHandHaiDeleteOne struct {
 	gphhd *GamePlayerHandHaiDelete
 }
 
+// Where appends a list predicates to the GamePlayerHandHaiDelete builder.
+func (gphhdo *GamePlayerHandHaiDeleteOne) Where(ps ...predicate.GamePlayerHandHai) *GamePlayerHandHaiDeleteOne {
+	gphhdo.gphhd.mutation.Where(ps...)
+	return gphhdo
+}
+
 // Exec executes the deletion query.
 func (gphhdo *GamePlayerHandHaiDeleteOne) Exec(ctx context.Context) error {
 	n, err := gphhdo.gphhd.Exec(ctx)
@@ -84,5 +82,7 @@ func (gphhdo *GamePlayerHandHaiDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (gphhdo *GamePlayerHandHaiDeleteOne) ExecX(ctx context.Context) {
-	gphhdo.gphhd.ExecX(ctx)
+	if err := gphhdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

@@ -40,15 +40,7 @@ func (rd *ReachDelete) ExecX(ctx context.Context) int {
 }
 
 func (rd *ReachDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: reach.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: reach.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(reach.Table, sqlgraph.NewFieldSpec(reach.FieldID, field.TypeUUID))
 	if ps := rd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -69,6 +61,12 @@ type ReachDeleteOne struct {
 	rd *ReachDelete
 }
 
+// Where appends a list predicates to the ReachDelete builder.
+func (rdo *ReachDeleteOne) Where(ps ...predicate.Reach) *ReachDeleteOne {
+	rdo.rd.mutation.Where(ps...)
+	return rdo
+}
+
 // Exec executes the deletion query.
 func (rdo *ReachDeleteOne) Exec(ctx context.Context) error {
 	n, err := rdo.rd.Exec(ctx)
@@ -84,5 +82,7 @@ func (rdo *ReachDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (rdo *ReachDeleteOne) ExecX(ctx context.Context) {
-	rdo.rd.ExecX(ctx)
+	if err := rdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

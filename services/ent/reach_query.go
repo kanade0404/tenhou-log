@@ -20,11 +20,8 @@ import (
 // ReachQuery is the builder for querying Reach entities.
 type ReachQuery struct {
 	config
-	limit       *int
-	offset      *int
-	unique      *bool
+	ctx         *QueryContext
 	order       []OrderFunc
-	fields      []string
 	inters      []Interceptor
 	predicates  []predicate.Reach
 	withEvent   *EventQuery
@@ -43,20 +40,20 @@ func (rq *ReachQuery) Where(ps ...predicate.Reach) *ReachQuery {
 
 // Limit the number of records to be returned by this query.
 func (rq *ReachQuery) Limit(limit int) *ReachQuery {
-	rq.limit = &limit
+	rq.ctx.Limit = &limit
 	return rq
 }
 
 // Offset to start from.
 func (rq *ReachQuery) Offset(offset int) *ReachQuery {
-	rq.offset = &offset
+	rq.ctx.Offset = &offset
 	return rq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (rq *ReachQuery) Unique(unique bool) *ReachQuery {
-	rq.unique = &unique
+	rq.ctx.Unique = &unique
 	return rq
 }
 
@@ -113,7 +110,7 @@ func (rq *ReachQuery) QueryDiscard() *DiscardQuery {
 // First returns the first Reach entity from the query.
 // Returns a *NotFoundError when no Reach was found.
 func (rq *ReachQuery) First(ctx context.Context) (*Reach, error) {
-	nodes, err := rq.Limit(1).All(newQueryContext(ctx, TypeReach, "First"))
+	nodes, err := rq.Limit(1).All(setContextOp(ctx, rq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +133,7 @@ func (rq *ReachQuery) FirstX(ctx context.Context) *Reach {
 // Returns a *NotFoundError when no Reach ID was found.
 func (rq *ReachQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = rq.Limit(1).IDs(newQueryContext(ctx, TypeReach, "FirstID")); err != nil {
+	if ids, err = rq.Limit(1).IDs(setContextOp(ctx, rq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -159,7 +156,7 @@ func (rq *ReachQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one Reach entity is found.
 // Returns a *NotFoundError when no Reach entities are found.
 func (rq *ReachQuery) Only(ctx context.Context) (*Reach, error) {
-	nodes, err := rq.Limit(2).All(newQueryContext(ctx, TypeReach, "Only"))
+	nodes, err := rq.Limit(2).All(setContextOp(ctx, rq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +184,7 @@ func (rq *ReachQuery) OnlyX(ctx context.Context) *Reach {
 // Returns a *NotFoundError when no entities are found.
 func (rq *ReachQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = rq.Limit(2).IDs(newQueryContext(ctx, TypeReach, "OnlyID")); err != nil {
+	if ids, err = rq.Limit(2).IDs(setContextOp(ctx, rq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -212,7 +209,7 @@ func (rq *ReachQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of Reaches.
 func (rq *ReachQuery) All(ctx context.Context) ([]*Reach, error) {
-	ctx = newQueryContext(ctx, TypeReach, "All")
+	ctx = setContextOp(ctx, rq.ctx, "All")
 	if err := rq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
@@ -230,10 +227,12 @@ func (rq *ReachQuery) AllX(ctx context.Context) []*Reach {
 }
 
 // IDs executes the query and returns a list of Reach IDs.
-func (rq *ReachQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	ctx = newQueryContext(ctx, TypeReach, "IDs")
-	if err := rq.Select(reach.FieldID).Scan(ctx, &ids); err != nil {
+func (rq *ReachQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if rq.ctx.Unique == nil && rq.path != nil {
+		rq.Unique(true)
+	}
+	ctx = setContextOp(ctx, rq.ctx, "IDs")
+	if err = rq.Select(reach.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -250,7 +249,7 @@ func (rq *ReachQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (rq *ReachQuery) Count(ctx context.Context) (int, error) {
-	ctx = newQueryContext(ctx, TypeReach, "Count")
+	ctx = setContextOp(ctx, rq.ctx, "Count")
 	if err := rq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
@@ -268,7 +267,7 @@ func (rq *ReachQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (rq *ReachQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = newQueryContext(ctx, TypeReach, "Exist")
+	ctx = setContextOp(ctx, rq.ctx, "Exist")
 	switch _, err := rq.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
@@ -296,17 +295,15 @@ func (rq *ReachQuery) Clone() *ReachQuery {
 	}
 	return &ReachQuery{
 		config:      rq.config,
-		limit:       rq.limit,
-		offset:      rq.offset,
+		ctx:         rq.ctx.Clone(),
 		order:       append([]OrderFunc{}, rq.order...),
 		inters:      append([]Interceptor{}, rq.inters...),
 		predicates:  append([]predicate.Reach{}, rq.predicates...),
 		withEvent:   rq.withEvent.Clone(),
 		withDiscard: rq.withDiscard.Clone(),
 		// clone intermediate query.
-		sql:    rq.sql.Clone(),
-		path:   rq.path,
-		unique: rq.unique,
+		sql:  rq.sql.Clone(),
+		path: rq.path,
 	}
 }
 
@@ -335,9 +332,9 @@ func (rq *ReachQuery) WithDiscard(opts ...func(*DiscardQuery)) *ReachQuery {
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
 func (rq *ReachQuery) GroupBy(field string, fields ...string) *ReachGroupBy {
-	rq.fields = append([]string{field}, fields...)
+	rq.ctx.Fields = append([]string{field}, fields...)
 	grbuild := &ReachGroupBy{build: rq}
-	grbuild.flds = &rq.fields
+	grbuild.flds = &rq.ctx.Fields
 	grbuild.label = reach.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -346,10 +343,10 @@ func (rq *ReachQuery) GroupBy(field string, fields ...string) *ReachGroupBy {
 // Select allows the selection one or more fields/columns for the given query,
 // instead of selecting all fields in the entity.
 func (rq *ReachQuery) Select(fields ...string) *ReachSelect {
-	rq.fields = append(rq.fields, fields...)
+	rq.ctx.Fields = append(rq.ctx.Fields, fields...)
 	sbuild := &ReachSelect{ReachQuery: rq}
 	sbuild.label = reach.Label
-	sbuild.flds, sbuild.scan = &rq.fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &rq.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
@@ -369,7 +366,7 @@ func (rq *ReachQuery) prepareQuery(ctx context.Context) error {
 			}
 		}
 	}
-	for _, f := range rq.fields {
+	for _, f := range rq.ctx.Fields {
 		if !reach.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -446,6 +443,9 @@ func (rq *ReachQuery) loadEvent(ctx context.Context, query *EventQuery, nodes []
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
+	if len(ids) == 0 {
+		return nil
+	}
 	query.Where(event.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -475,6 +475,9 @@ func (rq *ReachQuery) loadDiscard(ctx context.Context, query *DiscardQuery, node
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
+	if len(ids) == 0 {
+		return nil
+	}
 	query.Where(discard.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -494,30 +497,22 @@ func (rq *ReachQuery) loadDiscard(ctx context.Context, query *DiscardQuery, node
 
 func (rq *ReachQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := rq.querySpec()
-	_spec.Node.Columns = rq.fields
-	if len(rq.fields) > 0 {
-		_spec.Unique = rq.unique != nil && *rq.unique
+	_spec.Node.Columns = rq.ctx.Fields
+	if len(rq.ctx.Fields) > 0 {
+		_spec.Unique = rq.ctx.Unique != nil && *rq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, rq.driver, _spec)
 }
 
 func (rq *ReachQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   reach.Table,
-			Columns: reach.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: reach.FieldID,
-			},
-		},
-		From:   rq.sql,
-		Unique: true,
-	}
-	if unique := rq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(reach.Table, reach.Columns, sqlgraph.NewFieldSpec(reach.FieldID, field.TypeUUID))
+	_spec.From = rq.sql
+	if unique := rq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if rq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := rq.fields; len(fields) > 0 {
+	if fields := rq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, reach.FieldID)
 		for i := range fields {
@@ -533,10 +528,10 @@ func (rq *ReachQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := rq.limit; limit != nil {
+	if limit := rq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := rq.offset; offset != nil {
+	if offset := rq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := rq.order; len(ps) > 0 {
@@ -552,7 +547,7 @@ func (rq *ReachQuery) querySpec() *sqlgraph.QuerySpec {
 func (rq *ReachQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(rq.driver.Dialect())
 	t1 := builder.Table(reach.Table)
-	columns := rq.fields
+	columns := rq.ctx.Fields
 	if len(columns) == 0 {
 		columns = reach.Columns
 	}
@@ -561,7 +556,7 @@ func (rq *ReachQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = rq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if rq.unique != nil && *rq.unique {
+	if rq.ctx.Unique != nil && *rq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range rq.predicates {
@@ -570,12 +565,12 @@ func (rq *ReachQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range rq.order {
 		p(selector)
 	}
-	if offset := rq.offset; offset != nil {
+	if offset := rq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := rq.limit; limit != nil {
+	if limit := rq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -595,7 +590,7 @@ func (rgb *ReachGroupBy) Aggregate(fns ...AggregateFunc) *ReachGroupBy {
 
 // Scan applies the selector query and scans the result into the given value.
 func (rgb *ReachGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeReach, "GroupBy")
+	ctx = setContextOp(ctx, rgb.build.ctx, "GroupBy")
 	if err := rgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
@@ -643,7 +638,7 @@ func (rs *ReachSelect) Aggregate(fns ...AggregateFunc) *ReachSelect {
 
 // Scan applies the selector query and scans the result into the given value.
 func (rs *ReachSelect) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeReach, "Select")
+	ctx = setContextOp(ctx, rs.ctx, "Select")
 	if err := rs.prepareQuery(ctx); err != nil {
 		return err
 	}

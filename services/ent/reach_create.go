@@ -139,13 +139,7 @@ func (rc *ReachCreate) sqlSave(ctx context.Context) (*Reach, error) {
 func (rc *ReachCreate) createSpec() (*Reach, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Reach{config: rc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: reach.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: reach.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(reach.Table, sqlgraph.NewFieldSpec(reach.FieldID, field.TypeUUID))
 	)
 	_spec.OnConflict = rc.conflict
 	if id, ok := rc.mutation.ID(); ok {
@@ -160,10 +154,7 @@ func (rc *ReachCreate) createSpec() (*Reach, *sqlgraph.CreateSpec) {
 			Columns: []string{reach.EventColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: event.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -180,10 +171,7 @@ func (rc *ReachCreate) createSpec() (*Reach, *sqlgraph.CreateSpec) {
 			Columns: []string{reach.DiscardColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: discard.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(discard.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

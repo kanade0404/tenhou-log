@@ -20,11 +20,8 @@ import (
 // PonQuery is the builder for querying Pon entities.
 type PonQuery struct {
 	config
-	limit      *int
-	offset     *int
-	unique     *bool
+	ctx        *QueryContext
 	order      []OrderFunc
-	fields     []string
 	inters     []Interceptor
 	predicates []predicate.Pon
 	withCall   *CallQuery
@@ -41,20 +38,20 @@ func (pq *PonQuery) Where(ps ...predicate.Pon) *PonQuery {
 
 // Limit the number of records to be returned by this query.
 func (pq *PonQuery) Limit(limit int) *PonQuery {
-	pq.limit = &limit
+	pq.ctx.Limit = &limit
 	return pq
 }
 
 // Offset to start from.
 func (pq *PonQuery) Offset(offset int) *PonQuery {
-	pq.offset = &offset
+	pq.ctx.Offset = &offset
 	return pq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (pq *PonQuery) Unique(unique bool) *PonQuery {
-	pq.unique = &unique
+	pq.ctx.Unique = &unique
 	return pq
 }
 
@@ -89,7 +86,7 @@ func (pq *PonQuery) QueryCall() *CallQuery {
 // First returns the first Pon entity from the query.
 // Returns a *NotFoundError when no Pon was found.
 func (pq *PonQuery) First(ctx context.Context) (*Pon, error) {
-	nodes, err := pq.Limit(1).All(newQueryContext(ctx, TypePon, "First"))
+	nodes, err := pq.Limit(1).All(setContextOp(ctx, pq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +109,7 @@ func (pq *PonQuery) FirstX(ctx context.Context) *Pon {
 // Returns a *NotFoundError when no Pon ID was found.
 func (pq *PonQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = pq.Limit(1).IDs(newQueryContext(ctx, TypePon, "FirstID")); err != nil {
+	if ids, err = pq.Limit(1).IDs(setContextOp(ctx, pq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -135,7 +132,7 @@ func (pq *PonQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one Pon entity is found.
 // Returns a *NotFoundError when no Pon entities are found.
 func (pq *PonQuery) Only(ctx context.Context) (*Pon, error) {
-	nodes, err := pq.Limit(2).All(newQueryContext(ctx, TypePon, "Only"))
+	nodes, err := pq.Limit(2).All(setContextOp(ctx, pq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +160,7 @@ func (pq *PonQuery) OnlyX(ctx context.Context) *Pon {
 // Returns a *NotFoundError when no entities are found.
 func (pq *PonQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = pq.Limit(2).IDs(newQueryContext(ctx, TypePon, "OnlyID")); err != nil {
+	if ids, err = pq.Limit(2).IDs(setContextOp(ctx, pq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -188,7 +185,7 @@ func (pq *PonQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of Pons.
 func (pq *PonQuery) All(ctx context.Context) ([]*Pon, error) {
-	ctx = newQueryContext(ctx, TypePon, "All")
+	ctx = setContextOp(ctx, pq.ctx, "All")
 	if err := pq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
@@ -206,10 +203,12 @@ func (pq *PonQuery) AllX(ctx context.Context) []*Pon {
 }
 
 // IDs executes the query and returns a list of Pon IDs.
-func (pq *PonQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	ctx = newQueryContext(ctx, TypePon, "IDs")
-	if err := pq.Select(pon.FieldID).Scan(ctx, &ids); err != nil {
+func (pq *PonQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if pq.ctx.Unique == nil && pq.path != nil {
+		pq.Unique(true)
+	}
+	ctx = setContextOp(ctx, pq.ctx, "IDs")
+	if err = pq.Select(pon.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -226,7 +225,7 @@ func (pq *PonQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (pq *PonQuery) Count(ctx context.Context) (int, error) {
-	ctx = newQueryContext(ctx, TypePon, "Count")
+	ctx = setContextOp(ctx, pq.ctx, "Count")
 	if err := pq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
@@ -244,7 +243,7 @@ func (pq *PonQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (pq *PonQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = newQueryContext(ctx, TypePon, "Exist")
+	ctx = setContextOp(ctx, pq.ctx, "Exist")
 	switch _, err := pq.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
@@ -272,16 +271,14 @@ func (pq *PonQuery) Clone() *PonQuery {
 	}
 	return &PonQuery{
 		config:     pq.config,
-		limit:      pq.limit,
-		offset:     pq.offset,
+		ctx:        pq.ctx.Clone(),
 		order:      append([]OrderFunc{}, pq.order...),
 		inters:     append([]Interceptor{}, pq.inters...),
 		predicates: append([]predicate.Pon{}, pq.predicates...),
 		withCall:   pq.withCall.Clone(),
 		// clone intermediate query.
-		sql:    pq.sql.Clone(),
-		path:   pq.path,
-		unique: pq.unique,
+		sql:  pq.sql.Clone(),
+		path: pq.path,
 	}
 }
 
@@ -299,9 +296,9 @@ func (pq *PonQuery) WithCall(opts ...func(*CallQuery)) *PonQuery {
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
 func (pq *PonQuery) GroupBy(field string, fields ...string) *PonGroupBy {
-	pq.fields = append([]string{field}, fields...)
+	pq.ctx.Fields = append([]string{field}, fields...)
 	grbuild := &PonGroupBy{build: pq}
-	grbuild.flds = &pq.fields
+	grbuild.flds = &pq.ctx.Fields
 	grbuild.label = pon.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -310,10 +307,10 @@ func (pq *PonQuery) GroupBy(field string, fields ...string) *PonGroupBy {
 // Select allows the selection one or more fields/columns for the given query,
 // instead of selecting all fields in the entity.
 func (pq *PonQuery) Select(fields ...string) *PonSelect {
-	pq.fields = append(pq.fields, fields...)
+	pq.ctx.Fields = append(pq.ctx.Fields, fields...)
 	sbuild := &PonSelect{PonQuery: pq}
 	sbuild.label = pon.Label
-	sbuild.flds, sbuild.scan = &pq.fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &pq.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
@@ -333,7 +330,7 @@ func (pq *PonQuery) prepareQuery(ctx context.Context) error {
 			}
 		}
 	}
-	for _, f := range pq.fields {
+	for _, f := range pq.ctx.Fields {
 		if !pon.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -414,30 +411,22 @@ func (pq *PonQuery) loadCall(ctx context.Context, query *CallQuery, nodes []*Pon
 
 func (pq *PonQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := pq.querySpec()
-	_spec.Node.Columns = pq.fields
-	if len(pq.fields) > 0 {
-		_spec.Unique = pq.unique != nil && *pq.unique
+	_spec.Node.Columns = pq.ctx.Fields
+	if len(pq.ctx.Fields) > 0 {
+		_spec.Unique = pq.ctx.Unique != nil && *pq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, pq.driver, _spec)
 }
 
 func (pq *PonQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   pon.Table,
-			Columns: pon.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: pon.FieldID,
-			},
-		},
-		From:   pq.sql,
-		Unique: true,
-	}
-	if unique := pq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(pon.Table, pon.Columns, sqlgraph.NewFieldSpec(pon.FieldID, field.TypeUUID))
+	_spec.From = pq.sql
+	if unique := pq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if pq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := pq.fields; len(fields) > 0 {
+	if fields := pq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, pon.FieldID)
 		for i := range fields {
@@ -453,10 +442,10 @@ func (pq *PonQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := pq.limit; limit != nil {
+	if limit := pq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := pq.offset; offset != nil {
+	if offset := pq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := pq.order; len(ps) > 0 {
@@ -472,7 +461,7 @@ func (pq *PonQuery) querySpec() *sqlgraph.QuerySpec {
 func (pq *PonQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(pq.driver.Dialect())
 	t1 := builder.Table(pon.Table)
-	columns := pq.fields
+	columns := pq.ctx.Fields
 	if len(columns) == 0 {
 		columns = pon.Columns
 	}
@@ -481,7 +470,7 @@ func (pq *PonQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = pq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if pq.unique != nil && *pq.unique {
+	if pq.ctx.Unique != nil && *pq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range pq.predicates {
@@ -490,12 +479,12 @@ func (pq *PonQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range pq.order {
 		p(selector)
 	}
-	if offset := pq.offset; offset != nil {
+	if offset := pq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := pq.limit; limit != nil {
+	if limit := pq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -515,7 +504,7 @@ func (pgb *PonGroupBy) Aggregate(fns ...AggregateFunc) *PonGroupBy {
 
 // Scan applies the selector query and scans the result into the given value.
 func (pgb *PonGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypePon, "GroupBy")
+	ctx = setContextOp(ctx, pgb.build.ctx, "GroupBy")
 	if err := pgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
@@ -563,7 +552,7 @@ func (ps *PonSelect) Aggregate(fns ...AggregateFunc) *PonSelect {
 
 // Scan applies the selector query and scans the result into the given value.
 func (ps *PonSelect) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypePon, "Select")
+	ctx = setContextOp(ctx, ps.ctx, "Select")
 	if err := ps.prepareQuery(ctx); err != nil {
 		return err
 	}

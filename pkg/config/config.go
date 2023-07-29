@@ -23,6 +23,7 @@ type databaseConfig struct {
 	localDatabaseConfig
 }
 type Config struct {
+	projectID               string
 	isLocal                 bool
 	appPort                 string
 	compressedLogBucketName string
@@ -49,6 +50,10 @@ func (c *Config) CompressedLogBucketName() string {
 	return c.compressedLogBucketName
 }
 
+func (c *Config) ProjectID() string {
+	return c.projectID
+}
+
 func NewEnv(ctx context.Context) (*Config, error) {
 	if IsLocal() {
 		env, err := newLocalEnv()
@@ -72,6 +77,7 @@ func NewEnv(ctx context.Context) (*Config, error) {
 func newLocalEnv() (*Config, error) {
 	return &Config{
 		isLocal:                 true,
+		projectID:               os.Getenv("PROJECT_ID"),
 		appPort:                 os.Getenv("SCRAPER_PORT"),
 		googleAppEnv:            os.Getenv("GOOGLE_APPLICATION_CREDENTIALS"),
 		compressedLogBucketName: os.Getenv("COMPRESSED_LOG_BUCKET_NAME"),
@@ -90,6 +96,10 @@ func newLocalEnv() (*Config, error) {
 }
 
 func newRemoteEnv(manager *secret_manager.SecretManager) (*Config, error) {
+	projectID, err := manager.GetVersion("PROJECT_ID")
+	if err != nil {
+		return nil, err
+	}
 	appPort, err := manager.GetVersion("SCRAPER_PORT")
 	if err != nil {
 		return nil, err
@@ -116,6 +126,7 @@ func newRemoteEnv(manager *secret_manager.SecretManager) (*Config, error) {
 	}
 	return &Config{
 		isLocal:                 false,
+		projectID:               projectID,
 		appPort:                 appPort,
 		compressedLogBucketName: compressedLogBucketName,
 		databaseConfig: databaseConfig{

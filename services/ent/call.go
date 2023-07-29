@@ -245,44 +245,44 @@ func (c *Call) assignValues(columns []string, values []any) error {
 
 // QueryEvent queries the "event" edge of the Call entity.
 func (c *Call) QueryEvent() *EventQuery {
-	return (&CallClient{config: c.config}).QueryEvent(c)
+	return NewCallClient(c.config).QueryEvent(c)
 }
 
 // QueryDiscard queries the "discard" edge of the Call entity.
 func (c *Call) QueryDiscard() *DiscardQuery {
-	return (&CallClient{config: c.config}).QueryDiscard(c)
+	return NewCallClient(c.config).QueryDiscard(c)
 }
 
 // QueryChii queries the "chii" edge of the Call entity.
 func (c *Call) QueryChii() *ChiiQuery {
-	return (&CallClient{config: c.config}).QueryChii(c)
+	return NewCallClient(c.config).QueryChii(c)
 }
 
 // QueryChakan queries the "chakan" edge of the Call entity.
 func (c *Call) QueryChakan() *ChakanQuery {
-	return (&CallClient{config: c.config}).QueryChakan(c)
+	return NewCallClient(c.config).QueryChakan(c)
 }
 
 // QueryConcealedkan queries the "concealedkan" edge of the Call entity.
 func (c *Call) QueryConcealedkan() *ConcealedKanQuery {
-	return (&CallClient{config: c.config}).QueryConcealedkan(c)
+	return NewCallClient(c.config).QueryConcealedkan(c)
 }
 
 // QueryMeldedkan queries the "meldedkan" edge of the Call entity.
 func (c *Call) QueryMeldedkan() *MeldedKanQuery {
-	return (&CallClient{config: c.config}).QueryMeldedkan(c)
+	return NewCallClient(c.config).QueryMeldedkan(c)
 }
 
 // QueryPon queries the "pon" edge of the Call entity.
 func (c *Call) QueryPon() *PonQuery {
-	return (&CallClient{config: c.config}).QueryPon(c)
+	return NewCallClient(c.config).QueryPon(c)
 }
 
 // Update returns a builder for updating this Call.
 // Note that you need to call Call.Unwrap() before calling this method if this Call
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (c *Call) Update() *CallUpdateOne {
-	return (&CallClient{config: c.config}).UpdateOne(c)
+	return NewCallClient(c.config).UpdateOne(c)
 }
 
 // Unwrap unwraps the Call entity that was returned from a transaction after it was closed,
@@ -307,9 +307,3 @@ func (c *Call) String() string {
 
 // Calls is a parsable slice of Call.
 type Calls []*Call
-
-func (c Calls) config(cfg config) {
-	for _i := range c {
-		c[_i].config = cfg
-	}
-}

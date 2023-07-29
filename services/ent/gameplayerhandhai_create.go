@@ -133,13 +133,7 @@ func (gphhc *GamePlayerHandHaiCreate) sqlSave(ctx context.Context) (*GamePlayerH
 func (gphhc *GamePlayerHandHaiCreate) createSpec() (*GamePlayerHandHai, *sqlgraph.CreateSpec) {
 	var (
 		_node = &GamePlayerHandHai{config: gphhc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: gameplayerhandhai.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: gameplayerhandhai.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(gameplayerhandhai.Table, sqlgraph.NewFieldSpec(gameplayerhandhai.FieldID, field.TypeUUID))
 	)
 	_spec.OnConflict = gphhc.conflict
 	if id, ok := gphhc.mutation.ID(); ok {
@@ -158,10 +152,7 @@ func (gphhc *GamePlayerHandHaiCreate) createSpec() (*GamePlayerHandHai, *sqlgrap
 			Columns: []string{gameplayerhandhai.TurnColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: turn.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(turn.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

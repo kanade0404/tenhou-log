@@ -40,15 +40,7 @@ func (td *TurnDelete) ExecX(ctx context.Context) int {
 }
 
 func (td *TurnDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: turn.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: turn.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(turn.Table, sqlgraph.NewFieldSpec(turn.FieldID, field.TypeUUID))
 	if ps := td.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -69,6 +61,12 @@ type TurnDeleteOne struct {
 	td *TurnDelete
 }
 
+// Where appends a list predicates to the TurnDelete builder.
+func (tdo *TurnDeleteOne) Where(ps ...predicate.Turn) *TurnDeleteOne {
+	tdo.td.mutation.Where(ps...)
+	return tdo
+}
+
 // Exec executes the deletion query.
 func (tdo *TurnDeleteOne) Exec(ctx context.Context) error {
 	n, err := tdo.td.Exec(ctx)
@@ -84,5 +82,7 @@ func (tdo *TurnDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (tdo *TurnDeleteOne) ExecX(ctx context.Context) {
-	tdo.td.ExecX(ctx)
+	if err := tdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

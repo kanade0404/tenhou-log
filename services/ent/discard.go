@@ -110,24 +110,24 @@ func (d *Discard) assignValues(columns []string, values []any) error {
 
 // QueryReach queries the "reach" edge of the Discard entity.
 func (d *Discard) QueryReach() *ReachQuery {
-	return (&DiscardClient{config: d.config}).QueryReach(d)
+	return NewDiscardClient(d.config).QueryReach(d)
 }
 
 // QueryCall queries the "call" edge of the Discard entity.
 func (d *Discard) QueryCall() *CallQuery {
-	return (&DiscardClient{config: d.config}).QueryCall(d)
+	return NewDiscardClient(d.config).QueryCall(d)
 }
 
 // QueryDraw queries the "draw" edge of the Discard entity.
 func (d *Discard) QueryDraw() *DrawnQuery {
-	return (&DiscardClient{config: d.config}).QueryDraw(d)
+	return NewDiscardClient(d.config).QueryDraw(d)
 }
 
 // Update returns a builder for updating this Discard.
 // Note that you need to call Discard.Unwrap() before calling this method if this Discard
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (d *Discard) Update() *DiscardUpdateOne {
-	return (&DiscardClient{config: d.config}).UpdateOne(d)
+	return NewDiscardClient(d.config).UpdateOne(d)
 }
 
 // Unwrap unwraps the Discard entity that was returned from a transaction after it was closed,
@@ -152,9 +152,3 @@ func (d *Discard) String() string {
 
 // Discards is a parsable slice of Discard.
 type Discards []*Discard
-
-func (d Discards) config(cfg config) {
-	for _i := range d {
-		d[_i].config = cfg
-	}
-}

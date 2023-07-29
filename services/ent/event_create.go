@@ -188,13 +188,7 @@ func (ec *EventCreate) sqlSave(ctx context.Context) (*Event, error) {
 func (ec *EventCreate) createSpec() (*Event, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Event{config: ec.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: event.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: event.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(event.Table, sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID))
 	)
 	_spec.OnConflict = ec.conflict
 	if id, ok := ec.mutation.ID(); ok {
@@ -209,10 +203,7 @@ func (ec *EventCreate) createSpec() (*Event, *sqlgraph.CreateSpec) {
 			Columns: []string{event.TurnColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: turn.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(turn.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -229,10 +220,7 @@ func (ec *EventCreate) createSpec() (*Event, *sqlgraph.CreateSpec) {
 			Columns: []string{event.WinColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: win.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(win.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -248,10 +236,7 @@ func (ec *EventCreate) createSpec() (*Event, *sqlgraph.CreateSpec) {
 			Columns: []string{event.CallColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: call.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(call.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -267,10 +252,7 @@ func (ec *EventCreate) createSpec() (*Event, *sqlgraph.CreateSpec) {
 			Columns: []string{event.DrawColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: drawn.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(drawn.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -286,10 +268,7 @@ func (ec *EventCreate) createSpec() (*Event, *sqlgraph.CreateSpec) {
 			Columns: []string{event.ReachColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: reach.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(reach.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

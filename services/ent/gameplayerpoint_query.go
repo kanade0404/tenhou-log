@@ -20,11 +20,8 @@ import (
 // GamePlayerPointQuery is the builder for querying GamePlayerPoint entities.
 type GamePlayerPointQuery struct {
 	config
-	limit      *int
-	offset     *int
-	unique     *bool
+	ctx        *QueryContext
 	order      []OrderFunc
-	fields     []string
 	inters     []Interceptor
 	predicates []predicate.GamePlayerPoint
 	withTurns  *TurnQuery
@@ -41,20 +38,20 @@ func (gppq *GamePlayerPointQuery) Where(ps ...predicate.GamePlayerPoint) *GamePl
 
 // Limit the number of records to be returned by this query.
 func (gppq *GamePlayerPointQuery) Limit(limit int) *GamePlayerPointQuery {
-	gppq.limit = &limit
+	gppq.ctx.Limit = &limit
 	return gppq
 }
 
 // Offset to start from.
 func (gppq *GamePlayerPointQuery) Offset(offset int) *GamePlayerPointQuery {
-	gppq.offset = &offset
+	gppq.ctx.Offset = &offset
 	return gppq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (gppq *GamePlayerPointQuery) Unique(unique bool) *GamePlayerPointQuery {
-	gppq.unique = &unique
+	gppq.ctx.Unique = &unique
 	return gppq
 }
 
@@ -89,7 +86,7 @@ func (gppq *GamePlayerPointQuery) QueryTurns() *TurnQuery {
 // First returns the first GamePlayerPoint entity from the query.
 // Returns a *NotFoundError when no GamePlayerPoint was found.
 func (gppq *GamePlayerPointQuery) First(ctx context.Context) (*GamePlayerPoint, error) {
-	nodes, err := gppq.Limit(1).All(newQueryContext(ctx, TypeGamePlayerPoint, "First"))
+	nodes, err := gppq.Limit(1).All(setContextOp(ctx, gppq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +109,7 @@ func (gppq *GamePlayerPointQuery) FirstX(ctx context.Context) *GamePlayerPoint {
 // Returns a *NotFoundError when no GamePlayerPoint ID was found.
 func (gppq *GamePlayerPointQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = gppq.Limit(1).IDs(newQueryContext(ctx, TypeGamePlayerPoint, "FirstID")); err != nil {
+	if ids, err = gppq.Limit(1).IDs(setContextOp(ctx, gppq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -135,7 +132,7 @@ func (gppq *GamePlayerPointQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one GamePlayerPoint entity is found.
 // Returns a *NotFoundError when no GamePlayerPoint entities are found.
 func (gppq *GamePlayerPointQuery) Only(ctx context.Context) (*GamePlayerPoint, error) {
-	nodes, err := gppq.Limit(2).All(newQueryContext(ctx, TypeGamePlayerPoint, "Only"))
+	nodes, err := gppq.Limit(2).All(setContextOp(ctx, gppq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +160,7 @@ func (gppq *GamePlayerPointQuery) OnlyX(ctx context.Context) *GamePlayerPoint {
 // Returns a *NotFoundError when no entities are found.
 func (gppq *GamePlayerPointQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = gppq.Limit(2).IDs(newQueryContext(ctx, TypeGamePlayerPoint, "OnlyID")); err != nil {
+	if ids, err = gppq.Limit(2).IDs(setContextOp(ctx, gppq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -188,7 +185,7 @@ func (gppq *GamePlayerPointQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of GamePlayerPoints.
 func (gppq *GamePlayerPointQuery) All(ctx context.Context) ([]*GamePlayerPoint, error) {
-	ctx = newQueryContext(ctx, TypeGamePlayerPoint, "All")
+	ctx = setContextOp(ctx, gppq.ctx, "All")
 	if err := gppq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
@@ -206,10 +203,12 @@ func (gppq *GamePlayerPointQuery) AllX(ctx context.Context) []*GamePlayerPoint {
 }
 
 // IDs executes the query and returns a list of GamePlayerPoint IDs.
-func (gppq *GamePlayerPointQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	ctx = newQueryContext(ctx, TypeGamePlayerPoint, "IDs")
-	if err := gppq.Select(gameplayerpoint.FieldID).Scan(ctx, &ids); err != nil {
+func (gppq *GamePlayerPointQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if gppq.ctx.Unique == nil && gppq.path != nil {
+		gppq.Unique(true)
+	}
+	ctx = setContextOp(ctx, gppq.ctx, "IDs")
+	if err = gppq.Select(gameplayerpoint.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -226,7 +225,7 @@ func (gppq *GamePlayerPointQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (gppq *GamePlayerPointQuery) Count(ctx context.Context) (int, error) {
-	ctx = newQueryContext(ctx, TypeGamePlayerPoint, "Count")
+	ctx = setContextOp(ctx, gppq.ctx, "Count")
 	if err := gppq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
@@ -244,7 +243,7 @@ func (gppq *GamePlayerPointQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (gppq *GamePlayerPointQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = newQueryContext(ctx, TypeGamePlayerPoint, "Exist")
+	ctx = setContextOp(ctx, gppq.ctx, "Exist")
 	switch _, err := gppq.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
@@ -272,16 +271,14 @@ func (gppq *GamePlayerPointQuery) Clone() *GamePlayerPointQuery {
 	}
 	return &GamePlayerPointQuery{
 		config:     gppq.config,
-		limit:      gppq.limit,
-		offset:     gppq.offset,
+		ctx:        gppq.ctx.Clone(),
 		order:      append([]OrderFunc{}, gppq.order...),
 		inters:     append([]Interceptor{}, gppq.inters...),
 		predicates: append([]predicate.GamePlayerPoint{}, gppq.predicates...),
 		withTurns:  gppq.withTurns.Clone(),
 		// clone intermediate query.
-		sql:    gppq.sql.Clone(),
-		path:   gppq.path,
-		unique: gppq.unique,
+		sql:  gppq.sql.Clone(),
+		path: gppq.path,
 	}
 }
 
@@ -311,9 +308,9 @@ func (gppq *GamePlayerPointQuery) WithTurns(opts ...func(*TurnQuery)) *GamePlaye
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (gppq *GamePlayerPointQuery) GroupBy(field string, fields ...string) *GamePlayerPointGroupBy {
-	gppq.fields = append([]string{field}, fields...)
+	gppq.ctx.Fields = append([]string{field}, fields...)
 	grbuild := &GamePlayerPointGroupBy{build: gppq}
-	grbuild.flds = &gppq.fields
+	grbuild.flds = &gppq.ctx.Fields
 	grbuild.label = gameplayerpoint.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -332,10 +329,10 @@ func (gppq *GamePlayerPointQuery) GroupBy(field string, fields ...string) *GameP
 //		Select(gameplayerpoint.FieldPoint).
 //		Scan(ctx, &v)
 func (gppq *GamePlayerPointQuery) Select(fields ...string) *GamePlayerPointSelect {
-	gppq.fields = append(gppq.fields, fields...)
+	gppq.ctx.Fields = append(gppq.ctx.Fields, fields...)
 	sbuild := &GamePlayerPointSelect{GamePlayerPointQuery: gppq}
 	sbuild.label = gameplayerpoint.Label
-	sbuild.flds, sbuild.scan = &gppq.fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &gppq.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
@@ -355,7 +352,7 @@ func (gppq *GamePlayerPointQuery) prepareQuery(ctx context.Context) error {
 			}
 		}
 	}
-	for _, f := range gppq.fields {
+	for _, f := range gppq.ctx.Fields {
 		if !gameplayerpoint.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -429,27 +426,30 @@ func (gppq *GamePlayerPointQuery) loadTurns(ctx context.Context, query *TurnQuer
 	if err := query.prepareQuery(ctx); err != nil {
 		return err
 	}
-	neighbors, err := query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
-		assign := spec.Assign
-		values := spec.ScanValues
-		spec.ScanValues = func(columns []string) ([]any, error) {
-			values, err := values(columns[1:])
-			if err != nil {
-				return nil, err
+	qr := QuerierFunc(func(ctx context.Context, q Query) (Value, error) {
+		return query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
+			assign := spec.Assign
+			values := spec.ScanValues
+			spec.ScanValues = func(columns []string) ([]any, error) {
+				values, err := values(columns[1:])
+				if err != nil {
+					return nil, err
+				}
+				return append([]any{new(uuid.UUID)}, values...), nil
 			}
-			return append([]any{new(uuid.UUID)}, values...), nil
-		}
-		spec.Assign = func(columns []string, values []any) error {
-			outValue := *values[0].(*uuid.UUID)
-			inValue := *values[1].(*uuid.UUID)
-			if nids[inValue] == nil {
-				nids[inValue] = map[*GamePlayerPoint]struct{}{byID[outValue]: {}}
-				return assign(columns[1:], values[1:])
+			spec.Assign = func(columns []string, values []any) error {
+				outValue := *values[0].(*uuid.UUID)
+				inValue := *values[1].(*uuid.UUID)
+				if nids[inValue] == nil {
+					nids[inValue] = map[*GamePlayerPoint]struct{}{byID[outValue]: {}}
+					return assign(columns[1:], values[1:])
+				}
+				nids[inValue][byID[outValue]] = struct{}{}
+				return nil
 			}
-			nids[inValue][byID[outValue]] = struct{}{}
-			return nil
-		}
+		})
 	})
+	neighbors, err := withInterceptors[[]*Turn](ctx, query, qr, query.inters)
 	if err != nil {
 		return err
 	}
@@ -467,30 +467,22 @@ func (gppq *GamePlayerPointQuery) loadTurns(ctx context.Context, query *TurnQuer
 
 func (gppq *GamePlayerPointQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := gppq.querySpec()
-	_spec.Node.Columns = gppq.fields
-	if len(gppq.fields) > 0 {
-		_spec.Unique = gppq.unique != nil && *gppq.unique
+	_spec.Node.Columns = gppq.ctx.Fields
+	if len(gppq.ctx.Fields) > 0 {
+		_spec.Unique = gppq.ctx.Unique != nil && *gppq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, gppq.driver, _spec)
 }
 
 func (gppq *GamePlayerPointQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   gameplayerpoint.Table,
-			Columns: gameplayerpoint.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: gameplayerpoint.FieldID,
-			},
-		},
-		From:   gppq.sql,
-		Unique: true,
-	}
-	if unique := gppq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(gameplayerpoint.Table, gameplayerpoint.Columns, sqlgraph.NewFieldSpec(gameplayerpoint.FieldID, field.TypeUUID))
+	_spec.From = gppq.sql
+	if unique := gppq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if gppq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := gppq.fields; len(fields) > 0 {
+	if fields := gppq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, gameplayerpoint.FieldID)
 		for i := range fields {
@@ -506,10 +498,10 @@ func (gppq *GamePlayerPointQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := gppq.limit; limit != nil {
+	if limit := gppq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := gppq.offset; offset != nil {
+	if offset := gppq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := gppq.order; len(ps) > 0 {
@@ -525,7 +517,7 @@ func (gppq *GamePlayerPointQuery) querySpec() *sqlgraph.QuerySpec {
 func (gppq *GamePlayerPointQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(gppq.driver.Dialect())
 	t1 := builder.Table(gameplayerpoint.Table)
-	columns := gppq.fields
+	columns := gppq.ctx.Fields
 	if len(columns) == 0 {
 		columns = gameplayerpoint.Columns
 	}
@@ -534,7 +526,7 @@ func (gppq *GamePlayerPointQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = gppq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if gppq.unique != nil && *gppq.unique {
+	if gppq.ctx.Unique != nil && *gppq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range gppq.predicates {
@@ -543,12 +535,12 @@ func (gppq *GamePlayerPointQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range gppq.order {
 		p(selector)
 	}
-	if offset := gppq.offset; offset != nil {
+	if offset := gppq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := gppq.limit; limit != nil {
+	if limit := gppq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -568,7 +560,7 @@ func (gppgb *GamePlayerPointGroupBy) Aggregate(fns ...AggregateFunc) *GamePlayer
 
 // Scan applies the selector query and scans the result into the given value.
 func (gppgb *GamePlayerPointGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeGamePlayerPoint, "GroupBy")
+	ctx = setContextOp(ctx, gppgb.build.ctx, "GroupBy")
 	if err := gppgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
@@ -616,7 +608,7 @@ func (gpps *GamePlayerPointSelect) Aggregate(fns ...AggregateFunc) *GamePlayerPo
 
 // Scan applies the selector query and scans the result into the given value.
 func (gpps *GamePlayerPointSelect) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeGamePlayerPoint, "Select")
+	ctx = setContextOp(ctx, gpps.ctx, "Select")
 	if err := gpps.prepareQuery(ctx); err != nil {
 		return err
 	}

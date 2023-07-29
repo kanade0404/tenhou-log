@@ -23,11 +23,8 @@ import (
 // GameQuery is the builder for querying Game entities.
 type GameQuery struct {
 	config
-	limit           *int
-	offset          *int
-	unique          *bool
+	ctx             *QueryContext
 	order           []OrderFunc
-	fields          []string
 	inters          []Interceptor
 	predicates      []predicate.Game
 	withMjlogs      *MJLogQuery
@@ -48,20 +45,20 @@ func (gq *GameQuery) Where(ps ...predicate.Game) *GameQuery {
 
 // Limit the number of records to be returned by this query.
 func (gq *GameQuery) Limit(limit int) *GameQuery {
-	gq.limit = &limit
+	gq.ctx.Limit = &limit
 	return gq
 }
 
 // Offset to start from.
 func (gq *GameQuery) Offset(offset int) *GameQuery {
-	gq.offset = &offset
+	gq.ctx.Offset = &offset
 	return gq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (gq *GameQuery) Unique(unique bool) *GameQuery {
-	gq.unique = &unique
+	gq.ctx.Unique = &unique
 	return gq
 }
 
@@ -162,7 +159,7 @@ func (gq *GameQuery) QueryRounds() *RoundQuery {
 // First returns the first Game entity from the query.
 // Returns a *NotFoundError when no Game was found.
 func (gq *GameQuery) First(ctx context.Context) (*Game, error) {
-	nodes, err := gq.Limit(1).All(newQueryContext(ctx, TypeGame, "First"))
+	nodes, err := gq.Limit(1).All(setContextOp(ctx, gq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +182,7 @@ func (gq *GameQuery) FirstX(ctx context.Context) *Game {
 // Returns a *NotFoundError when no Game ID was found.
 func (gq *GameQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = gq.Limit(1).IDs(newQueryContext(ctx, TypeGame, "FirstID")); err != nil {
+	if ids, err = gq.Limit(1).IDs(setContextOp(ctx, gq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -208,7 +205,7 @@ func (gq *GameQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one Game entity is found.
 // Returns a *NotFoundError when no Game entities are found.
 func (gq *GameQuery) Only(ctx context.Context) (*Game, error) {
-	nodes, err := gq.Limit(2).All(newQueryContext(ctx, TypeGame, "Only"))
+	nodes, err := gq.Limit(2).All(setContextOp(ctx, gq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -236,7 +233,7 @@ func (gq *GameQuery) OnlyX(ctx context.Context) *Game {
 // Returns a *NotFoundError when no entities are found.
 func (gq *GameQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = gq.Limit(2).IDs(newQueryContext(ctx, TypeGame, "OnlyID")); err != nil {
+	if ids, err = gq.Limit(2).IDs(setContextOp(ctx, gq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -261,7 +258,7 @@ func (gq *GameQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of Games.
 func (gq *GameQuery) All(ctx context.Context) ([]*Game, error) {
-	ctx = newQueryContext(ctx, TypeGame, "All")
+	ctx = setContextOp(ctx, gq.ctx, "All")
 	if err := gq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
@@ -279,10 +276,12 @@ func (gq *GameQuery) AllX(ctx context.Context) []*Game {
 }
 
 // IDs executes the query and returns a list of Game IDs.
-func (gq *GameQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	ctx = newQueryContext(ctx, TypeGame, "IDs")
-	if err := gq.Select(game.FieldID).Scan(ctx, &ids); err != nil {
+func (gq *GameQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if gq.ctx.Unique == nil && gq.path != nil {
+		gq.Unique(true)
+	}
+	ctx = setContextOp(ctx, gq.ctx, "IDs")
+	if err = gq.Select(game.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -299,7 +298,7 @@ func (gq *GameQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (gq *GameQuery) Count(ctx context.Context) (int, error) {
-	ctx = newQueryContext(ctx, TypeGame, "Count")
+	ctx = setContextOp(ctx, gq.ctx, "Count")
 	if err := gq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
@@ -317,7 +316,7 @@ func (gq *GameQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (gq *GameQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = newQueryContext(ctx, TypeGame, "Exist")
+	ctx = setContextOp(ctx, gq.ctx, "Exist")
 	switch _, err := gq.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
@@ -345,8 +344,7 @@ func (gq *GameQuery) Clone() *GameQuery {
 	}
 	return &GameQuery{
 		config:          gq.config,
-		limit:           gq.limit,
-		offset:          gq.offset,
+		ctx:             gq.ctx.Clone(),
 		order:           append([]OrderFunc{}, gq.order...),
 		inters:          append([]Interceptor{}, gq.inters...),
 		predicates:      append([]predicate.Game{}, gq.predicates...),
@@ -355,9 +353,8 @@ func (gq *GameQuery) Clone() *GameQuery {
 		withRooms:       gq.withRooms.Clone(),
 		withRounds:      gq.withRounds.Clone(),
 		// clone intermediate query.
-		sql:    gq.sql.Clone(),
-		path:   gq.path,
-		unique: gq.unique,
+		sql:  gq.sql.Clone(),
+		path: gq.path,
 	}
 }
 
@@ -420,9 +417,9 @@ func (gq *GameQuery) WithRounds(opts ...func(*RoundQuery)) *GameQuery {
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (gq *GameQuery) GroupBy(field string, fields ...string) *GameGroupBy {
-	gq.fields = append([]string{field}, fields...)
+	gq.ctx.Fields = append([]string{field}, fields...)
 	grbuild := &GameGroupBy{build: gq}
-	grbuild.flds = &gq.fields
+	grbuild.flds = &gq.ctx.Fields
 	grbuild.label = game.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -441,10 +438,10 @@ func (gq *GameQuery) GroupBy(field string, fields ...string) *GameGroupBy {
 //		Select(game.FieldName).
 //		Scan(ctx, &v)
 func (gq *GameQuery) Select(fields ...string) *GameSelect {
-	gq.fields = append(gq.fields, fields...)
+	gq.ctx.Fields = append(gq.ctx.Fields, fields...)
 	sbuild := &GameSelect{GameQuery: gq}
 	sbuild.label = game.Label
-	sbuild.flds, sbuild.scan = &gq.fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &gq.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
@@ -464,7 +461,7 @@ func (gq *GameQuery) prepareQuery(ctx context.Context) error {
 			}
 		}
 	}
-	for _, f := range gq.fields {
+	for _, f := range gq.ctx.Fields {
 		if !game.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -595,27 +592,30 @@ func (gq *GameQuery) loadGamePlayers(ctx context.Context, query *GamePlayerQuery
 	if err := query.prepareQuery(ctx); err != nil {
 		return err
 	}
-	neighbors, err := query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
-		assign := spec.Assign
-		values := spec.ScanValues
-		spec.ScanValues = func(columns []string) ([]any, error) {
-			values, err := values(columns[1:])
-			if err != nil {
-				return nil, err
+	qr := QuerierFunc(func(ctx context.Context, q Query) (Value, error) {
+		return query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
+			assign := spec.Assign
+			values := spec.ScanValues
+			spec.ScanValues = func(columns []string) ([]any, error) {
+				values, err := values(columns[1:])
+				if err != nil {
+					return nil, err
+				}
+				return append([]any{new(uuid.UUID)}, values...), nil
 			}
-			return append([]any{new(uuid.UUID)}, values...), nil
-		}
-		spec.Assign = func(columns []string, values []any) error {
-			outValue := *values[0].(*uuid.UUID)
-			inValue := *values[1].(*uuid.UUID)
-			if nids[inValue] == nil {
-				nids[inValue] = map[*Game]struct{}{byID[outValue]: {}}
-				return assign(columns[1:], values[1:])
+			spec.Assign = func(columns []string, values []any) error {
+				outValue := *values[0].(*uuid.UUID)
+				inValue := *values[1].(*uuid.UUID)
+				if nids[inValue] == nil {
+					nids[inValue] = map[*Game]struct{}{byID[outValue]: {}}
+					return assign(columns[1:], values[1:])
+				}
+				nids[inValue][byID[outValue]] = struct{}{}
+				return nil
 			}
-			nids[inValue][byID[outValue]] = struct{}{}
-			return nil
-		}
+		})
 	})
+	neighbors, err := withInterceptors[[]*GamePlayer](ctx, query, qr, query.inters)
 	if err != nil {
 		return err
 	}
@@ -642,6 +642,9 @@ func (gq *GameQuery) loadRooms(ctx context.Context, query *RoomQuery, nodes []*G
 			ids = append(ids, fk)
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
 	}
 	query.Where(room.IDIn(ids...))
 	neighbors, err := query.All(ctx)
@@ -693,30 +696,22 @@ func (gq *GameQuery) loadRounds(ctx context.Context, query *RoundQuery, nodes []
 
 func (gq *GameQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := gq.querySpec()
-	_spec.Node.Columns = gq.fields
-	if len(gq.fields) > 0 {
-		_spec.Unique = gq.unique != nil && *gq.unique
+	_spec.Node.Columns = gq.ctx.Fields
+	if len(gq.ctx.Fields) > 0 {
+		_spec.Unique = gq.ctx.Unique != nil && *gq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, gq.driver, _spec)
 }
 
 func (gq *GameQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   game.Table,
-			Columns: game.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: game.FieldID,
-			},
-		},
-		From:   gq.sql,
-		Unique: true,
-	}
-	if unique := gq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(game.Table, game.Columns, sqlgraph.NewFieldSpec(game.FieldID, field.TypeUUID))
+	_spec.From = gq.sql
+	if unique := gq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if gq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := gq.fields; len(fields) > 0 {
+	if fields := gq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, game.FieldID)
 		for i := range fields {
@@ -732,10 +727,10 @@ func (gq *GameQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := gq.limit; limit != nil {
+	if limit := gq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := gq.offset; offset != nil {
+	if offset := gq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := gq.order; len(ps) > 0 {
@@ -751,7 +746,7 @@ func (gq *GameQuery) querySpec() *sqlgraph.QuerySpec {
 func (gq *GameQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(gq.driver.Dialect())
 	t1 := builder.Table(game.Table)
-	columns := gq.fields
+	columns := gq.ctx.Fields
 	if len(columns) == 0 {
 		columns = game.Columns
 	}
@@ -760,7 +755,7 @@ func (gq *GameQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = gq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if gq.unique != nil && *gq.unique {
+	if gq.ctx.Unique != nil && *gq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range gq.predicates {
@@ -769,12 +764,12 @@ func (gq *GameQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range gq.order {
 		p(selector)
 	}
-	if offset := gq.offset; offset != nil {
+	if offset := gq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := gq.limit; limit != nil {
+	if limit := gq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -794,7 +789,7 @@ func (ggb *GameGroupBy) Aggregate(fns ...AggregateFunc) *GameGroupBy {
 
 // Scan applies the selector query and scans the result into the given value.
 func (ggb *GameGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeGame, "GroupBy")
+	ctx = setContextOp(ctx, ggb.build.ctx, "GroupBy")
 	if err := ggb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
@@ -842,7 +837,7 @@ func (gs *GameSelect) Aggregate(fns ...AggregateFunc) *GameSelect {
 
 // Scan applies the selector query and scans the result into the given value.
 func (gs *GameSelect) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeGame, "Select")
+	ctx = setContextOp(ctx, gs.ctx, "Select")
 	if err := gs.prepareQuery(ctx); err != nil {
 		return err
 	}

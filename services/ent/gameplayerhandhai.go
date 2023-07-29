@@ -102,14 +102,14 @@ func (gphh *GamePlayerHandHai) assignValues(columns []string, values []any) erro
 
 // QueryTurn queries the "turn" edge of the GamePlayerHandHai entity.
 func (gphh *GamePlayerHandHai) QueryTurn() *TurnQuery {
-	return (&GamePlayerHandHaiClient{config: gphh.config}).QueryTurn(gphh)
+	return NewGamePlayerHandHaiClient(gphh.config).QueryTurn(gphh)
 }
 
 // Update returns a builder for updating this GamePlayerHandHai.
 // Note that you need to call GamePlayerHandHai.Unwrap() before calling this method if this GamePlayerHandHai
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (gphh *GamePlayerHandHai) Update() *GamePlayerHandHaiUpdateOne {
-	return (&GamePlayerHandHaiClient{config: gphh.config}).UpdateOne(gphh)
+	return NewGamePlayerHandHaiClient(gphh.config).UpdateOne(gphh)
 }
 
 // Unwrap unwraps the GamePlayerHandHai entity that was returned from a transaction after it was closed,
@@ -136,9 +136,3 @@ func (gphh *GamePlayerHandHai) String() string {
 
 // GamePlayerHandHais is a parsable slice of GamePlayerHandHai.
 type GamePlayerHandHais []*GamePlayerHandHai
-
-func (gphh GamePlayerHandHais) config(cfg config) {
-	for _i := range gphh {
-		gphh[_i].config = cfg
-	}
-}

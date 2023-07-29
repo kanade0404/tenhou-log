@@ -6,7 +6,7 @@ resource "google_cloud_run_service" "run" {
     spec {
       service_account_name = var.service_account_name
       containers {
-        image = "${var.image_name}:latest"
+        image = var.image_name
         ports {
           container_port = var.port
           name           = "http1"
@@ -68,6 +68,19 @@ resource "google_cloud_run_service" "run" {
       template[0].metadata[0].annotations["run.googleapis.com/client-name"],
       template[0].metadata[0].annotations["run.googleapis.com/client-version"],
       template[0].metadata[0].annotations["run.googleapis.com/sandbox"],
+      template[0].metadata[0].labels["cloud.googleapis.com/startupProbeType"],
     ]
+  }
+}
+
+resource "google_cloud_run_domain_mapping" "domain" {
+  for_each = toset(var.mapping_domains)
+  location = var.location
+  name     = each.value
+  metadata {
+    namespace = var.PROJECT_ID
+  }
+  spec {
+    route_name = google_cloud_run_service.run.name
   }
 }

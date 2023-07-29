@@ -20,11 +20,8 @@ import (
 // CompressedMJLogQuery is the builder for querying CompressedMJLog entities.
 type CompressedMJLogQuery struct {
 	config
-	limit          *int
-	offset         *int
-	unique         *bool
+	ctx            *QueryContext
 	order          []OrderFunc
-	fields         []string
 	inters         []Interceptor
 	predicates     []predicate.CompressedMJLog
 	withMjlogFiles *MJLogFileQuery
@@ -41,20 +38,20 @@ func (cmlq *CompressedMJLogQuery) Where(ps ...predicate.CompressedMJLog) *Compre
 
 // Limit the number of records to be returned by this query.
 func (cmlq *CompressedMJLogQuery) Limit(limit int) *CompressedMJLogQuery {
-	cmlq.limit = &limit
+	cmlq.ctx.Limit = &limit
 	return cmlq
 }
 
 // Offset to start from.
 func (cmlq *CompressedMJLogQuery) Offset(offset int) *CompressedMJLogQuery {
-	cmlq.offset = &offset
+	cmlq.ctx.Offset = &offset
 	return cmlq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (cmlq *CompressedMJLogQuery) Unique(unique bool) *CompressedMJLogQuery {
-	cmlq.unique = &unique
+	cmlq.ctx.Unique = &unique
 	return cmlq
 }
 
@@ -89,7 +86,7 @@ func (cmlq *CompressedMJLogQuery) QueryMjlogFiles() *MJLogFileQuery {
 // First returns the first CompressedMJLog entity from the query.
 // Returns a *NotFoundError when no CompressedMJLog was found.
 func (cmlq *CompressedMJLogQuery) First(ctx context.Context) (*CompressedMJLog, error) {
-	nodes, err := cmlq.Limit(1).All(newQueryContext(ctx, TypeCompressedMJLog, "First"))
+	nodes, err := cmlq.Limit(1).All(setContextOp(ctx, cmlq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +109,7 @@ func (cmlq *CompressedMJLogQuery) FirstX(ctx context.Context) *CompressedMJLog {
 // Returns a *NotFoundError when no CompressedMJLog ID was found.
 func (cmlq *CompressedMJLogQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = cmlq.Limit(1).IDs(newQueryContext(ctx, TypeCompressedMJLog, "FirstID")); err != nil {
+	if ids, err = cmlq.Limit(1).IDs(setContextOp(ctx, cmlq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -135,7 +132,7 @@ func (cmlq *CompressedMJLogQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one CompressedMJLog entity is found.
 // Returns a *NotFoundError when no CompressedMJLog entities are found.
 func (cmlq *CompressedMJLogQuery) Only(ctx context.Context) (*CompressedMJLog, error) {
-	nodes, err := cmlq.Limit(2).All(newQueryContext(ctx, TypeCompressedMJLog, "Only"))
+	nodes, err := cmlq.Limit(2).All(setContextOp(ctx, cmlq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +160,7 @@ func (cmlq *CompressedMJLogQuery) OnlyX(ctx context.Context) *CompressedMJLog {
 // Returns a *NotFoundError when no entities are found.
 func (cmlq *CompressedMJLogQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = cmlq.Limit(2).IDs(newQueryContext(ctx, TypeCompressedMJLog, "OnlyID")); err != nil {
+	if ids, err = cmlq.Limit(2).IDs(setContextOp(ctx, cmlq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -188,7 +185,7 @@ func (cmlq *CompressedMJLogQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of CompressedMJLogs.
 func (cmlq *CompressedMJLogQuery) All(ctx context.Context) ([]*CompressedMJLog, error) {
-	ctx = newQueryContext(ctx, TypeCompressedMJLog, "All")
+	ctx = setContextOp(ctx, cmlq.ctx, "All")
 	if err := cmlq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
@@ -206,10 +203,12 @@ func (cmlq *CompressedMJLogQuery) AllX(ctx context.Context) []*CompressedMJLog {
 }
 
 // IDs executes the query and returns a list of CompressedMJLog IDs.
-func (cmlq *CompressedMJLogQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	ctx = newQueryContext(ctx, TypeCompressedMJLog, "IDs")
-	if err := cmlq.Select(compressedmjlog.FieldID).Scan(ctx, &ids); err != nil {
+func (cmlq *CompressedMJLogQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if cmlq.ctx.Unique == nil && cmlq.path != nil {
+		cmlq.Unique(true)
+	}
+	ctx = setContextOp(ctx, cmlq.ctx, "IDs")
+	if err = cmlq.Select(compressedmjlog.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -226,7 +225,7 @@ func (cmlq *CompressedMJLogQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (cmlq *CompressedMJLogQuery) Count(ctx context.Context) (int, error) {
-	ctx = newQueryContext(ctx, TypeCompressedMJLog, "Count")
+	ctx = setContextOp(ctx, cmlq.ctx, "Count")
 	if err := cmlq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
@@ -244,7 +243,7 @@ func (cmlq *CompressedMJLogQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (cmlq *CompressedMJLogQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = newQueryContext(ctx, TypeCompressedMJLog, "Exist")
+	ctx = setContextOp(ctx, cmlq.ctx, "Exist")
 	switch _, err := cmlq.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
@@ -272,16 +271,14 @@ func (cmlq *CompressedMJLogQuery) Clone() *CompressedMJLogQuery {
 	}
 	return &CompressedMJLogQuery{
 		config:         cmlq.config,
-		limit:          cmlq.limit,
-		offset:         cmlq.offset,
+		ctx:            cmlq.ctx.Clone(),
 		order:          append([]OrderFunc{}, cmlq.order...),
 		inters:         append([]Interceptor{}, cmlq.inters...),
 		predicates:     append([]predicate.CompressedMJLog{}, cmlq.predicates...),
 		withMjlogFiles: cmlq.withMjlogFiles.Clone(),
 		// clone intermediate query.
-		sql:    cmlq.sql.Clone(),
-		path:   cmlq.path,
-		unique: cmlq.unique,
+		sql:  cmlq.sql.Clone(),
+		path: cmlq.path,
 	}
 }
 
@@ -311,9 +308,9 @@ func (cmlq *CompressedMJLogQuery) WithMjlogFiles(opts ...func(*MJLogFileQuery)) 
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (cmlq *CompressedMJLogQuery) GroupBy(field string, fields ...string) *CompressedMJLogGroupBy {
-	cmlq.fields = append([]string{field}, fields...)
+	cmlq.ctx.Fields = append([]string{field}, fields...)
 	grbuild := &CompressedMJLogGroupBy{build: cmlq}
-	grbuild.flds = &cmlq.fields
+	grbuild.flds = &cmlq.ctx.Fields
 	grbuild.label = compressedmjlog.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -332,10 +329,10 @@ func (cmlq *CompressedMJLogQuery) GroupBy(field string, fields ...string) *Compr
 //		Select(compressedmjlog.FieldName).
 //		Scan(ctx, &v)
 func (cmlq *CompressedMJLogQuery) Select(fields ...string) *CompressedMJLogSelect {
-	cmlq.fields = append(cmlq.fields, fields...)
+	cmlq.ctx.Fields = append(cmlq.ctx.Fields, fields...)
 	sbuild := &CompressedMJLogSelect{CompressedMJLogQuery: cmlq}
 	sbuild.label = compressedmjlog.Label
-	sbuild.flds, sbuild.scan = &cmlq.fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &cmlq.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
@@ -355,7 +352,7 @@ func (cmlq *CompressedMJLogQuery) prepareQuery(ctx context.Context) error {
 			}
 		}
 	}
-	for _, f := range cmlq.fields {
+	for _, f := range cmlq.ctx.Fields {
 		if !compressedmjlog.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -436,30 +433,22 @@ func (cmlq *CompressedMJLogQuery) loadMjlogFiles(ctx context.Context, query *MJL
 
 func (cmlq *CompressedMJLogQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := cmlq.querySpec()
-	_spec.Node.Columns = cmlq.fields
-	if len(cmlq.fields) > 0 {
-		_spec.Unique = cmlq.unique != nil && *cmlq.unique
+	_spec.Node.Columns = cmlq.ctx.Fields
+	if len(cmlq.ctx.Fields) > 0 {
+		_spec.Unique = cmlq.ctx.Unique != nil && *cmlq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, cmlq.driver, _spec)
 }
 
 func (cmlq *CompressedMJLogQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   compressedmjlog.Table,
-			Columns: compressedmjlog.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: compressedmjlog.FieldID,
-			},
-		},
-		From:   cmlq.sql,
-		Unique: true,
-	}
-	if unique := cmlq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(compressedmjlog.Table, compressedmjlog.Columns, sqlgraph.NewFieldSpec(compressedmjlog.FieldID, field.TypeUUID))
+	_spec.From = cmlq.sql
+	if unique := cmlq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if cmlq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := cmlq.fields; len(fields) > 0 {
+	if fields := cmlq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, compressedmjlog.FieldID)
 		for i := range fields {
@@ -475,10 +464,10 @@ func (cmlq *CompressedMJLogQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := cmlq.limit; limit != nil {
+	if limit := cmlq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := cmlq.offset; offset != nil {
+	if offset := cmlq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := cmlq.order; len(ps) > 0 {
@@ -494,7 +483,7 @@ func (cmlq *CompressedMJLogQuery) querySpec() *sqlgraph.QuerySpec {
 func (cmlq *CompressedMJLogQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(cmlq.driver.Dialect())
 	t1 := builder.Table(compressedmjlog.Table)
-	columns := cmlq.fields
+	columns := cmlq.ctx.Fields
 	if len(columns) == 0 {
 		columns = compressedmjlog.Columns
 	}
@@ -503,7 +492,7 @@ func (cmlq *CompressedMJLogQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = cmlq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if cmlq.unique != nil && *cmlq.unique {
+	if cmlq.ctx.Unique != nil && *cmlq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range cmlq.predicates {
@@ -512,12 +501,12 @@ func (cmlq *CompressedMJLogQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range cmlq.order {
 		p(selector)
 	}
-	if offset := cmlq.offset; offset != nil {
+	if offset := cmlq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := cmlq.limit; limit != nil {
+	if limit := cmlq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -537,7 +526,7 @@ func (cmlgb *CompressedMJLogGroupBy) Aggregate(fns ...AggregateFunc) *Compressed
 
 // Scan applies the selector query and scans the result into the given value.
 func (cmlgb *CompressedMJLogGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeCompressedMJLog, "GroupBy")
+	ctx = setContextOp(ctx, cmlgb.build.ctx, "GroupBy")
 	if err := cmlgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
@@ -585,7 +574,7 @@ func (cmls *CompressedMJLogSelect) Aggregate(fns ...AggregateFunc) *CompressedMJ
 
 // Scan applies the selector query and scans the result into the given value.
 func (cmls *CompressedMJLogSelect) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeCompressedMJLog, "Select")
+	ctx = setContextOp(ctx, cmls.ctx, "Select")
 	if err := cmls.prepareQuery(ctx); err != nil {
 		return err
 	}

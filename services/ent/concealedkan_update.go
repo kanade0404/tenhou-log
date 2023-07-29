@@ -87,16 +87,7 @@ func (cku *ConcealedKanUpdate) ExecX(ctx context.Context) {
 }
 
 func (cku *ConcealedKanUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   concealedkan.Table,
-			Columns: concealedkan.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: concealedkan.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(concealedkan.Table, concealedkan.Columns, sqlgraph.NewFieldSpec(concealedkan.FieldID, field.TypeUUID))
 	if ps := cku.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -112,10 +103,7 @@ func (cku *ConcealedKanUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{concealedkan.CallColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: call.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(call.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -128,10 +116,7 @@ func (cku *ConcealedKanUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{concealedkan.CallColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: call.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(call.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -189,6 +174,12 @@ func (ckuo *ConcealedKanUpdateOne) ClearCall() *ConcealedKanUpdateOne {
 	return ckuo
 }
 
+// Where appends a list predicates to the ConcealedKanUpdate builder.
+func (ckuo *ConcealedKanUpdateOne) Where(ps ...predicate.ConcealedKan) *ConcealedKanUpdateOne {
+	ckuo.mutation.Where(ps...)
+	return ckuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (ckuo *ConcealedKanUpdateOne) Select(field string, fields ...string) *ConcealedKanUpdateOne {
@@ -224,16 +215,7 @@ func (ckuo *ConcealedKanUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (ckuo *ConcealedKanUpdateOne) sqlSave(ctx context.Context) (_node *ConcealedKan, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   concealedkan.Table,
-			Columns: concealedkan.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: concealedkan.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(concealedkan.Table, concealedkan.Columns, sqlgraph.NewFieldSpec(concealedkan.FieldID, field.TypeUUID))
 	id, ok := ckuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "ConcealedKan.id" for update`)}
@@ -266,10 +248,7 @@ func (ckuo *ConcealedKanUpdateOne) sqlSave(ctx context.Context) (_node *Conceale
 			Columns: []string{concealedkan.CallColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: call.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(call.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -282,10 +261,7 @@ func (ckuo *ConcealedKanUpdateOne) sqlSave(ctx context.Context) (_node *Conceale
 			Columns: []string{concealedkan.CallColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: call.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(call.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

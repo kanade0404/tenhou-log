@@ -69,7 +69,11 @@ locals {
     "cloudscheduler.googleapis.com",
     // Eventarc API
     "eventarc.googleapis.com",
+    // Secret Manager API
     "secretmanager.googleapis.com",
+    // Service Networking API
     "servicenetworking.googleapis.com",
+    // Dataflow API
+    "dataflow.googleapis.com"
   ]
 }

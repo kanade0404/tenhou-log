@@ -139,13 +139,7 @@ func (gppc *GamePlayerPointCreate) sqlSave(ctx context.Context) (*GamePlayerPoin
 func (gppc *GamePlayerPointCreate) createSpec() (*GamePlayerPoint, *sqlgraph.CreateSpec) {
 	var (
 		_node = &GamePlayerPoint{config: gppc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: gameplayerpoint.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: gameplayerpoint.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(gameplayerpoint.Table, sqlgraph.NewFieldSpec(gameplayerpoint.FieldID, field.TypeUUID))
 	)
 	_spec.OnConflict = gppc.conflict
 	if id, ok := gppc.mutation.ID(); ok {
@@ -164,10 +158,7 @@ func (gppc *GamePlayerPointCreate) createSpec() (*GamePlayerPoint, *sqlgraph.Cre
 			Columns: gameplayerpoint.TurnsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: turn.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(turn.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

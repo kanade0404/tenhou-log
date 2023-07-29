@@ -40,15 +40,7 @@ func (cd *CallDelete) ExecX(ctx context.Context) int {
 }
 
 func (cd *CallDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: call.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: call.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(call.Table, sqlgraph.NewFieldSpec(call.FieldID, field.TypeUUID))
 	if ps := cd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -69,6 +61,12 @@ type CallDeleteOne struct {
 	cd *CallDelete
 }
 
+// Where appends a list predicates to the CallDelete builder.
+func (cdo *CallDeleteOne) Where(ps ...predicate.Call) *CallDeleteOne {
+	cdo.cd.mutation.Where(ps...)
+	return cdo
+}
+
 // Exec executes the deletion query.
 func (cdo *CallDeleteOne) Exec(ctx context.Context) error {
 	n, err := cdo.cd.Exec(ctx)
@@ -84,5 +82,7 @@ func (cdo *CallDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (cdo *CallDeleteOne) ExecX(ctx context.Context) {
-	cdo.cd.ExecX(ctx)
+	if err := cdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

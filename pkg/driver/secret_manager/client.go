@@ -1,11 +1,12 @@
 package secret_manager
 
 import (
-	secretmanager "cloud.google.com/go/secretmanager/apiv1"
-	"cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
 	"context"
 	"fmt"
 	"hash/crc32"
+
+	secretmanager "cloud.google.com/go/secretmanager/apiv1"
+	"cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
 )
 
 type SecretManager struct {

@@ -40,15 +40,7 @@ func (dd *DanDelete) ExecX(ctx context.Context) int {
 }
 
 func (dd *DanDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: dan.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: dan.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(dan.Table, sqlgraph.NewFieldSpec(dan.FieldID, field.TypeUUID))
 	if ps := dd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -69,6 +61,12 @@ type DanDeleteOne struct {
 	dd *DanDelete
 }
 
+// Where appends a list predicates to the DanDelete builder.
+func (ddo *DanDeleteOne) Where(ps ...predicate.Dan) *DanDeleteOne {
+	ddo.dd.mutation.Where(ps...)
+	return ddo
+}
+
 // Exec executes the deletion query.
 func (ddo *DanDeleteOne) Exec(ctx context.Context) error {
 	n, err := ddo.dd.Exec(ctx)
@@ -84,5 +82,7 @@ func (ddo *DanDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (ddo *DanDeleteOne) ExecX(ctx context.Context) {
-	ddo.dd.ExecX(ctx)
+	if err := ddo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

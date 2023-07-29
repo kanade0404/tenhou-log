@@ -33,32 +33,32 @@ module "ns_record" {
   rrdatas       = module.dns.name_servers
   ttl           = 21600
 }
-module "a_record" {
-  source        = "../../modules/dns/record_set"
-  PROJECT_ID    = var.PROJECT_ID
-  name          = "www.${module.dns.dns_name}"
-  dns_zone_name = "touka-ryuumonbuchi"
-  record_type   = "A"
-  rrdatas       = [module.lb-http-serverless_neg.load_balancer_ip]
-  ttl           = 21600
-}
-
-module "a__record" {
-  source        = "../../modules/dns/record_set"
-  PROJECT_ID    = var.PROJECT_ID
-  name          = module.dns.dns_name
-  dns_zone_name = "touka-ryuumonbuchi"
-  record_type   = "A"
-  rrdatas       = [module.lb-http-serverless_neg.load_balancer_ip]
-  ttl           = 21600
-}
-module "api_a_record" {
-  source        = "../../modules/dns/record_set"
-  PROJECT_ID    = var.PROJECT_ID
-  name          = "api.${module.dns.dns_name}"
-  dns_zone_name = "touka-ryuumonbuchi"
-  record_type   = "A"
-  rrdatas       = [module.lb-http-serverless_neg.load_balancer_ip]
-  ttl           = 21600
-}
-
+#module "a_record" {
+#  source        = "../../modules/dns/record_set"
+#  PROJECT_ID    = var.PROJECT_ID
+#  name          = "www.${module.dns.dns_name}"
+#  dns_zone_name = "touka-ryuumonbuchi"
+#  record_type   = "A"
+#  rrdatas       = [module.lb-http-serverless_neg.load_balancer_ip]
+#  ttl           = 21600
+#}
+#
+#module "a__record" {
+#  source        = "../../modules/dns/record_set"
+#  PROJECT_ID    = var.PROJECT_ID
+#  name          = module.dns.dns_name
+#  dns_zone_name = "touka-ryuumonbuchi"
+#  record_type   = "A"
+#  rrdatas       = [module.lb-http-serverless_neg.load_balancer_ip]
+#  ttl           = 21600
+#}
+#module "api_a_record" {
+#  source        = "../../modules/dns/record_set"
+#  PROJECT_ID    = var.PROJECT_ID
+#  name          = "api.${module.dns.dns_name}"
+#  dns_zone_name = "touka-ryuumonbuchi"
+#  record_type   = "A"
+#  rrdatas       = [module.lb-http-serverless_neg.load_balancer_ip]
+#  ttl           = 21600
+#}
+#

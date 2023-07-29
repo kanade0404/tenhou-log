@@ -90,16 +90,7 @@ func (gphhu *GamePlayerHandHaiUpdate) sqlSave(ctx context.Context) (n int, err e
 	if err := gphhu.check(); err != nil {
 		return n, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   gameplayerhandhai.Table,
-			Columns: gameplayerhandhai.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: gameplayerhandhai.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(gameplayerhandhai.Table, gameplayerhandhai.Columns, sqlgraph.NewFieldSpec(gameplayerhandhai.FieldID, field.TypeUUID))
 	if ps := gphhu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -115,10 +106,7 @@ func (gphhu *GamePlayerHandHaiUpdate) sqlSave(ctx context.Context) (n int, err e
 			Columns: []string{gameplayerhandhai.TurnColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: turn.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(turn.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -131,10 +119,7 @@ func (gphhu *GamePlayerHandHaiUpdate) sqlSave(ctx context.Context) (n int, err e
 			Columns: []string{gameplayerhandhai.TurnColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: turn.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(turn.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -184,6 +169,12 @@ func (gphhuo *GamePlayerHandHaiUpdateOne) ClearTurn() *GamePlayerHandHaiUpdateOn
 	return gphhuo
 }
 
+// Where appends a list predicates to the GamePlayerHandHaiUpdate builder.
+func (gphhuo *GamePlayerHandHaiUpdateOne) Where(ps ...predicate.GamePlayerHandHai) *GamePlayerHandHaiUpdateOne {
+	gphhuo.mutation.Where(ps...)
+	return gphhuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (gphhuo *GamePlayerHandHaiUpdateOne) Select(field string, fields ...string) *GamePlayerHandHaiUpdateOne {
@@ -230,16 +221,7 @@ func (gphhuo *GamePlayerHandHaiUpdateOne) sqlSave(ctx context.Context) (_node *G
 	if err := gphhuo.check(); err != nil {
 		return _node, err
 	}
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   gameplayerhandhai.Table,
-			Columns: gameplayerhandhai.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: gameplayerhandhai.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(gameplayerhandhai.Table, gameplayerhandhai.Columns, sqlgraph.NewFieldSpec(gameplayerhandhai.FieldID, field.TypeUUID))
 	id, ok := gphhuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "GamePlayerHandHai.id" for update`)}
@@ -272,10 +254,7 @@ func (gphhuo *GamePlayerHandHaiUpdateOne) sqlSave(ctx context.Context) (_node *G
 			Columns: []string{gameplayerhandhai.TurnColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: turn.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(turn.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -288,10 +267,7 @@ func (gphhuo *GamePlayerHandHaiUpdateOne) sqlSave(ctx context.Context) (_node *G
 			Columns: []string{gameplayerhandhai.TurnColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: turn.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(turn.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

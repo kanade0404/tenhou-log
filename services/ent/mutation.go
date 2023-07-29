@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"entgo.io/ent"
+	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 	"github.com/kanade0404/tenhou-log/services/ent/call"
 	"github.com/kanade0404/tenhou-log/services/ent/chakan"
@@ -35,9 +37,6 @@ import (
 	"github.com/kanade0404/tenhou-log/services/ent/round"
 	"github.com/kanade0404/tenhou-log/services/ent/turn"
 	"github.com/kanade0404/tenhou-log/services/ent/win"
-
-	"entgo.io/ent"
-	"entgo.io/ent/dialect/sql"
 )
 
 const (

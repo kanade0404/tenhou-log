@@ -129,13 +129,7 @@ func (pc *PonCreate) sqlSave(ctx context.Context) (*Pon, error) {
 func (pc *PonCreate) createSpec() (*Pon, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Pon{config: pc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: pon.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: pon.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(pon.Table, sqlgraph.NewFieldSpec(pon.FieldID, field.TypeUUID))
 	)
 	_spec.OnConflict = pc.conflict
 	if id, ok := pc.mutation.ID(); ok {
@@ -150,10 +144,7 @@ func (pc *PonCreate) createSpec() (*Pon, *sqlgraph.CreateSpec) {
 			Columns: []string{pon.CallColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: call.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(call.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

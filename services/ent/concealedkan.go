@@ -78,14 +78,14 @@ func (ck *ConcealedKan) assignValues(columns []string, values []any) error {
 
 // QueryCall queries the "call" edge of the ConcealedKan entity.
 func (ck *ConcealedKan) QueryCall() *CallQuery {
-	return (&ConcealedKanClient{config: ck.config}).QueryCall(ck)
+	return NewConcealedKanClient(ck.config).QueryCall(ck)
 }
 
 // Update returns a builder for updating this ConcealedKan.
 // Note that you need to call ConcealedKan.Unwrap() before calling this method if this ConcealedKan
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (ck *ConcealedKan) Update() *ConcealedKanUpdateOne {
-	return (&ConcealedKanClient{config: ck.config}).UpdateOne(ck)
+	return NewConcealedKanClient(ck.config).UpdateOne(ck)
 }
 
 // Unwrap unwraps the ConcealedKan entity that was returned from a transaction after it was closed,
@@ -110,9 +110,3 @@ func (ck *ConcealedKan) String() string {
 
 // ConcealedKans is a parsable slice of ConcealedKan.
 type ConcealedKans []*ConcealedKan
-
-func (ck ConcealedKans) config(cfg config) {
-	for _i := range ck {
-		ck[_i].config = cfg
-	}
-}

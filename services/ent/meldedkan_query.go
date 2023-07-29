@@ -20,11 +20,8 @@ import (
 // MeldedKanQuery is the builder for querying MeldedKan entities.
 type MeldedKanQuery struct {
 	config
-	limit      *int
-	offset     *int
-	unique     *bool
+	ctx        *QueryContext
 	order      []OrderFunc
-	fields     []string
 	inters     []Interceptor
 	predicates []predicate.MeldedKan
 	withCall   *CallQuery
@@ -41,20 +38,20 @@ func (mkq *MeldedKanQuery) Where(ps ...predicate.MeldedKan) *MeldedKanQuery {
 
 // Limit the number of records to be returned by this query.
 func (mkq *MeldedKanQuery) Limit(limit int) *MeldedKanQuery {
-	mkq.limit = &limit
+	mkq.ctx.Limit = &limit
 	return mkq
 }
 
 // Offset to start from.
 func (mkq *MeldedKanQuery) Offset(offset int) *MeldedKanQuery {
-	mkq.offset = &offset
+	mkq.ctx.Offset = &offset
 	return mkq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (mkq *MeldedKanQuery) Unique(unique bool) *MeldedKanQuery {
-	mkq.unique = &unique
+	mkq.ctx.Unique = &unique
 	return mkq
 }
 
@@ -89,7 +86,7 @@ func (mkq *MeldedKanQuery) QueryCall() *CallQuery {
 // First returns the first MeldedKan entity from the query.
 // Returns a *NotFoundError when no MeldedKan was found.
 func (mkq *MeldedKanQuery) First(ctx context.Context) (*MeldedKan, error) {
-	nodes, err := mkq.Limit(1).All(newQueryContext(ctx, TypeMeldedKan, "First"))
+	nodes, err := mkq.Limit(1).All(setContextOp(ctx, mkq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +109,7 @@ func (mkq *MeldedKanQuery) FirstX(ctx context.Context) *MeldedKan {
 // Returns a *NotFoundError when no MeldedKan ID was found.
 func (mkq *MeldedKanQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = mkq.Limit(1).IDs(newQueryContext(ctx, TypeMeldedKan, "FirstID")); err != nil {
+	if ids, err = mkq.Limit(1).IDs(setContextOp(ctx, mkq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -135,7 +132,7 @@ func (mkq *MeldedKanQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one MeldedKan entity is found.
 // Returns a *NotFoundError when no MeldedKan entities are found.
 func (mkq *MeldedKanQuery) Only(ctx context.Context) (*MeldedKan, error) {
-	nodes, err := mkq.Limit(2).All(newQueryContext(ctx, TypeMeldedKan, "Only"))
+	nodes, err := mkq.Limit(2).All(setContextOp(ctx, mkq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +160,7 @@ func (mkq *MeldedKanQuery) OnlyX(ctx context.Context) *MeldedKan {
 // Returns a *NotFoundError when no entities are found.
 func (mkq *MeldedKanQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = mkq.Limit(2).IDs(newQueryContext(ctx, TypeMeldedKan, "OnlyID")); err != nil {
+	if ids, err = mkq.Limit(2).IDs(setContextOp(ctx, mkq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -188,7 +185,7 @@ func (mkq *MeldedKanQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of MeldedKans.
 func (mkq *MeldedKanQuery) All(ctx context.Context) ([]*MeldedKan, error) {
-	ctx = newQueryContext(ctx, TypeMeldedKan, "All")
+	ctx = setContextOp(ctx, mkq.ctx, "All")
 	if err := mkq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
@@ -206,10 +203,12 @@ func (mkq *MeldedKanQuery) AllX(ctx context.Context) []*MeldedKan {
 }
 
 // IDs executes the query and returns a list of MeldedKan IDs.
-func (mkq *MeldedKanQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	ctx = newQueryContext(ctx, TypeMeldedKan, "IDs")
-	if err := mkq.Select(meldedkan.FieldID).Scan(ctx, &ids); err != nil {
+func (mkq *MeldedKanQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if mkq.ctx.Unique == nil && mkq.path != nil {
+		mkq.Unique(true)
+	}
+	ctx = setContextOp(ctx, mkq.ctx, "IDs")
+	if err = mkq.Select(meldedkan.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -226,7 +225,7 @@ func (mkq *MeldedKanQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (mkq *MeldedKanQuery) Count(ctx context.Context) (int, error) {
-	ctx = newQueryContext(ctx, TypeMeldedKan, "Count")
+	ctx = setContextOp(ctx, mkq.ctx, "Count")
 	if err := mkq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
@@ -244,7 +243,7 @@ func (mkq *MeldedKanQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (mkq *MeldedKanQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = newQueryContext(ctx, TypeMeldedKan, "Exist")
+	ctx = setContextOp(ctx, mkq.ctx, "Exist")
 	switch _, err := mkq.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
@@ -272,16 +271,14 @@ func (mkq *MeldedKanQuery) Clone() *MeldedKanQuery {
 	}
 	return &MeldedKanQuery{
 		config:     mkq.config,
-		limit:      mkq.limit,
-		offset:     mkq.offset,
+		ctx:        mkq.ctx.Clone(),
 		order:      append([]OrderFunc{}, mkq.order...),
 		inters:     append([]Interceptor{}, mkq.inters...),
 		predicates: append([]predicate.MeldedKan{}, mkq.predicates...),
 		withCall:   mkq.withCall.Clone(),
 		// clone intermediate query.
-		sql:    mkq.sql.Clone(),
-		path:   mkq.path,
-		unique: mkq.unique,
+		sql:  mkq.sql.Clone(),
+		path: mkq.path,
 	}
 }
 
@@ -299,9 +296,9 @@ func (mkq *MeldedKanQuery) WithCall(opts ...func(*CallQuery)) *MeldedKanQuery {
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
 func (mkq *MeldedKanQuery) GroupBy(field string, fields ...string) *MeldedKanGroupBy {
-	mkq.fields = append([]string{field}, fields...)
+	mkq.ctx.Fields = append([]string{field}, fields...)
 	grbuild := &MeldedKanGroupBy{build: mkq}
-	grbuild.flds = &mkq.fields
+	grbuild.flds = &mkq.ctx.Fields
 	grbuild.label = meldedkan.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -310,10 +307,10 @@ func (mkq *MeldedKanQuery) GroupBy(field string, fields ...string) *MeldedKanGro
 // Select allows the selection one or more fields/columns for the given query,
 // instead of selecting all fields in the entity.
 func (mkq *MeldedKanQuery) Select(fields ...string) *MeldedKanSelect {
-	mkq.fields = append(mkq.fields, fields...)
+	mkq.ctx.Fields = append(mkq.ctx.Fields, fields...)
 	sbuild := &MeldedKanSelect{MeldedKanQuery: mkq}
 	sbuild.label = meldedkan.Label
-	sbuild.flds, sbuild.scan = &mkq.fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &mkq.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
@@ -333,7 +330,7 @@ func (mkq *MeldedKanQuery) prepareQuery(ctx context.Context) error {
 			}
 		}
 	}
-	for _, f := range mkq.fields {
+	for _, f := range mkq.ctx.Fields {
 		if !meldedkan.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -414,30 +411,22 @@ func (mkq *MeldedKanQuery) loadCall(ctx context.Context, query *CallQuery, nodes
 
 func (mkq *MeldedKanQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := mkq.querySpec()
-	_spec.Node.Columns = mkq.fields
-	if len(mkq.fields) > 0 {
-		_spec.Unique = mkq.unique != nil && *mkq.unique
+	_spec.Node.Columns = mkq.ctx.Fields
+	if len(mkq.ctx.Fields) > 0 {
+		_spec.Unique = mkq.ctx.Unique != nil && *mkq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, mkq.driver, _spec)
 }
 
 func (mkq *MeldedKanQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   meldedkan.Table,
-			Columns: meldedkan.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: meldedkan.FieldID,
-			},
-		},
-		From:   mkq.sql,
-		Unique: true,
-	}
-	if unique := mkq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(meldedkan.Table, meldedkan.Columns, sqlgraph.NewFieldSpec(meldedkan.FieldID, field.TypeUUID))
+	_spec.From = mkq.sql
+	if unique := mkq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if mkq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := mkq.fields; len(fields) > 0 {
+	if fields := mkq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, meldedkan.FieldID)
 		for i := range fields {
@@ -453,10 +442,10 @@ func (mkq *MeldedKanQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := mkq.limit; limit != nil {
+	if limit := mkq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := mkq.offset; offset != nil {
+	if offset := mkq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := mkq.order; len(ps) > 0 {
@@ -472,7 +461,7 @@ func (mkq *MeldedKanQuery) querySpec() *sqlgraph.QuerySpec {
 func (mkq *MeldedKanQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(mkq.driver.Dialect())
 	t1 := builder.Table(meldedkan.Table)
-	columns := mkq.fields
+	columns := mkq.ctx.Fields
 	if len(columns) == 0 {
 		columns = meldedkan.Columns
 	}
@@ -481,7 +470,7 @@ func (mkq *MeldedKanQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = mkq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if mkq.unique != nil && *mkq.unique {
+	if mkq.ctx.Unique != nil && *mkq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range mkq.predicates {
@@ -490,12 +479,12 @@ func (mkq *MeldedKanQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range mkq.order {
 		p(selector)
 	}
-	if offset := mkq.offset; offset != nil {
+	if offset := mkq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := mkq.limit; limit != nil {
+	if limit := mkq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -515,7 +504,7 @@ func (mkgb *MeldedKanGroupBy) Aggregate(fns ...AggregateFunc) *MeldedKanGroupBy 
 
 // Scan applies the selector query and scans the result into the given value.
 func (mkgb *MeldedKanGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeMeldedKan, "GroupBy")
+	ctx = setContextOp(ctx, mkgb.build.ctx, "GroupBy")
 	if err := mkgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
@@ -563,7 +552,7 @@ func (mks *MeldedKanSelect) Aggregate(fns ...AggregateFunc) *MeldedKanSelect {
 
 // Scan applies the selector query and scans the result into the given value.
 func (mks *MeldedKanSelect) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeMeldedKan, "Select")
+	ctx = setContextOp(ctx, mks.ctx, "Select")
 	if err := mks.prepareQuery(ctx); err != nil {
 		return err
 	}

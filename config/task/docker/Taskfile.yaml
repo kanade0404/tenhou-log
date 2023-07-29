@@ -1,0 +1,37 @@
+version: '3'
+
+tasks:
+  up:
+    desc: Start docker compose
+    cmds:
+      - docker compose up -d
+  build:
+    desc: Build docker compose
+    cmds:
+      - docker compose build {{.SERVICE}} {{.CLI_ARGS}}
+  ps:
+    desc: Show docker compose status
+    cmds:
+      - docker compose ps
+  stop:
+    desc: Stop docker compose
+    cmds:
+      - docker compose stop {{.SERVICE}}
+  down:
+    desc: Stop docker compose
+    cmds:
+      - docker compose down
+  down-all:
+    desc: Stop docker compose
+    cmds:
+      - docker-compose down --rmi local --volumes --remove-orphans
+      - rm -rf services/database/data
+      - mkdir services/database/data
+  log:
+    desc: Show docker compose logs
+    cmds:
+      - docker compose logs {{.SERVICE}}
+  exec:
+    desc: Execute docker compose command
+    cmds:
+      - docker compose exec {{.SERVICE}} {{.CMD}}

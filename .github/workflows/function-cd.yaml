@@ -1,0 +1,51 @@
+name: Function CD
+on:
+  workflow_call:
+    inputs:
+      service_name:
+        required: true
+        type: string
+      function_name:
+        required: true
+        type: string
+      entry_point:
+        required: true
+        type: string
+env:
+  WORKDIR: service_name/${{ inputs.service_name }}
+jobs:
+  services:
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        continue-on-error: true
+      - name: Format
+        run: go fmt ./...
+        working-directory: ${{ env.WORKDIR }}
+      - name: Test
+        run: go test ./...
+        working-directory: ${{ env.WORKDIR }}
+      - name: go lint
+        run: go vet ./...
+        working-directory: ${{ env.WORKDIR }}
+      - name: Authentication Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: "projects/${{ secrets.GCP_PROJECT_NUMBER_DEV }}/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider"
+          service_account: "github-actions@${{ secrets.GCP_PROJECT_ID_DEV }}.iam.gserviceaccount.com"
+          project_id: ${{ secrets.GCP_PROJECT_ID_DEV }}
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v1'
+      - name: Deploy Function
+        run: gcloud functions deploy ${{ inputs.function_name }} --gen2 --region asia-northeast1 --runtime go120 --trigger-http --entry-point=${{ inputs.entry_point }} --source=${{ env.WORKDIR }}
+

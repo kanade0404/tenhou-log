@@ -21,11 +21,8 @@ import (
 // HandQuery is the builder for querying Hand entities.
 type HandQuery struct {
 	config
-	limit      *int
-	offset     *int
-	unique     *bool
+	ctx        *QueryContext
 	order      []OrderFunc
-	fields     []string
 	inters     []Interceptor
 	predicates []predicate.Hand
 	withRounds *RoundQuery
@@ -44,20 +41,20 @@ func (hq *HandQuery) Where(ps ...predicate.Hand) *HandQuery {
 
 // Limit the number of records to be returned by this query.
 func (hq *HandQuery) Limit(limit int) *HandQuery {
-	hq.limit = &limit
+	hq.ctx.Limit = &limit
 	return hq
 }
 
 // Offset to start from.
 func (hq *HandQuery) Offset(offset int) *HandQuery {
-	hq.offset = &offset
+	hq.ctx.Offset = &offset
 	return hq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (hq *HandQuery) Unique(unique bool) *HandQuery {
-	hq.unique = &unique
+	hq.ctx.Unique = &unique
 	return hq
 }
 
@@ -114,7 +111,7 @@ func (hq *HandQuery) QueryTurns() *TurnQuery {
 // First returns the first Hand entity from the query.
 // Returns a *NotFoundError when no Hand was found.
 func (hq *HandQuery) First(ctx context.Context) (*Hand, error) {
-	nodes, err := hq.Limit(1).All(newQueryContext(ctx, TypeHand, "First"))
+	nodes, err := hq.Limit(1).All(setContextOp(ctx, hq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +134,7 @@ func (hq *HandQuery) FirstX(ctx context.Context) *Hand {
 // Returns a *NotFoundError when no Hand ID was found.
 func (hq *HandQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = hq.Limit(1).IDs(newQueryContext(ctx, TypeHand, "FirstID")); err != nil {
+	if ids, err = hq.Limit(1).IDs(setContextOp(ctx, hq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -160,7 +157,7 @@ func (hq *HandQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one Hand entity is found.
 // Returns a *NotFoundError when no Hand entities are found.
 func (hq *HandQuery) Only(ctx context.Context) (*Hand, error) {
-	nodes, err := hq.Limit(2).All(newQueryContext(ctx, TypeHand, "Only"))
+	nodes, err := hq.Limit(2).All(setContextOp(ctx, hq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +185,7 @@ func (hq *HandQuery) OnlyX(ctx context.Context) *Hand {
 // Returns a *NotFoundError when no entities are found.
 func (hq *HandQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = hq.Limit(2).IDs(newQueryContext(ctx, TypeHand, "OnlyID")); err != nil {
+	if ids, err = hq.Limit(2).IDs(setContextOp(ctx, hq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -213,7 +210,7 @@ func (hq *HandQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of Hands.
 func (hq *HandQuery) All(ctx context.Context) ([]*Hand, error) {
-	ctx = newQueryContext(ctx, TypeHand, "All")
+	ctx = setContextOp(ctx, hq.ctx, "All")
 	if err := hq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
@@ -231,10 +228,12 @@ func (hq *HandQuery) AllX(ctx context.Context) []*Hand {
 }
 
 // IDs executes the query and returns a list of Hand IDs.
-func (hq *HandQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	ctx = newQueryContext(ctx, TypeHand, "IDs")
-	if err := hq.Select(hand.FieldID).Scan(ctx, &ids); err != nil {
+func (hq *HandQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if hq.ctx.Unique == nil && hq.path != nil {
+		hq.Unique(true)
+	}
+	ctx = setContextOp(ctx, hq.ctx, "IDs")
+	if err = hq.Select(hand.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -251,7 +250,7 @@ func (hq *HandQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (hq *HandQuery) Count(ctx context.Context) (int, error) {
-	ctx = newQueryContext(ctx, TypeHand, "Count")
+	ctx = setContextOp(ctx, hq.ctx, "Count")
 	if err := hq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
@@ -269,7 +268,7 @@ func (hq *HandQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (hq *HandQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = newQueryContext(ctx, TypeHand, "Exist")
+	ctx = setContextOp(ctx, hq.ctx, "Exist")
 	switch _, err := hq.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
@@ -297,17 +296,15 @@ func (hq *HandQuery) Clone() *HandQuery {
 	}
 	return &HandQuery{
 		config:     hq.config,
-		limit:      hq.limit,
-		offset:     hq.offset,
+		ctx:        hq.ctx.Clone(),
 		order:      append([]OrderFunc{}, hq.order...),
 		inters:     append([]Interceptor{}, hq.inters...),
 		predicates: append([]predicate.Hand{}, hq.predicates...),
 		withRounds: hq.withRounds.Clone(),
 		withTurns:  hq.withTurns.Clone(),
 		// clone intermediate query.
-		sql:    hq.sql.Clone(),
-		path:   hq.path,
-		unique: hq.unique,
+		sql:  hq.sql.Clone(),
+		path: hq.path,
 	}
 }
 
@@ -348,9 +345,9 @@ func (hq *HandQuery) WithTurns(opts ...func(*TurnQuery)) *HandQuery {
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (hq *HandQuery) GroupBy(field string, fields ...string) *HandGroupBy {
-	hq.fields = append([]string{field}, fields...)
+	hq.ctx.Fields = append([]string{field}, fields...)
 	grbuild := &HandGroupBy{build: hq}
-	grbuild.flds = &hq.fields
+	grbuild.flds = &hq.ctx.Fields
 	grbuild.label = hand.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -369,10 +366,10 @@ func (hq *HandQuery) GroupBy(field string, fields ...string) *HandGroupBy {
 //		Select(hand.FieldNum).
 //		Scan(ctx, &v)
 func (hq *HandQuery) Select(fields ...string) *HandSelect {
-	hq.fields = append(hq.fields, fields...)
+	hq.ctx.Fields = append(hq.ctx.Fields, fields...)
 	sbuild := &HandSelect{HandQuery: hq}
 	sbuild.label = hand.Label
-	sbuild.flds, sbuild.scan = &hq.fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &hq.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
@@ -392,7 +389,7 @@ func (hq *HandQuery) prepareQuery(ctx context.Context) error {
 			}
 		}
 	}
-	for _, f := range hq.fields {
+	for _, f := range hq.ctx.Fields {
 		if !hand.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -470,6 +467,9 @@ func (hq *HandQuery) loadRounds(ctx context.Context, query *RoundQuery, nodes []
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
+	if len(ids) == 0 {
+		return nil
+	}
 	query.Where(round.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -509,27 +509,30 @@ func (hq *HandQuery) loadTurns(ctx context.Context, query *TurnQuery, nodes []*H
 	if err := query.prepareQuery(ctx); err != nil {
 		return err
 	}
-	neighbors, err := query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
-		assign := spec.Assign
-		values := spec.ScanValues
-		spec.ScanValues = func(columns []string) ([]any, error) {
-			values, err := values(columns[1:])
-			if err != nil {
-				return nil, err
+	qr := QuerierFunc(func(ctx context.Context, q Query) (Value, error) {
+		return query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
+			assign := spec.Assign
+			values := spec.ScanValues
+			spec.ScanValues = func(columns []string) ([]any, error) {
+				values, err := values(columns[1:])
+				if err != nil {
+					return nil, err
+				}
+				return append([]any{new(uuid.UUID)}, values...), nil
 			}
-			return append([]any{new(uuid.UUID)}, values...), nil
-		}
-		spec.Assign = func(columns []string, values []any) error {
-			outValue := *values[0].(*uuid.UUID)
-			inValue := *values[1].(*uuid.UUID)
-			if nids[inValue] == nil {
-				nids[inValue] = map[*Hand]struct{}{byID[outValue]: {}}
-				return assign(columns[1:], values[1:])
+			spec.Assign = func(columns []string, values []any) error {
+				outValue := *values[0].(*uuid.UUID)
+				inValue := *values[1].(*uuid.UUID)
+				if nids[inValue] == nil {
+					nids[inValue] = map[*Hand]struct{}{byID[outValue]: {}}
+					return assign(columns[1:], values[1:])
+				}
+				nids[inValue][byID[outValue]] = struct{}{}
+				return nil
 			}
-			nids[inValue][byID[outValue]] = struct{}{}
-			return nil
-		}
+		})
 	})
+	neighbors, err := withInterceptors[[]*Turn](ctx, query, qr, query.inters)
 	if err != nil {
 		return err
 	}
@@ -547,30 +550,22 @@ func (hq *HandQuery) loadTurns(ctx context.Context, query *TurnQuery, nodes []*H
 
 func (hq *HandQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := hq.querySpec()
-	_spec.Node.Columns = hq.fields
-	if len(hq.fields) > 0 {
-		_spec.Unique = hq.unique != nil && *hq.unique
+	_spec.Node.Columns = hq.ctx.Fields
+	if len(hq.ctx.Fields) > 0 {
+		_spec.Unique = hq.ctx.Unique != nil && *hq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, hq.driver, _spec)
 }
 
 func (hq *HandQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   hand.Table,
-			Columns: hand.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: hand.FieldID,
-			},
-		},
-		From:   hq.sql,
-		Unique: true,
-	}
-	if unique := hq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(hand.Table, hand.Columns, sqlgraph.NewFieldSpec(hand.FieldID, field.TypeUUID))
+	_spec.From = hq.sql
+	if unique := hq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if hq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := hq.fields; len(fields) > 0 {
+	if fields := hq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, hand.FieldID)
 		for i := range fields {
@@ -586,10 +581,10 @@ func (hq *HandQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := hq.limit; limit != nil {
+	if limit := hq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := hq.offset; offset != nil {
+	if offset := hq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := hq.order; len(ps) > 0 {
@@ -605,7 +600,7 @@ func (hq *HandQuery) querySpec() *sqlgraph.QuerySpec {
 func (hq *HandQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(hq.driver.Dialect())
 	t1 := builder.Table(hand.Table)
-	columns := hq.fields
+	columns := hq.ctx.Fields
 	if len(columns) == 0 {
 		columns = hand.Columns
 	}
@@ -614,7 +609,7 @@ func (hq *HandQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = hq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if hq.unique != nil && *hq.unique {
+	if hq.ctx.Unique != nil && *hq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range hq.predicates {
@@ -623,12 +618,12 @@ func (hq *HandQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range hq.order {
 		p(selector)
 	}
-	if offset := hq.offset; offset != nil {
+	if offset := hq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := hq.limit; limit != nil {
+	if limit := hq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -648,7 +643,7 @@ func (hgb *HandGroupBy) Aggregate(fns ...AggregateFunc) *HandGroupBy {
 
 // Scan applies the selector query and scans the result into the given value.
 func (hgb *HandGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeHand, "GroupBy")
+	ctx = setContextOp(ctx, hgb.build.ctx, "GroupBy")
 	if err := hgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
@@ -696,7 +691,7 @@ func (hs *HandSelect) Aggregate(fns ...AggregateFunc) *HandSelect {
 
 // Scan applies the selector query and scans the result into the given value.
 func (hs *HandSelect) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeHand, "Select")
+	ctx = setContextOp(ctx, hs.ctx, "Select")
 	if err := hs.prepareQuery(ctx); err != nil {
 		return err
 	}

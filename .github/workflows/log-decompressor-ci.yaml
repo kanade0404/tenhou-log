@@ -1,0 +1,15 @@
+name: Log Decompressor CI
+on:
+  pull_request:
+    paths:
+      - services/log_decompressor/**
+      - pkg/**
+      - .github/workflows/log-decompressor-ci.yaml
+      - go.*
+      - '!pkg/parser/**'
+
+jobs:
+  services:
+    uses: ./.github/workflows/function-ci.yaml
+    with:
+      service_name: log_decompressor/cmd

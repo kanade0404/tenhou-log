@@ -187,16 +187,7 @@ func (tu *TurnUpdate) ExecX(ctx context.Context) {
 }
 
 func (tu *TurnUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   turn.Table,
-			Columns: turn.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: turn.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(turn.Table, turn.Columns, sqlgraph.NewFieldSpec(turn.FieldID, field.TypeUUID))
 	if ps := tu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -212,10 +203,7 @@ func (tu *TurnUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: turn.HandsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: hand.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(hand.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -228,10 +216,7 @@ func (tu *TurnUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: turn.HandsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: hand.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(hand.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -247,10 +232,7 @@ func (tu *TurnUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: turn.HandsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: hand.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(hand.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -266,10 +248,7 @@ func (tu *TurnUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: turn.GamePlayerPointsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: gameplayerpoint.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(gameplayerpoint.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -282,10 +261,7 @@ func (tu *TurnUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: turn.GamePlayerPointsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: gameplayerpoint.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(gameplayerpoint.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -301,10 +277,7 @@ func (tu *TurnUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: turn.GamePlayerPointsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: gameplayerpoint.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(gameplayerpoint.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -320,10 +293,7 @@ func (tu *TurnUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{turn.EventColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: event.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -336,10 +306,7 @@ func (tu *TurnUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{turn.EventColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: event.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -355,10 +322,7 @@ func (tu *TurnUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{turn.GameplayerhandhaiColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: gameplayerhandhai.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(gameplayerhandhai.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -371,10 +335,7 @@ func (tu *TurnUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{turn.GameplayerhandhaiColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: gameplayerhandhai.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(gameplayerhandhai.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -529,6 +490,12 @@ func (tuo *TurnUpdateOne) ClearGameplayerhandhai() *TurnUpdateOne {
 	return tuo
 }
 
+// Where appends a list predicates to the TurnUpdate builder.
+func (tuo *TurnUpdateOne) Where(ps ...predicate.Turn) *TurnUpdateOne {
+	tuo.mutation.Where(ps...)
+	return tuo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (tuo *TurnUpdateOne) Select(field string, fields ...string) *TurnUpdateOne {
@@ -564,16 +531,7 @@ func (tuo *TurnUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (tuo *TurnUpdateOne) sqlSave(ctx context.Context) (_node *Turn, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   turn.Table,
-			Columns: turn.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: turn.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(turn.Table, turn.Columns, sqlgraph.NewFieldSpec(turn.FieldID, field.TypeUUID))
 	id, ok := tuo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Turn.id" for update`)}
@@ -606,10 +564,7 @@ func (tuo *TurnUpdateOne) sqlSave(ctx context.Context) (_node *Turn, err error) 
 			Columns: turn.HandsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: hand.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(hand.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -622,10 +577,7 @@ func (tuo *TurnUpdateOne) sqlSave(ctx context.Context) (_node *Turn, err error) 
 			Columns: turn.HandsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: hand.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(hand.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -641,10 +593,7 @@ func (tuo *TurnUpdateOne) sqlSave(ctx context.Context) (_node *Turn, err error) 
 			Columns: turn.HandsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: hand.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(hand.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -660,10 +609,7 @@ func (tuo *TurnUpdateOne) sqlSave(ctx context.Context) (_node *Turn, err error) 
 			Columns: turn.GamePlayerPointsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: gameplayerpoint.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(gameplayerpoint.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -676,10 +622,7 @@ func (tuo *TurnUpdateOne) sqlSave(ctx context.Context) (_node *Turn, err error) 
 			Columns: turn.GamePlayerPointsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: gameplayerpoint.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(gameplayerpoint.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -695,10 +638,7 @@ func (tuo *TurnUpdateOne) sqlSave(ctx context.Context) (_node *Turn, err error) 
 			Columns: turn.GamePlayerPointsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: gameplayerpoint.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(gameplayerpoint.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -714,10 +654,7 @@ func (tuo *TurnUpdateOne) sqlSave(ctx context.Context) (_node *Turn, err error) 
 			Columns: []string{turn.EventColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: event.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -730,10 +667,7 @@ func (tuo *TurnUpdateOne) sqlSave(ctx context.Context) (_node *Turn, err error) 
 			Columns: []string{turn.EventColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: event.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -749,10 +683,7 @@ func (tuo *TurnUpdateOne) sqlSave(ctx context.Context) (_node *Turn, err error) 
 			Columns: []string{turn.GameplayerhandhaiColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: gameplayerhandhai.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(gameplayerhandhai.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -765,10 +696,7 @@ func (tuo *TurnUpdateOne) sqlSave(ctx context.Context) (_node *Turn, err error) 
 			Columns: []string{turn.GameplayerhandhaiColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: gameplayerhandhai.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(gameplayerhandhai.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

@@ -100,16 +100,7 @@ func (cmlu *CompressedMJLogUpdate) ExecX(ctx context.Context) {
 }
 
 func (cmlu *CompressedMJLogUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   compressedmjlog.Table,
-			Columns: compressedmjlog.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: compressedmjlog.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(compressedmjlog.Table, compressedmjlog.Columns, sqlgraph.NewFieldSpec(compressedmjlog.FieldID, field.TypeUUID))
 	if ps := cmlu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -131,10 +122,7 @@ func (cmlu *CompressedMJLogUpdate) sqlSave(ctx context.Context) (n int, err erro
 			Columns: []string{compressedmjlog.MjlogFilesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: mjlogfile.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(mjlogfile.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -147,10 +135,7 @@ func (cmlu *CompressedMJLogUpdate) sqlSave(ctx context.Context) (n int, err erro
 			Columns: []string{compressedmjlog.MjlogFilesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: mjlogfile.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(mjlogfile.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -221,6 +206,12 @@ func (cmluo *CompressedMJLogUpdateOne) ClearMjlogFiles() *CompressedMJLogUpdateO
 	return cmluo
 }
 
+// Where appends a list predicates to the CompressedMJLogUpdate builder.
+func (cmluo *CompressedMJLogUpdateOne) Where(ps ...predicate.CompressedMJLog) *CompressedMJLogUpdateOne {
+	cmluo.mutation.Where(ps...)
+	return cmluo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (cmluo *CompressedMJLogUpdateOne) Select(field string, fields ...string) *CompressedMJLogUpdateOne {
@@ -256,16 +247,7 @@ func (cmluo *CompressedMJLogUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (cmluo *CompressedMJLogUpdateOne) sqlSave(ctx context.Context) (_node *CompressedMJLog, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   compressedmjlog.Table,
-			Columns: compressedmjlog.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: compressedmjlog.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(compressedmjlog.Table, compressedmjlog.Columns, sqlgraph.NewFieldSpec(compressedmjlog.FieldID, field.TypeUUID))
 	id, ok := cmluo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "CompressedMJLog.id" for update`)}
@@ -304,10 +286,7 @@ func (cmluo *CompressedMJLogUpdateOne) sqlSave(ctx context.Context) (_node *Comp
 			Columns: []string{compressedmjlog.MjlogFilesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: mjlogfile.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(mjlogfile.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -320,10 +299,7 @@ func (cmluo *CompressedMJLogUpdateOne) sqlSave(ctx context.Context) (_node *Comp
 			Columns: []string{compressedmjlog.MjlogFilesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: mjlogfile.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(mjlogfile.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

@@ -40,15 +40,7 @@ func (wd *WinDelete) ExecX(ctx context.Context) int {
 }
 
 func (wd *WinDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: win.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: win.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(win.Table, sqlgraph.NewFieldSpec(win.FieldID, field.TypeUUID))
 	if ps := wd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -69,6 +61,12 @@ type WinDeleteOne struct {
 	wd *WinDelete
 }
 
+// Where appends a list predicates to the WinDelete builder.
+func (wdo *WinDeleteOne) Where(ps ...predicate.Win) *WinDeleteOne {
+	wdo.wd.mutation.Where(ps...)
+	return wdo
+}
+
 // Exec executes the deletion query.
 func (wdo *WinDeleteOne) Exec(ctx context.Context) error {
 	n, err := wdo.wd.Exec(ctx)
@@ -84,5 +82,7 @@ func (wdo *WinDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (wdo *WinDeleteOne) ExecX(ctx context.Context) {
-	wdo.wd.ExecX(ctx)
+	if err := wdo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

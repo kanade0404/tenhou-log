@@ -24,11 +24,8 @@ import (
 // EventQuery is the builder for querying Event entities.
 type EventQuery struct {
 	config
-	limit      *int
-	offset     *int
-	unique     *bool
+	ctx        *QueryContext
 	order      []OrderFunc
-	fields     []string
 	inters     []Interceptor
 	predicates []predicate.Event
 	withTurn   *TurnQuery
@@ -50,20 +47,20 @@ func (eq *EventQuery) Where(ps ...predicate.Event) *EventQuery {
 
 // Limit the number of records to be returned by this query.
 func (eq *EventQuery) Limit(limit int) *EventQuery {
-	eq.limit = &limit
+	eq.ctx.Limit = &limit
 	return eq
 }
 
 // Offset to start from.
 func (eq *EventQuery) Offset(offset int) *EventQuery {
-	eq.offset = &offset
+	eq.ctx.Offset = &offset
 	return eq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (eq *EventQuery) Unique(unique bool) *EventQuery {
-	eq.unique = &unique
+	eq.ctx.Unique = &unique
 	return eq
 }
 
@@ -186,7 +183,7 @@ func (eq *EventQuery) QueryReach() *ReachQuery {
 // First returns the first Event entity from the query.
 // Returns a *NotFoundError when no Event was found.
 func (eq *EventQuery) First(ctx context.Context) (*Event, error) {
-	nodes, err := eq.Limit(1).All(newQueryContext(ctx, TypeEvent, "First"))
+	nodes, err := eq.Limit(1).All(setContextOp(ctx, eq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +206,7 @@ func (eq *EventQuery) FirstX(ctx context.Context) *Event {
 // Returns a *NotFoundError when no Event ID was found.
 func (eq *EventQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = eq.Limit(1).IDs(newQueryContext(ctx, TypeEvent, "FirstID")); err != nil {
+	if ids, err = eq.Limit(1).IDs(setContextOp(ctx, eq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -232,7 +229,7 @@ func (eq *EventQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one Event entity is found.
 // Returns a *NotFoundError when no Event entities are found.
 func (eq *EventQuery) Only(ctx context.Context) (*Event, error) {
-	nodes, err := eq.Limit(2).All(newQueryContext(ctx, TypeEvent, "Only"))
+	nodes, err := eq.Limit(2).All(setContextOp(ctx, eq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -260,7 +257,7 @@ func (eq *EventQuery) OnlyX(ctx context.Context) *Event {
 // Returns a *NotFoundError when no entities are found.
 func (eq *EventQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = eq.Limit(2).IDs(newQueryContext(ctx, TypeEvent, "OnlyID")); err != nil {
+	if ids, err = eq.Limit(2).IDs(setContextOp(ctx, eq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -285,7 +282,7 @@ func (eq *EventQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of Events.
 func (eq *EventQuery) All(ctx context.Context) ([]*Event, error) {
-	ctx = newQueryContext(ctx, TypeEvent, "All")
+	ctx = setContextOp(ctx, eq.ctx, "All")
 	if err := eq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
@@ -303,10 +300,12 @@ func (eq *EventQuery) AllX(ctx context.Context) []*Event {
 }
 
 // IDs executes the query and returns a list of Event IDs.
-func (eq *EventQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	ctx = newQueryContext(ctx, TypeEvent, "IDs")
-	if err := eq.Select(event.FieldID).Scan(ctx, &ids); err != nil {
+func (eq *EventQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if eq.ctx.Unique == nil && eq.path != nil {
+		eq.Unique(true)
+	}
+	ctx = setContextOp(ctx, eq.ctx, "IDs")
+	if err = eq.Select(event.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -323,7 +322,7 @@ func (eq *EventQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (eq *EventQuery) Count(ctx context.Context) (int, error) {
-	ctx = newQueryContext(ctx, TypeEvent, "Count")
+	ctx = setContextOp(ctx, eq.ctx, "Count")
 	if err := eq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
@@ -341,7 +340,7 @@ func (eq *EventQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (eq *EventQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = newQueryContext(ctx, TypeEvent, "Exist")
+	ctx = setContextOp(ctx, eq.ctx, "Exist")
 	switch _, err := eq.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
@@ -369,8 +368,7 @@ func (eq *EventQuery) Clone() *EventQuery {
 	}
 	return &EventQuery{
 		config:     eq.config,
-		limit:      eq.limit,
-		offset:     eq.offset,
+		ctx:        eq.ctx.Clone(),
 		order:      append([]OrderFunc{}, eq.order...),
 		inters:     append([]Interceptor{}, eq.inters...),
 		predicates: append([]predicate.Event{}, eq.predicates...),
@@ -380,9 +378,8 @@ func (eq *EventQuery) Clone() *EventQuery {
 		withDraw:   eq.withDraw.Clone(),
 		withReach:  eq.withReach.Clone(),
 		// clone intermediate query.
-		sql:    eq.sql.Clone(),
-		path:   eq.path,
-		unique: eq.unique,
+		sql:  eq.sql.Clone(),
+		path: eq.path,
 	}
 }
 
@@ -444,9 +441,9 @@ func (eq *EventQuery) WithReach(opts ...func(*ReachQuery)) *EventQuery {
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
 func (eq *EventQuery) GroupBy(field string, fields ...string) *EventGroupBy {
-	eq.fields = append([]string{field}, fields...)
+	eq.ctx.Fields = append([]string{field}, fields...)
 	grbuild := &EventGroupBy{build: eq}
-	grbuild.flds = &eq.fields
+	grbuild.flds = &eq.ctx.Fields
 	grbuild.label = event.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -455,10 +452,10 @@ func (eq *EventQuery) GroupBy(field string, fields ...string) *EventGroupBy {
 // Select allows the selection one or more fields/columns for the given query,
 // instead of selecting all fields in the entity.
 func (eq *EventQuery) Select(fields ...string) *EventSelect {
-	eq.fields = append(eq.fields, fields...)
+	eq.ctx.Fields = append(eq.ctx.Fields, fields...)
 	sbuild := &EventSelect{EventQuery: eq}
 	sbuild.label = event.Label
-	sbuild.flds, sbuild.scan = &eq.fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &eq.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
@@ -478,7 +475,7 @@ func (eq *EventQuery) prepareQuery(ctx context.Context) error {
 			}
 		}
 	}
-	for _, f := range eq.fields {
+	for _, f := range eq.ctx.Fields {
 		if !event.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -579,6 +576,9 @@ func (eq *EventQuery) loadTurn(ctx context.Context, query *TurnQuery, nodes []*E
 			ids = append(ids, fk)
 		}
 		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
 	}
 	query.Where(turn.IDIn(ids...))
 	neighbors, err := query.All(ctx)
@@ -723,30 +723,22 @@ func (eq *EventQuery) loadReach(ctx context.Context, query *ReachQuery, nodes []
 
 func (eq *EventQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := eq.querySpec()
-	_spec.Node.Columns = eq.fields
-	if len(eq.fields) > 0 {
-		_spec.Unique = eq.unique != nil && *eq.unique
+	_spec.Node.Columns = eq.ctx.Fields
+	if len(eq.ctx.Fields) > 0 {
+		_spec.Unique = eq.ctx.Unique != nil && *eq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, eq.driver, _spec)
 }
 
 func (eq *EventQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   event.Table,
-			Columns: event.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: event.FieldID,
-			},
-		},
-		From:   eq.sql,
-		Unique: true,
-	}
-	if unique := eq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(event.Table, event.Columns, sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID))
+	_spec.From = eq.sql
+	if unique := eq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if eq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := eq.fields; len(fields) > 0 {
+	if fields := eq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, event.FieldID)
 		for i := range fields {
@@ -762,10 +754,10 @@ func (eq *EventQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := eq.limit; limit != nil {
+	if limit := eq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := eq.offset; offset != nil {
+	if offset := eq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := eq.order; len(ps) > 0 {
@@ -781,7 +773,7 @@ func (eq *EventQuery) querySpec() *sqlgraph.QuerySpec {
 func (eq *EventQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(eq.driver.Dialect())
 	t1 := builder.Table(event.Table)
-	columns := eq.fields
+	columns := eq.ctx.Fields
 	if len(columns) == 0 {
 		columns = event.Columns
 	}
@@ -790,7 +782,7 @@ func (eq *EventQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = eq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if eq.unique != nil && *eq.unique {
+	if eq.ctx.Unique != nil && *eq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range eq.predicates {
@@ -799,12 +791,12 @@ func (eq *EventQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range eq.order {
 		p(selector)
 	}
-	if offset := eq.offset; offset != nil {
+	if offset := eq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := eq.limit; limit != nil {
+	if limit := eq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -824,7 +816,7 @@ func (egb *EventGroupBy) Aggregate(fns ...AggregateFunc) *EventGroupBy {
 
 // Scan applies the selector query and scans the result into the given value.
 func (egb *EventGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeEvent, "GroupBy")
+	ctx = setContextOp(ctx, egb.build.ctx, "GroupBy")
 	if err := egb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
@@ -872,7 +864,7 @@ func (es *EventSelect) Aggregate(fns ...AggregateFunc) *EventSelect {
 
 // Scan applies the selector query and scans the result into the given value.
 func (es *EventSelect) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeEvent, "Select")
+	ctx = setContextOp(ctx, es.ctx, "Select")
 	if err := es.prepareQuery(ctx); err != nil {
 		return err
 	}

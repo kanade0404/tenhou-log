@@ -146,24 +146,24 @@ func (gp *GamePlayer) assignValues(columns []string, values []any) error {
 
 // QueryGames queries the "games" edge of the GamePlayer entity.
 func (gp *GamePlayer) QueryGames() *GameQuery {
-	return (&GamePlayerClient{config: gp.config}).QueryGames(gp)
+	return NewGamePlayerClient(gp.config).QueryGames(gp)
 }
 
 // QueryPlayers queries the "players" edge of the GamePlayer entity.
 func (gp *GamePlayer) QueryPlayers() *PlayerQuery {
-	return (&GamePlayerClient{config: gp.config}).QueryPlayers(gp)
+	return NewGamePlayerClient(gp.config).QueryPlayers(gp)
 }
 
 // QueryDans queries the "dans" edge of the GamePlayer entity.
 func (gp *GamePlayer) QueryDans() *DanQuery {
-	return (&GamePlayerClient{config: gp.config}).QueryDans(gp)
+	return NewGamePlayerClient(gp.config).QueryDans(gp)
 }
 
 // Update returns a builder for updating this GamePlayer.
 // Note that you need to call GamePlayer.Unwrap() before calling this method if this GamePlayer
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (gp *GamePlayer) Update() *GamePlayerUpdateOne {
-	return (&GamePlayerClient{config: gp.config}).UpdateOne(gp)
+	return NewGamePlayerClient(gp.config).UpdateOne(gp)
 }
 
 // Unwrap unwraps the GamePlayer entity that was returned from a transaction after it was closed,
@@ -193,9 +193,3 @@ func (gp *GamePlayer) String() string {
 
 // GamePlayers is a parsable slice of GamePlayer.
 type GamePlayers []*GamePlayer
-
-func (gp GamePlayers) config(cfg config) {
-	for _i := range gp {
-		gp[_i].config = cfg
-	}
-}

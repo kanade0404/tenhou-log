@@ -84,14 +84,14 @@ func (gpp *GamePlayerPoint) assignValues(columns []string, values []any) error {
 
 // QueryTurns queries the "turns" edge of the GamePlayerPoint entity.
 func (gpp *GamePlayerPoint) QueryTurns() *TurnQuery {
-	return (&GamePlayerPointClient{config: gpp.config}).QueryTurns(gpp)
+	return NewGamePlayerPointClient(gpp.config).QueryTurns(gpp)
 }
 
 // Update returns a builder for updating this GamePlayerPoint.
 // Note that you need to call GamePlayerPoint.Unwrap() before calling this method if this GamePlayerPoint
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (gpp *GamePlayerPoint) Update() *GamePlayerPointUpdateOne {
-	return (&GamePlayerPointClient{config: gpp.config}).UpdateOne(gpp)
+	return NewGamePlayerPointClient(gpp.config).UpdateOne(gpp)
 }
 
 // Unwrap unwraps the GamePlayerPoint entity that was returned from a transaction after it was closed,
@@ -118,9 +118,3 @@ func (gpp *GamePlayerPoint) String() string {
 
 // GamePlayerPoints is a parsable slice of GamePlayerPoint.
 type GamePlayerPoints []*GamePlayerPoint
-
-func (gpp GamePlayerPoints) config(cfg config) {
-	for _i := range gpp {
-		gpp[_i].config = cfg
-	}
-}

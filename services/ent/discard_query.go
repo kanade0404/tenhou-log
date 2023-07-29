@@ -22,11 +22,8 @@ import (
 // DiscardQuery is the builder for querying Discard entities.
 type DiscardQuery struct {
 	config
-	limit      *int
-	offset     *int
-	unique     *bool
+	ctx        *QueryContext
 	order      []OrderFunc
-	fields     []string
 	inters     []Interceptor
 	predicates []predicate.Discard
 	withReach  *ReachQuery
@@ -45,20 +42,20 @@ func (dq *DiscardQuery) Where(ps ...predicate.Discard) *DiscardQuery {
 
 // Limit the number of records to be returned by this query.
 func (dq *DiscardQuery) Limit(limit int) *DiscardQuery {
-	dq.limit = &limit
+	dq.ctx.Limit = &limit
 	return dq
 }
 
 // Offset to start from.
 func (dq *DiscardQuery) Offset(offset int) *DiscardQuery {
-	dq.offset = &offset
+	dq.ctx.Offset = &offset
 	return dq
 }
 
 // Unique configures the query builder to filter duplicate records on query.
 // By default, unique is set to true, and can be disabled using this method.
 func (dq *DiscardQuery) Unique(unique bool) *DiscardQuery {
-	dq.unique = &unique
+	dq.ctx.Unique = &unique
 	return dq
 }
 
@@ -137,7 +134,7 @@ func (dq *DiscardQuery) QueryDraw() *DrawnQuery {
 // First returns the first Discard entity from the query.
 // Returns a *NotFoundError when no Discard was found.
 func (dq *DiscardQuery) First(ctx context.Context) (*Discard, error) {
-	nodes, err := dq.Limit(1).All(newQueryContext(ctx, TypeDiscard, "First"))
+	nodes, err := dq.Limit(1).All(setContextOp(ctx, dq.ctx, "First"))
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +157,7 @@ func (dq *DiscardQuery) FirstX(ctx context.Context) *Discard {
 // Returns a *NotFoundError when no Discard ID was found.
 func (dq *DiscardQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = dq.Limit(1).IDs(newQueryContext(ctx, TypeDiscard, "FirstID")); err != nil {
+	if ids, err = dq.Limit(1).IDs(setContextOp(ctx, dq.ctx, "FirstID")); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -183,7 +180,7 @@ func (dq *DiscardQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one Discard entity is found.
 // Returns a *NotFoundError when no Discard entities are found.
 func (dq *DiscardQuery) Only(ctx context.Context) (*Discard, error) {
-	nodes, err := dq.Limit(2).All(newQueryContext(ctx, TypeDiscard, "Only"))
+	nodes, err := dq.Limit(2).All(setContextOp(ctx, dq.ctx, "Only"))
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +208,7 @@ func (dq *DiscardQuery) OnlyX(ctx context.Context) *Discard {
 // Returns a *NotFoundError when no entities are found.
 func (dq *DiscardQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = dq.Limit(2).IDs(newQueryContext(ctx, TypeDiscard, "OnlyID")); err != nil {
+	if ids, err = dq.Limit(2).IDs(setContextOp(ctx, dq.ctx, "OnlyID")); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -236,7 +233,7 @@ func (dq *DiscardQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of Discards.
 func (dq *DiscardQuery) All(ctx context.Context) ([]*Discard, error) {
-	ctx = newQueryContext(ctx, TypeDiscard, "All")
+	ctx = setContextOp(ctx, dq.ctx, "All")
 	if err := dq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
@@ -254,10 +251,12 @@ func (dq *DiscardQuery) AllX(ctx context.Context) []*Discard {
 }
 
 // IDs executes the query and returns a list of Discard IDs.
-func (dq *DiscardQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
-	var ids []uuid.UUID
-	ctx = newQueryContext(ctx, TypeDiscard, "IDs")
-	if err := dq.Select(discard.FieldID).Scan(ctx, &ids); err != nil {
+func (dq *DiscardQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
+	if dq.ctx.Unique == nil && dq.path != nil {
+		dq.Unique(true)
+	}
+	ctx = setContextOp(ctx, dq.ctx, "IDs")
+	if err = dq.Select(discard.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
 	return ids, nil
@@ -274,7 +273,7 @@ func (dq *DiscardQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (dq *DiscardQuery) Count(ctx context.Context) (int, error) {
-	ctx = newQueryContext(ctx, TypeDiscard, "Count")
+	ctx = setContextOp(ctx, dq.ctx, "Count")
 	if err := dq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
@@ -292,7 +291,7 @@ func (dq *DiscardQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (dq *DiscardQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = newQueryContext(ctx, TypeDiscard, "Exist")
+	ctx = setContextOp(ctx, dq.ctx, "Exist")
 	switch _, err := dq.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
@@ -320,8 +319,7 @@ func (dq *DiscardQuery) Clone() *DiscardQuery {
 	}
 	return &DiscardQuery{
 		config:     dq.config,
-		limit:      dq.limit,
-		offset:     dq.offset,
+		ctx:        dq.ctx.Clone(),
 		order:      append([]OrderFunc{}, dq.order...),
 		inters:     append([]Interceptor{}, dq.inters...),
 		predicates: append([]predicate.Discard{}, dq.predicates...),
@@ -329,9 +327,8 @@ func (dq *DiscardQuery) Clone() *DiscardQuery {
 		withCall:   dq.withCall.Clone(),
 		withDraw:   dq.withDraw.Clone(),
 		// clone intermediate query.
-		sql:    dq.sql.Clone(),
-		path:   dq.path,
-		unique: dq.unique,
+		sql:  dq.sql.Clone(),
+		path: dq.path,
 	}
 }
 
@@ -371,9 +368,9 @@ func (dq *DiscardQuery) WithDraw(opts ...func(*DrawnQuery)) *DiscardQuery {
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
 func (dq *DiscardQuery) GroupBy(field string, fields ...string) *DiscardGroupBy {
-	dq.fields = append([]string{field}, fields...)
+	dq.ctx.Fields = append([]string{field}, fields...)
 	grbuild := &DiscardGroupBy{build: dq}
-	grbuild.flds = &dq.fields
+	grbuild.flds = &dq.ctx.Fields
 	grbuild.label = discard.Label
 	grbuild.scan = grbuild.Scan
 	return grbuild
@@ -382,10 +379,10 @@ func (dq *DiscardQuery) GroupBy(field string, fields ...string) *DiscardGroupBy 
 // Select allows the selection one or more fields/columns for the given query,
 // instead of selecting all fields in the entity.
 func (dq *DiscardQuery) Select(fields ...string) *DiscardSelect {
-	dq.fields = append(dq.fields, fields...)
+	dq.ctx.Fields = append(dq.ctx.Fields, fields...)
 	sbuild := &DiscardSelect{DiscardQuery: dq}
 	sbuild.label = discard.Label
-	sbuild.flds, sbuild.scan = &dq.fields, sbuild.Scan
+	sbuild.flds, sbuild.scan = &dq.ctx.Fields, sbuild.Scan
 	return sbuild
 }
 
@@ -405,7 +402,7 @@ func (dq *DiscardQuery) prepareQuery(ctx context.Context) error {
 			}
 		}
 	}
-	for _, f := range dq.fields {
+	for _, f := range dq.ctx.Fields {
 		if !discard.ValidColumn(f) {
 			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
@@ -556,30 +553,22 @@ func (dq *DiscardQuery) loadDraw(ctx context.Context, query *DrawnQuery, nodes [
 
 func (dq *DiscardQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := dq.querySpec()
-	_spec.Node.Columns = dq.fields
-	if len(dq.fields) > 0 {
-		_spec.Unique = dq.unique != nil && *dq.unique
+	_spec.Node.Columns = dq.ctx.Fields
+	if len(dq.ctx.Fields) > 0 {
+		_spec.Unique = dq.ctx.Unique != nil && *dq.ctx.Unique
 	}
 	return sqlgraph.CountNodes(ctx, dq.driver, _spec)
 }
 
 func (dq *DiscardQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := &sqlgraph.QuerySpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   discard.Table,
-			Columns: discard.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: discard.FieldID,
-			},
-		},
-		From:   dq.sql,
-		Unique: true,
-	}
-	if unique := dq.unique; unique != nil {
+	_spec := sqlgraph.NewQuerySpec(discard.Table, discard.Columns, sqlgraph.NewFieldSpec(discard.FieldID, field.TypeUUID))
+	_spec.From = dq.sql
+	if unique := dq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique
+	} else if dq.path != nil {
+		_spec.Unique = true
 	}
-	if fields := dq.fields; len(fields) > 0 {
+	if fields := dq.ctx.Fields; len(fields) > 0 {
 		_spec.Node.Columns = make([]string, 0, len(fields))
 		_spec.Node.Columns = append(_spec.Node.Columns, discard.FieldID)
 		for i := range fields {
@@ -595,10 +584,10 @@ func (dq *DiscardQuery) querySpec() *sqlgraph.QuerySpec {
 			}
 		}
 	}
-	if limit := dq.limit; limit != nil {
+	if limit := dq.ctx.Limit; limit != nil {
 		_spec.Limit = *limit
 	}
-	if offset := dq.offset; offset != nil {
+	if offset := dq.ctx.Offset; offset != nil {
 		_spec.Offset = *offset
 	}
 	if ps := dq.order; len(ps) > 0 {
@@ -614,7 +603,7 @@ func (dq *DiscardQuery) querySpec() *sqlgraph.QuerySpec {
 func (dq *DiscardQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	builder := sql.Dialect(dq.driver.Dialect())
 	t1 := builder.Table(discard.Table)
-	columns := dq.fields
+	columns := dq.ctx.Fields
 	if len(columns) == 0 {
 		columns = discard.Columns
 	}
@@ -623,7 +612,7 @@ func (dq *DiscardQuery) sqlQuery(ctx context.Context) *sql.Selector {
 		selector = dq.sql
 		selector.Select(selector.Columns(columns...)...)
 	}
-	if dq.unique != nil && *dq.unique {
+	if dq.ctx.Unique != nil && *dq.ctx.Unique {
 		selector.Distinct()
 	}
 	for _, p := range dq.predicates {
@@ -632,12 +621,12 @@ func (dq *DiscardQuery) sqlQuery(ctx context.Context) *sql.Selector {
 	for _, p := range dq.order {
 		p(selector)
 	}
-	if offset := dq.offset; offset != nil {
+	if offset := dq.ctx.Offset; offset != nil {
 		// limit is mandatory for offset clause. We start
 		// with default value, and override it below if needed.
 		selector.Offset(*offset).Limit(math.MaxInt32)
 	}
-	if limit := dq.limit; limit != nil {
+	if limit := dq.ctx.Limit; limit != nil {
 		selector.Limit(*limit)
 	}
 	return selector
@@ -657,7 +646,7 @@ func (dgb *DiscardGroupBy) Aggregate(fns ...AggregateFunc) *DiscardGroupBy {
 
 // Scan applies the selector query and scans the result into the given value.
 func (dgb *DiscardGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeDiscard, "GroupBy")
+	ctx = setContextOp(ctx, dgb.build.ctx, "GroupBy")
 	if err := dgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
@@ -705,7 +694,7 @@ func (ds *DiscardSelect) Aggregate(fns ...AggregateFunc) *DiscardSelect {
 
 // Scan applies the selector query and scans the result into the given value.
 func (ds *DiscardSelect) Scan(ctx context.Context, v any) error {
-	ctx = newQueryContext(ctx, TypeDiscard, "Select")
+	ctx = setContextOp(ctx, ds.ctx, "Select")
 	if err := ds.prepareQuery(ctx); err != nil {
 		return err
 	}

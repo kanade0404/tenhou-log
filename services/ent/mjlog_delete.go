@@ -40,15 +40,7 @@ func (mld *MJLogDelete) ExecX(ctx context.Context) int {
 }
 
 func (mld *MJLogDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := &sqlgraph.DeleteSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table: mjlog.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: mjlog.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewDeleteSpec(mjlog.Table, sqlgraph.NewFieldSpec(mjlog.FieldID, field.TypeUUID))
 	if ps := mld.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -69,6 +61,12 @@ type MJLogDeleteOne struct {
 	mld *MJLogDelete
 }
 
+// Where appends a list predicates to the MJLogDelete builder.
+func (mldo *MJLogDeleteOne) Where(ps ...predicate.MJLog) *MJLogDeleteOne {
+	mldo.mld.mutation.Where(ps...)
+	return mldo
+}
+
 // Exec executes the deletion query.
 func (mldo *MJLogDeleteOne) Exec(ctx context.Context) error {
 	n, err := mldo.mld.Exec(ctx)
@@ -84,5 +82,7 @@ func (mldo *MJLogDeleteOne) Exec(ctx context.Context) error {
 
 // ExecX is like Exec, but panics if an error occurs.
 func (mldo *MJLogDeleteOne) ExecX(ctx context.Context) {
-	mldo.mld.ExecX(ctx)
+	if err := mldo.Exec(ctx); err != nil {
+		panic(err)
+	}
 }

@@ -98,16 +98,7 @@ func (ru *RoomUpdate) ExecX(ctx context.Context) {
 }
 
 func (ru *RoomUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   room.Table,
-			Columns: room.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: room.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(room.Table, room.Columns, sqlgraph.NewFieldSpec(room.FieldID, field.TypeUUID))
 	if ps := ru.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -123,10 +114,7 @@ func (ru *RoomUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{room.GamesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: game.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(game.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -139,10 +127,7 @@ func (ru *RoomUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{room.GamesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: game.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(game.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -158,10 +143,7 @@ func (ru *RoomUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Columns: []string{room.GamesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: game.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(game.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -230,6 +212,12 @@ func (ruo *RoomUpdateOne) RemoveGames(g ...*Game) *RoomUpdateOne {
 	return ruo.RemoveGameIDs(ids...)
 }
 
+// Where appends a list predicates to the RoomUpdate builder.
+func (ruo *RoomUpdateOne) Where(ps ...predicate.Room) *RoomUpdateOne {
+	ruo.mutation.Where(ps...)
+	return ruo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (ruo *RoomUpdateOne) Select(field string, fields ...string) *RoomUpdateOne {
@@ -265,16 +253,7 @@ func (ruo *RoomUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (ruo *RoomUpdateOne) sqlSave(ctx context.Context) (_node *Room, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   room.Table,
-			Columns: room.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: room.FieldID,
-			},
-		},
-	}
+	_spec := sqlgraph.NewUpdateSpec(room.Table, room.Columns, sqlgraph.NewFieldSpec(room.FieldID, field.TypeUUID))
 	id, ok := ruo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Room.id" for update`)}
@@ -307,10 +286,7 @@ func (ruo *RoomUpdateOne) sqlSave(ctx context.Context) (_node *Room, err error) 
 			Columns: []string{room.GamesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: game.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(game.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
@@ -323,10 +299,7 @@ func (ruo *RoomUpdateOne) sqlSave(ctx context.Context) (_node *Room, err error) 
 			Columns: []string{room.GamesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: game.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(game.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -342,10 +315,7 @@ func (ruo *RoomUpdateOne) sqlSave(ctx context.Context) (_node *Room, err error) 
 			Columns: []string{room.GamesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeUUID,
-					Column: game.FieldID,
-				},
+				IDSpec: sqlgraph.NewFieldSpec(game.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

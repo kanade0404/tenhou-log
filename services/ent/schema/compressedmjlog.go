@@ -17,7 +17,7 @@ type CompressedMJLog struct {
 func (CompressedMJLog) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(uuid.New),
-		field.String("name").Immutable(),
+		field.String("name").Unique().Immutable(),
 		field.Uint("size"),
 		field.Time("inserted_at").Immutable().Default(time.Now),
 	}
