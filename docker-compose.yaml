@@ -2,7 +2,7 @@ version: '3'
 
 services:
   tenhou_log_db:
-    image: postgres:15.3
+    image: postgres:15.4
     container_name: tenhou-log-db
     ports:
       - "65432:5432"
@@ -16,7 +16,7 @@ services:
       - ./services/database/data:/var/lib/postgresql/data
       - ./services/database/logs:/var/log
   test_tenhou_log_db:
-    image: postgres:15.3
+    image: postgres:15.4
     container_name: tenhou-log-db-test
     ports:
       - "55432:5432"
