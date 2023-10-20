@@ -8,7 +8,7 @@ require (
 	cloud.google.com/go/storage v1.33.0
 	entgo.io/ent v0.12.4
 	github.com/PuerkitoBio/goquery v1.8.1
-	github.com/google/go-cmp v0.5.9
+	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.3.1
 	github.com/gorilla/mux v1.8.0
 	github.com/lib/pq v1.10.9
