@@ -9,7 +9,7 @@ require (
 	entgo.io/ent v0.12.4
 	github.com/PuerkitoBio/goquery v1.8.1
 	github.com/google/go-cmp v0.6.0
-	github.com/google/uuid v1.3.1
+	github.com/google/uuid v1.4.0
 	github.com/gorilla/mux v1.8.0
 	github.com/lib/pq v1.10.9
 	google.golang.org/genproto v0.0.0-20231016165738-49dd2c1f3d0b
