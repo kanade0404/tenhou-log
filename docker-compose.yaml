@@ -39,7 +39,7 @@ services:
     environment:
       HOME: "/terraform"
   backend:
-    image: hasura/graphql-engine:v2.35.1
+    image: hasura/graphql-engine:v2.35.3
     ports:
       - "8080:8080"
     depends_on:
