@@ -331,10 +331,10 @@
     copy-to-clipboard "3.3.3"
     framesync "6.1.2"
 
-"@chakra-ui/react@2.9.4":
-  version "2.9.4"
-  resolved "https://registry.yarnpkg.com/@chakra-ui/react/-/react-2.9.4.tgz#950a48b90f174407f8d71005962ac7fa79ab9838"
-  integrity sha512-e7fMItdoUjZsQuVsq4DSvrX/dpmYHEwJD2UM5dkHvR2Vzsrili0EWfXrT9R+4kCDHtc6vlECbHA13RHru7XUUg==
+"@chakra-ui/react@2.9.5":
+  version "2.9.5"
+  resolved "https://registry.yarnpkg.com/@chakra-ui/react/-/react-2.9.5.tgz#690d9316907ec47a7bfef51c6f5df70c32a4a248"
+  integrity sha512-g4CIow3I424Va6f/v5wIA+6nAbvsALARST/uqUmGMJJ4qDa95FpJx0XNJzlcFABBkuNDWplciCTUL0whKReL9w==
   dependencies:
     "@chakra-ui/hooks" "2.3.3"
     "@chakra-ui/styled-system" "2.10.3"
