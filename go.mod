@@ -8,7 +8,7 @@ require (
 	ariga.io/atlas v0.32.1
 	cloud.google.com/go/secretmanager v1.14.7
 	cloud.google.com/go/storage v1.52.0
-	entgo.io/ent v0.12.5
+	entgo.io/ent v0.14.4
 	github.com/PuerkitoBio/goquery v1.8.1
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
@@ -64,7 +64,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.35.0 // indirect
 	go.opentelemetry.io/otel/trace v1.35.0 // indirect
 	golang.org/x/crypto v0.37.0 // indirect
-	golang.org/x/mod v0.17.0 // indirect
+	golang.org/x/mod v0.23.0 // indirect
 	golang.org/x/net v0.39.0 // indirect
 	golang.org/x/oauth2 v0.29.0 // indirect
 	golang.org/x/sync v0.13.0 // indirect
