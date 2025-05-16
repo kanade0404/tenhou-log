@@ -5,7 +5,7 @@ go 1.23.0
 toolchain go1.24.3
 
 require (
-	ariga.io/atlas v0.32.1
+	ariga.io/atlas v0.33.0
 	cloud.google.com/go/secretmanager v1.14.7
 	cloud.google.com/go/storage v1.52.0
 	entgo.io/ent v0.14.4
@@ -78,4 +78,5 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250414145226-207652e42e2e // indirect
 	google.golang.org/grpc v1.71.1 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
