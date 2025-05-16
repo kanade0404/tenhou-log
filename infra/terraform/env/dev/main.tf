@@ -2,7 +2,7 @@ terraform {
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = "5.44.2"
+      version = "5.45.2"
     }
     random = {
       source  = "hashicorp/random"
