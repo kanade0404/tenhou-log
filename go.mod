@@ -5,7 +5,7 @@ go 1.23.0
 toolchain go1.24.3
 
 require (
-	ariga.io/atlas v0.33.0
+	ariga.io/atlas v0.33.1
 	cloud.google.com/go/secretmanager v1.14.7
 	cloud.google.com/go/storage v1.54.0
 	entgo.io/ent v0.14.4
