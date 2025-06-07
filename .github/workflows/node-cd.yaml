@@ -12,7 +12,7 @@ env:
   IMAGE: asia-northeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID_DEV }}/web/next
 jobs:
   cd:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       contents: 'read'
       id-token: 'write'
