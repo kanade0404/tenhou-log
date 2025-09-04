@@ -1,10 +1,10 @@
-FROM node:21.7.3 AS deps
+FROM node:22.19.0 AS deps
 
 WORKDIR /app
 COPY package.json yarn.lock ./
 RUN yarn install --frozen-lockfile
 
-FROM node:21.7.3 AS builder
+FROM node:22.19.0 AS builder
 
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
