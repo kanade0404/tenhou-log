@@ -1,11 +1,11 @@
 module github.com/kanade0404/tenhou-log
 
-go 1.23.0
+go 1.24
 
 toolchain go1.25.1
 
 require (
-	ariga.io/atlas v0.33.1
+	ariga.io/atlas v0.36.1
 	cloud.google.com/go/secretmanager v1.14.7
 	cloud.google.com/go/storage v1.54.0
 	entgo.io/ent v0.14.5
@@ -67,7 +67,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.35.0 // indirect
 	go.opentelemetry.io/otel/trace v1.35.0 // indirect
 	golang.org/x/crypto v0.37.0 // indirect
-	golang.org/x/mod v0.23.0 // indirect
+	golang.org/x/mod v0.24.0 // indirect
 	golang.org/x/net v0.39.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
 	golang.org/x/sync v0.14.0 // indirect
