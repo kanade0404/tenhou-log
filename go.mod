@@ -2,7 +2,7 @@ module github.com/kanade0404/tenhou-log
 
 go 1.24
 
-toolchain go1.25.1
+toolchain go1.25.2
 
 require (
 	ariga.io/atlas v0.36.1
