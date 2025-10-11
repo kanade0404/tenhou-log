@@ -7,7 +7,7 @@ toolchain go1.25.2
 require (
 	ariga.io/atlas v0.37.0
 	cloud.google.com/go/secretmanager v1.15.1
-	cloud.google.com/go/storage v1.56.2
+	cloud.google.com/go/storage v1.57.0
 	entgo.io/ent v0.14.5
 	github.com/PuerkitoBio/goquery v1.10.3
 	github.com/google/go-cmp v0.7.0
@@ -79,7 +79,7 @@ require (
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250818200422-3122310a409c // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250818200422-3122310a409c // indirect
-	google.golang.org/grpc v1.74.2 // indirect
+	google.golang.org/grpc v1.74.3 // indirect
 	google.golang.org/protobuf v1.36.7 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
