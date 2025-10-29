@@ -187,6 +187,8 @@ cloud.google.com/go/storage v1.56.2 h1:DzxQ4ppJe4OSTtZLtCqscC3knyW919eNl0zLLpojn
 cloud.google.com/go/storage v1.56.2/go.mod h1:C9xuCZgFl3buo2HZU/1FncgvvOgTAs/rnh4gF4lMg0s=
 cloud.google.com/go/storage v1.57.0 h1:4g7NB7Ta7KetVbOMpCqy89C+Vg5VE8scqlSHUPm7Rds=
 cloud.google.com/go/storage v1.57.0/go.mod h1:329cwlpzALLgJuu8beyJ/uvQznDHpa2U5lGjWednkzg=
+cloud.google.com/go/storage v1.57.1 h1:gzao6odNJ7dR3XXYvAgPK+Iw4fVPPznEPPyNjbaVkq8=
+cloud.google.com/go/storage v1.57.1/go.mod h1:329cwlpzALLgJuu8beyJ/uvQznDHpa2U5lGjWednkzg=
 entgo.io/ent v0.11.10 h1:iqn32ybY5HRW3xSAyMNdNKpZhKgMf1Zunsej9yPKUI8=
 entgo.io/ent v0.11.10/go.mod h1:mzTZ0trE+jCQw/fnzijbm5Mck/l8Gbg7gC/+L1COyzM=
 entgo.io/ent v0.12.0 h1:DTub/yd0pMK9s0ONfZps2cYkyD2VPIuknVBv10BESc0=
