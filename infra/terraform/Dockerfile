@@ -1,6 +1,6 @@
 FROM hashicorp/terraform:1.14.0 AS terraform
 
-FROM ubuntu:22.04 AS base
+FROM ubuntu:24.04 AS base
 RUN apt update && \
     apt install -y unzip curl wget && \
     curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash && \
@@ -11,7 +11,7 @@ RUN apt update && \
     tar -zxvf tfmigrate_0.3.7_linux_amd64.tar.gz tfmigrate && \
     mv tfmigrate /usr/local/bin/tfmigrate
 
-FROM ubuntu:22.04 AS gcloud
+FROM ubuntu:24.04 AS gcloud
 RUN apt update && \
     apt install -y curl apt-transport-https ca-certificates gnupg python3 && \
     echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list && \
