@@ -7,7 +7,7 @@ toolchain go1.25.6
 require (
 	ariga.io/atlas v0.38.0
 	cloud.google.com/go/secretmanager v1.16.0
-	cloud.google.com/go/storage v1.58.0
+	cloud.google.com/go/storage v1.59.2
 	entgo.io/ent v0.14.5
 	github.com/PuerkitoBio/goquery v1.11.0
 	github.com/google/go-cmp v0.7.0
