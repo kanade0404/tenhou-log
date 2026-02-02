@@ -25,5 +25,5 @@ jobs:
       - name: go lint
         run: go vet ./...
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v9
         continue-on-error: true
