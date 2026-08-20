@@ -1,11 +1,9 @@
 module github.com/kanade0404/tenhou-log
 
-go 1.25.0
-
-toolchain go1.26.4
+go 1.26.4
 
 require (
-	ariga.io/atlas v1.2.2
+	ariga.io/atlas v1.2.3
 	cloud.google.com/go/secretmanager v1.20.0
 	cloud.google.com/go/storage v1.62.3
 	entgo.io/ent v0.14.6
