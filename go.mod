@@ -4,7 +4,7 @@ go 1.26.4
 
 require (
 	ariga.io/atlas v1.3.0
-	cloud.google.com/go/secretmanager v1.21.0
+	cloud.google.com/go/secretmanager v1.22.0
 	cloud.google.com/go/storage v1.67.1
 	entgo.io/ent v0.14.6
 	github.com/PuerkitoBio/goquery v1.13.0
