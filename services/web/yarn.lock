@@ -5992,10 +5992,10 @@ react-is@^16.13.1, react-is@^16.7.0:
   resolved "https://registry.yarnpkg.com/react-is/-/react-is-16.13.1.tgz#789729a4dc36de2999dc156dd6c1d9c18cea56a4"
   integrity sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==
 
-react-is@^19.2.8:
-  version "19.2.8"
-  resolved "https://registry.yarnpkg.com/react-is/-/react-is-19.2.8.tgz#09826f9fbc187bc668e3e5c62edc001f804d5018"
-  integrity sha512-s5un28nYxKJw5gvUHyW5PCC28CvBqLu9r3cWgzHT4Vo/5fqqkFcdRYsGcKf50WMPpjjFZS5d76fn3YCo2njKwQ==
+react-is@^19.2.9:
+  version "19.3.1"
+  resolved "https://registry.yarnpkg.com/react-is/-/react-is-19.3.1.tgz#81f7f7e431fc9b5bd9781b0a9f19997f08dee51b"
+  integrity sha512-RRieF6IyxQBkcK6pP8xOHprLTPW6QjRkbGdImtqNme+/hYVwCZkLQLdlZGOhUqXwkS9IEynaGvPJtv6XB/cz0Q==
 
 react-remove-scroll-bar@^2.3.6:
   version "2.3.6"
@@ -6025,12 +6025,12 @@ react-style-singleton@^2.2.1:
     invariant "^2.2.4"
     tslib "^2.0.0"
 
-react-test-renderer@19.2.8:
-  version "19.2.8"
-  resolved "https://registry.yarnpkg.com/react-test-renderer/-/react-test-renderer-19.2.8.tgz#f4fb8c2a97c864ba708aec61d782a9bb725b672b"
-  integrity sha512-GHKPaDRaNYU24PHTLG8Bx8VMY9t+qNfxQbt/Yjp7aMWBkKU6766SR0n6TnYu7P5I1MfEuAMUadqiyDHyI4Yy9Q==
+react-test-renderer@19.2.9:
+  version "19.2.9"
+  resolved "https://registry.yarnpkg.com/react-test-renderer/-/react-test-renderer-19.2.9.tgz#926fd67cb1e99e6a33be77b99d2445c417445135"
+  integrity sha512-u1Ij3BK/ub7Wg+Z43mx/VPM2zgGD7n0bx8Y47cimjAY5Q4kA5grk6/sfTsYVW9DdBBB6oseywFhgAGLUPd2mHA==
   dependencies:
-    react-is "^19.2.8"
+    react-is "^19.2.9"
     scheduler "^0.27.0"
 
 react@18.3.1:
