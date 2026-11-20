@@ -18,7 +18,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v6.5.0
         with:
-          node-version: 26.13.0
+          node-version: 26.13.1
       - name: Install packages
         run: yarn install --frozen-lockfile
       - name: Build
